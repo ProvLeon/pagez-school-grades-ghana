@@ -12,7 +12,7 @@ import { MobileSubjectCard } from "@/components/results/MobileSubjectCard";
 import { StudentInfoSection } from "@/components/results/StudentInfoSection";
 import { SubjectsTableSection } from "@/components/results/SubjectsTableSection";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 const ViewResult = () => {
@@ -25,7 +25,7 @@ const ViewResult = () => {
     queryKey: ['result', id],
     queryFn: async () => {
       if (!id) throw new Error('Result ID is required');
-      
+
       const { data, error } = await supabase
         .from('results')
         .select(`
@@ -38,7 +38,7 @@ const ViewResult = () => {
         `)
         .eq('id', id)
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -104,15 +104,15 @@ const ViewResult = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header 
-        title="Student Result" 
+      <Header
+        title="Student Result"
         subtitle={`${result.student?.full_name} - ${result.term} Term ${result.academic_year}`}
       />
-      
+
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => navigate('/results/manage-results')}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -132,7 +132,7 @@ const ViewResult = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <Card className="lg:col-span-4">
-            <StudentInfoSection 
+            <StudentInfoSection
               studentName={result.student?.full_name}
               className={result.class?.name}
               academicYear={result.academic_year}
@@ -147,42 +147,42 @@ const ViewResult = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{Math.round(averageScore)}%</div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Pass Rate</CardTitle>
-                    <Award className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{Math.round(passPercentage)}%</div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Excellent Grades</CardTitle>
-                    <Award className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{excellentGrades}</div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Subjects</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{totalSubjects}</div>
-                </CardContent>
-            </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Average Score</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{Math.round(averageScore)}%</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pass Rate</CardTitle>
+              <Award className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{Math.round(passPercentage)}%</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Excellent Grades</CardTitle>
+              <Award className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{excellentGrades}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Subjects</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalSubjects}</div>
+            </CardContent>
+          </Card>
         </div>
 
         <Card>
@@ -190,7 +190,7 @@ const ViewResult = () => {
             <CardTitle>Subject Performance</CardTitle>
           </CardHeader>
           <CardContent>
-            <SubjectsTableSection 
+            <SubjectsTableSection
               subjectMarks={result.subject_marks || []}
               caTypeConfig={result.ca_type?.configuration}
             />
