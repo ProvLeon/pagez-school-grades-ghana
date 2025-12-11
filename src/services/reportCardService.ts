@@ -110,7 +110,7 @@ export class ReportCardService {
       const { data: schoolSettings } = await supabase
         .from('school_settings')
         .select('*')
-        .single();
+        .maybeSingle();
 
       // Fetch grading scale for the department/term
       const { data: gradingScale } = await supabase
@@ -125,7 +125,7 @@ export class ReportCardService {
         .select('attendance_for_term')
         .eq('academic_year', result.academic_year)
         .eq('term', result.term)
-        .single();
+        .maybeSingle();
 
       // Count total students with results for the same term, academic year, and class
       const { count: totalStudentsWithResults } = await supabase
@@ -257,17 +257,17 @@ export class ReportCardService {
       const studentsWithTotalScores = classResults.map(result => {
         // Use stored total_score if available, otherwise calculate from subject marks
         let calculatedTotal = result.total_score;
-        
+
         if (!calculatedTotal && result.subject_marks && result.subject_marks.length > 0) {
           const subjectTotals = result.subject_marks
             .filter((mark: any) => mark.total_score !== null)
             .map((mark: any) => mark.total_score);
-          
+
           if (subjectTotals.length > 0) {
             calculatedTotal = subjectTotals.reduce((sum: number, score: number) => sum + score, 0);
           }
         }
-        
+
         return {
           id: result.id,
           totalScore: calculatedTotal || 0
@@ -301,13 +301,13 @@ export class ReportCardService {
       let currentPosition = 1;
       for (const score of sortedScores) {
         const studentsWithScore = scoreGroups[score];
-        
+
         if (studentsWithScore.includes(resultId)) {
           const position = this.getOrdinalPosition(currentPosition);
           console.log(`Student ${resultId} position: ${position} (total score: ${score})`);
           return position;
         }
-        
+
         // Skip positions for tied students
         currentPosition += studentsWithScore.length;
       }
@@ -323,14 +323,14 @@ export class ReportCardService {
   // Helper method to convert number to ordinal format (1st, 2nd, 3rd, etc.)
   private static getOrdinalPosition(position: number): string {
     if (position <= 0) return '';
-    
+
     const lastDigit = position % 10;
     const lastTwoDigits = position % 100;
-    
+
     if (lastTwoDigits >= 11 && lastTwoDigits <= 13) {
       return `${position}th`;
     }
-    
+
     switch (lastDigit) {
       case 1: return `${position}st`;
       case 2: return `${position}nd`;
@@ -367,15 +367,15 @@ export class ReportCardService {
     const lineWidth = 0.5;
     pdf.setLineWidth(lineWidth);
     pdf.setDrawColor(0, 0, 0); // Black border
-    
-    // Since jsPDF doesn't have native rounded rectangle support, 
+
+    // Since jsPDF doesn't have native rounded rectangle support,
     // we'll create a rounded effect using multiple line segments
     pdf.setLineCap('round');
     pdf.setLineJoin('round');
-    
+
     // Draw rounded rectangle by creating small segments at corners
     const cornerOffset = Math.min(radius, width / 4, height / 4);
-    
+
     // Top line (with rounded corners)
     pdf.line(x + cornerOffset, y, x + width - cornerOffset, y);
     // Top-right corner curve simulation with short lines
@@ -442,7 +442,7 @@ export class ReportCardService {
     pdf.setDrawColor(primaryRGB.r, primaryRGB.g, primaryRGB.b);
     pdf.setLineWidth(1.2);
     pdf.roundedRect(4, 4, pageWidth - 8, pageHeight - 8, 3, 3);
-    
+
     // Inner shadow effect
     pdf.setDrawColor(this.lightenColor(primaryRGB, 0.3).r, this.lightenColor(primaryRGB, 0.3).g, this.lightenColor(primaryRGB, 0.3).b);
     pdf.setLineWidth(0.3);
@@ -462,18 +462,18 @@ export class ReportCardService {
         if (logoBase64) {
           // Save the current graphics state
           pdf.saveGraphicsState();
-          
+
           // Set transparency for watermark effect
           pdf.setGState(pdf.GState({ opacity: 0.1 }));
-          
+
           // Calculate watermark size and position (centered)
           const watermarkSize = Math.min(pageWidth, pageHeight) * 0.4;
           const watermarkX = (pageWidth - watermarkSize) / 2;
           const watermarkY = (pageHeight - watermarkSize) / 2;
-          
+
           // Add logo as watermark
           pdf.addImage(logoBase64, 'JPEG', watermarkX, watermarkY, watermarkSize, watermarkSize);
-          
+
           // Restore graphics state
           pdf.restoreGraphicsState();
         }
@@ -529,7 +529,7 @@ export class ReportCardService {
     pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
     let headerY = currentY + 5;
-    
+
     // School name at the top
     const schoolText = data.school.name.toUpperCase();
     const schoolWidth = pdf.getTextWidth(schoolText);
@@ -571,22 +571,22 @@ export class ReportCardService {
     const leftX = 15;
     const rightX = 110;
     const fieldSpacing = 7;
-    
+
     // Add small gap before student information
     currentY += 3;
 
     // Get school's primary color for accent lines
     const schoolColor = this.hexToRgb(data.school.primary_color || '#e11d48');
-    
+
     // Helper function to draw clean minimalist line
     const drawCleanLine = (x: number, y: number, width: number, text?: string) => {
       const lineY = y + 1.5; // Position line below text
-      
+
       // Draw clean line in school's primary color
       pdf.setDrawColor(schoolColor.r, schoolColor.g, schoolColor.b);
       pdf.setLineWidth(0.3);
       pdf.line(x, lineY, x + width, lineY);
-      
+
       // Add text if provided
       if (text) {
         pdf.setTextColor(0, 0, 0);
@@ -642,7 +642,7 @@ export class ReportCardService {
     pdf.setFont('helvetica', 'bold');
     pdf.text("NEXT TERM BEGINS:", rightX, currentY);
     pdf.setFont('helvetica', 'normal');
-    const nextTermText = data.academic.next_term_begin 
+    const nextTermText = data.academic.next_term_begin
       ? new Date(data.academic.next_term_begin).toLocaleDateString('en-GB')
       : '';
     drawCleanLine(rightX + 41, currentY, 45, nextTermText);
@@ -653,7 +653,7 @@ export class ReportCardService {
     const headers = [
       'SUBJECT',
       `CLASS SCORE (${data.ca_configuration.ca}%)`,
-      `EXAMS SCORE (${data.ca_configuration.exam}%)`, 
+      `EXAMS SCORE (${data.ca_configuration.exam}%)`,
       'TOTAL SCORE (100%)',
       'GRADE',
       'REMARKS'
@@ -676,13 +676,13 @@ export class ReportCardService {
     // Calculate margins to center the table (total column width is 170mm)
     const tableWidth = 170; // Sum of all column widths
     const centerMargin = (pageWidth - tableWidth) / 2;
-    
+
     autoTable(pdf, {
       head: [headers],
       body: tableData,
       startY: currentY,
       theme: 'grid',
-      styles: { 
+      styles: {
         fontSize: 10,
         cellPadding: 3,
         lineColor: [180, 180, 180],
@@ -691,7 +691,7 @@ export class ReportCardService {
         halign: 'center',
         textColor: [40, 40, 40]
       },
-      headStyles: { 
+      headStyles: {
         fillColor: [primaryRGB.r, primaryRGB.g, primaryRGB.b],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
@@ -711,7 +711,7 @@ export class ReportCardService {
       alternateRowStyles: {
         fillColor: [lightPrimaryRGB.r, lightPrimaryRGB.g, lightPrimaryRGB.b]
       },
-      didParseCell: function(data: any) {
+      didParseCell: function (data: any) {
         // No color coding for grades or scores
       },
       margin: { left: centerMargin, right: centerMargin }
@@ -724,12 +724,12 @@ export class ReportCardService {
     pdf.setFillColor(headerColor.r, headerColor.g, headerColor.b);
     pdf.roundedRect(centerMargin, currentY, 80, 12, 2, 2, 'F');
     pdf.roundedRect(centerMargin + 95, currentY, 75, 12, 2, 2, 'F');
-    
+
     pdf.setFontSize(9);
-     pdf.setFont('helvetica', 'bold');
+    pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(primaryRGB.r, primaryRGB.g, primaryRGB.b);
     pdf.text("ATTENDANCE", centerMargin + 5, currentY + 4);
-    
+
     // Attendance progress bar
     const attendancePercentage = (data.academic.days_present / data.academic.days_school_opened) * 100;
     pdf.setTextColor(0, 0, 0);
@@ -781,7 +781,7 @@ export class ReportCardService {
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
     pdf.text("CLASS TEACHER'S REMARKS:", centerMargin, currentY);
-    
+
     if (data.behavior.teachers_comment) {
       pdf.setFont('helvetica', 'normal');
       const splitComment = pdf.splitTextToSize(data.behavior.teachers_comment, 110);
@@ -795,7 +795,7 @@ export class ReportCardService {
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
     pdf.text("HEAD TEACHER'S REMARKS:", centerMargin, currentY);
-    
+
     if (data.behavior.heads_remarks) {
       pdf.setFont('helvetica', 'normal');
       const splitHeadRemarks = pdf.splitTextToSize(data.behavior.heads_remarks, 110);
@@ -808,11 +808,11 @@ export class ReportCardService {
 
     // Center the headteacher section
     const centerX = centerMargin + 85; // Center of the page width (170/2)
-    
+
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
     pdf.text("HEADTEACHER:", centerX, currentY, { align: 'center' });
-    
+
     if (data.school.headteacher_name) {
       pdf.setFontSize(8);
       pdf.setFont('helvetica', 'normal');
@@ -831,7 +831,7 @@ export class ReportCardService {
           pdf.addImage(img, 'PNG', imgX, currentY + 8, imgWidth, imgHeight);
         };
         img.src = data.school.headteacher_signature_url;
-        
+
         // Wait for image to load
         await new Promise(resolve => {
           img.onload = () => {
@@ -857,7 +857,7 @@ export class ReportCardService {
       pdf.line(centerX - 30, currentY + 8, centerX + 30, currentY + 8);
       currentY += 12;
     }
-    
+
     pdf.setFontSize(8);
     const generatedDate = new Date().toLocaleDateString('en-GB');
     pdf.text(generatedDate, centerX, currentY + 4, { align: 'center' });
@@ -891,7 +891,7 @@ export class ReportCardService {
     pdf.rect(x, y, w, h);
     pdf.setFontSize(6);
     pdf.setTextColor(100, 100, 100);
-    pdf.text('LOGO', x + w/2, y + h/2, { align: 'center' });
+    pdf.text('LOGO', x + w / 2, y + h / 2, { align: 'center' });
   }
 
   private static addPhotoPlaceholder(pdf: any, x: number, y: number, w: number, h: number) {
@@ -901,13 +901,13 @@ export class ReportCardService {
     pdf.rect(x, y, w, h);
     pdf.setFontSize(5);
     pdf.setTextColor(100, 100, 100);
-    pdf.text('STUDENT', x + w/2, y + h/2 - 1, { align: 'center' });
-    pdf.text('PHOTO', x + w/2, y + h/2 + 2, { align: 'center' });
+    pdf.text('STUDENT', x + w / 2, y + h / 2 - 1, { align: 'center' });
+    pdf.text('PHOTO', x + w / 2, y + h / 2 + 2, { align: 'center' });
   }
 
   static async generateBulkReports(studentIds: string[], term: string, academicYear: string): Promise<Blob[]> {
     const reports: Blob[] = [];
-    
+
     for (const studentId of studentIds) {
       // Find result for this student
       const { data: result } = await supabase
@@ -916,7 +916,7 @@ export class ReportCardService {
         .eq('student_id', studentId)
         .eq('term', term)
         .eq('academic_year', academicYear)
-        .single();
+        .maybeSingle();
 
       if (result) {
         const reportData = await this.fetchReportCardData(result.id);

@@ -45,20 +45,20 @@ export const useResults = () => {
         .select(`
           *,
           student:students(*),
-          class:classes(*),
+          class:classes(*, department:departments(*)),
           teacher:teachers(*),
           ca_type:ca_types(*)
         `)
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('Error fetching results:', error);
         throw error;
       }
-      
+
       console.log('Raw results from database:', data);
       console.log('Number of results fetched:', data?.length || 0);
-      
+
       // Log details about each result for debugging
       data?.forEach((result, index) => {
         console.log(`Result ${index + 1}:`, {
@@ -69,7 +69,7 @@ export const useResults = () => {
           academic_year: result.academic_year
         });
       });
-      
+
       return data as Result[];
     },
   });
@@ -77,10 +77,10 @@ export const useResults = () => {
 
 export const useCheckExistingResult = () => {
   return useMutation({
-    mutationFn: async ({ student_id, term, academic_year, exclude_result_id }: { 
-      student_id: string; 
-      term: string; 
-      academic_year: string; 
+    mutationFn: async ({ student_id, term, academic_year, exclude_result_id }: {
+      student_id: string;
+      term: string;
+      academic_year: string;
       exclude_result_id?: string;
     }) => {
       let query = supabase
@@ -89,14 +89,14 @@ export const useCheckExistingResult = () => {
         .eq('student_id', student_id)
         .eq('term', term)
         .eq('academic_year', academic_year);
-      
+
       // Exclude the current result being edited
       if (exclude_result_id) {
         query = query.neq('id', exclude_result_id);
       }
-      
+
       const { data, error } = await query.maybeSingle();
-      
+
       if (error) throw error;
       return data;
     },
@@ -128,11 +128,11 @@ export const useCreateResult = () => {
     onError: (error: any) => {
       console.error('Create result error:', error);
       let errorMessage = "Failed to create result";
-      
+
       if (error.message?.includes('duplicate key value violates unique constraint')) {
         errorMessage = "A result already exists for this student, term, and academic year. Please check existing results or choose a different combination.";
       }
-      
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -184,29 +184,29 @@ export const useDeleteResult = () => {
   return useMutation({
     mutationFn: async (resultId: string) => {
       console.log("Deleting result with ID:", resultId);
-      
+
       // First delete related subject marks
       const { error: subjectMarksError } = await supabase
         .from('subject_marks')
         .delete()
         .eq('result_id', resultId);
-      
+
       if (subjectMarksError) {
         console.error("Error deleting subject marks:", subjectMarksError);
         throw subjectMarksError;
       }
-      
+
       // Then delete the result
       const { error: resultError } = await supabase
         .from('results')
         .delete()
         .eq('id', resultId);
-      
+
       if (resultError) {
         console.error("Error deleting result:", resultError);
         throw resultError;
       }
-      
+
       return resultId;
     },
     onSuccess: () => {
