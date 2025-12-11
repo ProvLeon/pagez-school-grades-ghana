@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { seed } from '../seed.js'; // Import the seed function
+import { seed } from './seed.js'; // Import the seed function
 import pg from 'pg'; // Import pg client
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
