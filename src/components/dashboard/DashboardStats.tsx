@@ -9,6 +9,7 @@ interface StatItem {
   value: string;
   icon: LucideIcon;
   trend?: { value: string; isPositive: boolean };
+  description?: string;
 }
 
 interface DashboardStatsProps {
@@ -36,6 +37,9 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
                 </span>
                 <span>vs last month</span>
               </p>
+            )}
+            {stat.description && !stat.trend && (
+              <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
             )}
           </CardContent>
         </Card>

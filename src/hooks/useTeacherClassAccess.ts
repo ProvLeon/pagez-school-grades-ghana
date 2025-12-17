@@ -44,12 +44,12 @@ export const useTeacherByUserId = (userId?: string) => {
 export const useTeacherClassAccess = () => {
   const { user, isTeacher } = useAuth();
   const { data: teacher } = useTeacherByUserId(user?.id);
-  
+
   return useQuery({
     queryKey: ['teacher_class_access', teacher?.id],
     queryFn: async () => {
       if (!teacher?.id) return [];
-      
+
       const { data, error } = await supabase
         .from('teacher_assignments')
         .select(`
@@ -62,12 +62,12 @@ export const useTeacherClassAccess = () => {
           subject:subjects(id, name, code)
         `)
         .eq('teacher_id', teacher.id);
-      
+
       if (error) {
         console.error('Error fetching teacher class access:', error);
         throw error;
       }
-      
+
       return data;
     },
     enabled: !!teacher?.id && isTeacher,
@@ -75,24 +75,48 @@ export const useTeacherClassAccess = () => {
 };
 
 export const useCanAccessClass = () => {
-  const { data: assignments = [] } = useTeacherClassAccess();
-  
+  const { user, isTeacher } = useAuth();
+  const { data: teacher, isLoading: teacherLoading, isFetched: teacherFetched } = useTeacherByUserId(user?.id);
+  const { data: assignments = [], isLoading: assignmentsLoading, isFetched: assignmentsFetched } = useTeacherClassAccess();
+
+  // Combined loading state - we're loading if either teacher record or assignments are loading
+  const isLoading = (isTeacher && teacherLoading) || (!!teacher?.id && assignmentsLoading);
+
+  // Check if data has been fetched (not loading and query was enabled)
+  // For teachers: we're loaded when teacher query is done (teacher is null or has data)
+  // For non-teachers: we're always "loaded" since we don't need teacher data
+  const hasLoaded = isTeacher
+    ? (teacherFetched && (teacher?.id ? assignmentsFetched : true))
+    : true;
+
   const canAccessClass = (classId: string) => {
     return assignments.some(assignment => assignment.class_id === classId);
   };
-  
-  const getAccessibleClassIds = () => {
-    return assignments.map(assignment => assignment.class_id);
+
+  // Return unique class IDs (a teacher may be assigned to same class for multiple subjects)
+  const getAccessibleClassIds = (): string[] => {
+    const classIds = assignments.map(assignment => assignment.class_id);
+    return [...new Set(classIds)];
   };
-  
+
+  // Return unique classes (deduplicated by class id)
   const getAssignedClasses = () => {
-    return assignments.map(assignment => assignment.class).filter(Boolean);
+    const classesMap = new Map<string, typeof assignments[0]['class']>();
+    assignments.forEach(assignment => {
+      if (assignment.class && !classesMap.has(assignment.class_id)) {
+        classesMap.set(assignment.class_id, assignment.class);
+      }
+    });
+    return Array.from(classesMap.values());
   };
-  
+
   return {
     canAccessClass,
     getAccessibleClassIds,
     getAssignedClasses,
-    assignments
+    assignments,
+    isLoading,
+    hasLoaded,
+    teacherId: teacher?.id,
   };
 };

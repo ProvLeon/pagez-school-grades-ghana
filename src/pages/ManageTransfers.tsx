@@ -7,11 +7,12 @@ import TransferFilters from "@/components/transfers/TransferFilters";
 import TransferCard from "@/components/transfers/TransferCard";
 import AddTransferDialog from "@/components/transfers/AddTransferDialog";
 import { TransferConfirmationDialog } from "@/components/transfers/TransferConfirmationDialog";
+import { BulkPromotionDialog } from "@/components/transfers/BulkPromotionDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, CheckCircle, ArrowRightLeft, FileCheck, Ban, Plus } from "lucide-react";
+import { Clock, CheckCircle, ArrowRightLeft, FileCheck, Ban, Plus, ArrowUpCircle } from "lucide-react";
 
 const ManageTransfers = () => {
   const navigate = useNavigate();
@@ -74,7 +75,22 @@ const ManageTransfers = () => {
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <TransferFilters searchTerm={searchTerm} setSearchTerm={setSearchTerm} filters={filters} setFilters={setFilters} classes={classes} onClearFilters={() => { setSearchTerm(""); setFilters({ status: "all", academic_year: "all", from_class: "all", to_class: "all" }); }} />
-          <AddTransferDialog trigger={<Button variant="default" className="w-full md:w-auto"><Plus className="w-4 h-4 mr-2" />New Transfer</Button>} />
+          <div className="flex gap-2 w-full md:w-auto">
+            <BulkPromotionDialog
+              trigger={
+                <Button variant="outline" className="flex-1 md:flex-none">
+                  <ArrowUpCircle className="w-4 h-4 mr-2" />
+                  Bulk Promotion
+                </Button>
+              }
+            />
+            <AddTransferDialog>
+              <Button variant="default" className="flex-1 md:flex-none">
+                <Plus className="w-4 h-4 mr-2" />
+                New Transfer
+              </Button>
+            </AddTransferDialog>
+          </div>
         </div>
 
         <Card>

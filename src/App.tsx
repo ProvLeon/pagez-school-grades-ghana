@@ -11,7 +11,7 @@ import { WalkthroughProvider } from "@/contexts/WalkthroughContext";
 import { WalkthroughOverlay, FloatingHelpButton } from "@/components/walkthrough";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import TeacherProtectedRoute from "@/components/TeacherProtectedRoute";
+// TeacherProtectedRoute no longer needed - using unified role-based routes
 
 // Pages
 import Login from "./pages/Login";
@@ -27,6 +27,7 @@ import Settings from "./pages/Settings";
 import ManageProfile from "./pages/ManageProfile";
 import NotFound from "./pages/NotFound";
 import PublicReports from "./pages/PublicReports";
+import PublicMockResults from "./pages/PublicMockResults";
 import MockExams from "./pages/MockExams";
 
 // Subject pages
@@ -46,9 +47,9 @@ import EditResult from "./pages/results/EditResult";
 import GradingSettings from "./pages/results/GradingSettings";
 import ResultsAnalytics from "./pages/results/ResultsAnalytics";
 
-// Teacher pages
-import TeacherDashboard from "./pages/teacher/TeacherDashboard";
-import TeacherManageResults from "./pages/teacher/TeacherManageResults";
+// Teacher pages - no longer needed, using unified Dashboard and Results pages
+// import TeacherDashboard from "./pages/teacher/TeacherDashboard";
+// import TeacherManageResults from "./pages/teacher/TeacherManageResults";
 
 // Mock pages
 import AddMockScores from "./pages/mock/AddMockScores";
@@ -177,6 +178,7 @@ const App = () => {
                     {/* Public Routes */}
                     <Route path="/login" element={disableAuth ? <ForceRedirect to="/" /> : <Login />} />
                     <Route path="/student-reports" element={<PublicReports />} />
+                    <Route path="/mock-results/:sessionId" element={<PublicMockResults />} />
 
                     {/* Protected Routes */}
                     <Route
@@ -378,34 +380,16 @@ const App = () => {
                       }
                     />
 
-                    {/* Teacher Dashboard */}
-                    <Route
-                      path="/teacher-dashboard"
-                      element={
-                        <ProtectedRoute>
-                          <TeacherProtectedRoute>
-                            <AppLayout>
-                              <TeacherDashboard />
-                            </AppLayout>
-                          </TeacherProtectedRoute>
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/teacher/manage-results"
-                      element={
-                        <ProtectedRoute>
-                          <TeacherProtectedRoute>
-                            <AppLayout>
-                              <TeacherManageResults />
-                            </AppLayout>
-                          </TeacherProtectedRoute>
-                        </ProtectedRoute>
-                      }
-                    />
+                    {/* Legacy routes - redirect to unified routes */}
+                    <Route path="/teacher/dashboard" element={<Navigate to="/" replace />} />
+                    <Route path="/teacher-dashboard" element={<Navigate to="/" replace />} />
+                    <Route path="/teacher/results/add" element={<Navigate to="/results/add-results" replace />} />
+                    <Route path="/teacher/results/manage" element={<Navigate to="/results/manage-results" replace />} />
+                    <Route path="/teacher/manage-results" element={<Navigate to="/results/manage-results" replace />} />
 
                     {/* Redirects */}
                     <Route path="/dashboard" element={<Navigate to="/" replace />} />
+                    <Route path="/manage-profile" element={<Navigate to="/profile" replace />} />
 
                     {/* 404 - Keep this last */}
                     <Route path="*" element={disableAuth ? <ForceRedirect to="/" /> : <NotFound />} />

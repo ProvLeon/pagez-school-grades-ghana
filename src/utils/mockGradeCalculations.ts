@@ -17,20 +17,42 @@ export const calculateMockGrade = (score: number): number => {
 };
 
 /**
- * Calculate raw score for mock exams (Mathematics, English, Social Studies, Science only)
+ * Calculate total raw score for mock exams (sum of all subject scores)
+ * Returns the sum of all entered subject scores
  */
-export const calculateMockRawScore = (scores: Record<string, number | undefined>): number => {
-  const coreSubjects = ['mathematics', 'english', 'social', 'science'];
+export const calculateMockTotalScore = (scores: Record<string, number | undefined>): number => {
   let total = 0;
-  
-  for (const subject of coreSubjects) {
-    const score = scores[subject];
-    if (typeof score === 'number' && !isNaN(score)) {
+  let count = 0;
+
+  for (const key of Object.keys(scores)) {
+    const score = scores[key];
+    if (typeof score === 'number' && !isNaN(score) && score > 0) {
       total += Math.max(0, Math.min(100, score));
+      count++;
     }
   }
-  
+
   return total;
+};
+
+/**
+ * Calculate average percentage score for mock exams
+ * Returns the average of all entered subject scores (0-100)
+ */
+export const calculateMockRawScore = (scores: Record<string, number | undefined>): number => {
+  let total = 0;
+  let count = 0;
+
+  for (const key of Object.keys(scores)) {
+    const score = scores[key];
+    if (typeof score === 'number' && !isNaN(score) && score > 0) {
+      total += Math.max(0, Math.min(100, score));
+      count++;
+    }
+  }
+
+  if (count === 0) return 0;
+  return Math.round(total / count);
 };
 
 /**
@@ -41,9 +63,9 @@ export const calculateMockRawScore = (scores: Record<string, number | undefined>
 export const calculateMockAggregate = (scores: Record<string, number | undefined>): number => {
   const coreSubjects = ['mathematics', 'english', 'social', 'science'];
   const optionalSubjects = ['career_technology', 'rme', 'ict', 'creative_arts', 'gh_language', 'french'];
-  
+
   let aggregate = 0;
-  
+
   // Add grades for core subjects
   for (const subject of coreSubjects) {
     const score = scores[subject];
@@ -55,7 +77,7 @@ export const calculateMockAggregate = (scores: Record<string, number | undefined
       aggregate += 9;
     }
   }
-  
+
   // Get best two optional subjects
   const optionalGrades: number[] = [];
   for (const subject of optionalSubjects) {
@@ -65,10 +87,10 @@ export const calculateMockAggregate = (scores: Record<string, number | undefined
       optionalGrades.push(calculateMockGrade(clampedScore));
     }
   }
-  
+
   // Sort optional grades (best grades are lowest numbers)
   optionalGrades.sort((a, b) => a - b);
-  
+
   // Add best two optional grades (or assign worst grades if not enough)
   if (optionalGrades.length >= 2) {
     aggregate += optionalGrades[0] + optionalGrades[1];
@@ -77,7 +99,7 @@ export const calculateMockAggregate = (scores: Record<string, number | undefined
   } else {
     aggregate += 18; // Two worst grades (9 + 9)
   }
-  
+
   return aggregate;
 };
 

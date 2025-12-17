@@ -56,7 +56,7 @@ export const useTeacherAssignments = (teacherId?: string, classId?: string) => {
       if (teacherId) {
         query = query.eq('teacher_id', teacherId);
       }
-      
+
       if (classId) {
         query = query.eq('class_id', classId);
       }
@@ -103,6 +103,48 @@ export const useCreateTeacherAssignment = () => {
       toast({
         title: "Error",
         description: "Failed to create teacher assignment",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+// Bulk create multiple assignments at once (for multiple classes/subjects)
+export const useBulkCreateTeacherAssignments = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (assignments: CreateTeacherAssignmentData[]) => {
+      if (assignments.length === 0) {
+        throw new Error('No assignments to create');
+      }
+
+      const assignmentsWithDefaults = assignments.map(a => ({
+        ...a,
+        academic_year: a.academic_year || '2024/2025',
+      }));
+
+      const { data, error } = await supabase
+        .from('teacher_assignments')
+        .insert(assignmentsWithDefaults)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['teacher_assignments'] });
+      toast({
+        title: "Assignments Created",
+        description: `${data.length} teacher assignment(s) created successfully`,
+      });
+    },
+    onError: (error: Error) => {
+      console.error('Bulk assignment creation error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create teacher assignments",
         variant: "destructive",
       });
     },

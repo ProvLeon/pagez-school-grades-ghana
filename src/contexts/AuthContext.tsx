@@ -18,6 +18,7 @@ interface AuthContextType {
   userProfile: Profile | null | undefined;
   teacherRecord: TeacherRecord | null | undefined;
   loading: boolean;
+  profileLoading: boolean;
   signOut: () => Promise<void>;
   isTeacher: boolean;
   isAdmin: boolean;
@@ -34,33 +35,62 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: userProfile, isLoading: profileLoading } = useUserProfile(user?.id);
   const { data: teacherRecord, isLoading: teacherLoading } = useTeacherByUserId(user?.id);
 
-  const isTeacher = userProfile?.user_type === 'teacher';
+  // User is a teacher if their profile says so OR if they have a linked teacher record
+  const isTeacher = userProfile?.user_type === 'teacher' || !!teacherRecord;
   const isAdmin = ['admin', 'super_admin'].includes((userProfile?.user_type as string) ?? '');
   const isAuthenticated = !!user;
 
   const signOut = useCallback(async () => {
     try {
-      const { error } = await authService.signOut();
-      if (error) {
-        toast({
-          title: "Sign Out Error",
-          description: "There was an issue signing out. Please try again.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Signed Out",
-          description: "You have been successfully signed out.",
-          variant: "default",
-        });
-        window.location.assign(window.location.origin + '/login');
+      // Clear local user state immediately
+      setUser(null);
+
+      // Clear all Supabase-related items from localStorage
+      // This ensures no stale session data remains
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+          keysToRemove.push(key);
+        }
       }
-    } catch (error) {
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+
+      // Also clear sessionStorage
+      const sessionKeysToRemove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+          sessionKeysToRemove.push(key);
+        }
+      }
+      sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+
+      // Attempt to sign out from Supabase (this may fail if session already invalid)
+      try {
+        await authService.signOut();
+      } catch (e) {
+        // Ignore errors - we've already cleared local storage
+        console.warn('Supabase signOut error (ignored):', e);
+      }
+
       toast({
-        title: "Error",
-        description: "An unexpected error occurred during sign out.",
-        variant: "destructive",
+        title: "Signed Out",
+        description: "You have been successfully signed out.",
+        variant: "default",
       });
+    } catch (error) {
+      // Log error but still proceed with sign out
+      console.warn('Sign out error:', error);
+      toast({
+        title: "Signed Out",
+        description: "You have been signed out.",
+        variant: "default",
+      });
+    } finally {
+      // Always redirect to login, regardless of errors
+      // Use replace to prevent back button from returning to authenticated page
+      window.location.replace(window.location.origin + '/login');
     }
   }, [toast]);
 
@@ -120,15 +150,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [clearInvalidSession]);
 
-  // Only use initialAuthLoading for the main loading state
-  // Profile loading shouldn't block authentication checks
-  const contextLoading = initialAuthLoading;
+  // Include both initial auth loading AND profile/teacher loading
+  // This ensures we don't show "Access Denied" while profile or teacher record is still loading
+  const contextLoading = initialAuthLoading || (!!user && (profileLoading || teacherLoading));
 
   const contextValue: AuthContextType = {
     user,
     userProfile,
     teacherRecord,
     loading: contextLoading,
+    profileLoading,
     signOut,
     isTeacher,
     isAdmin,
@@ -165,10 +196,11 @@ export const usePermissions = () => {
 
     if (isTeacher) {
       const teacherRoutes = [
-        '/teacher-dashboard',
-        '/teacher-results',
-        '/students',
-        '/classes',
+        '/teacher',
+        '/teacher/dashboard',
+        '/teacher/results',
+        '/teacher/results/add',
+        '/teacher/results/manage',
         '/profile'
       ];
       return teacherRoutes.some(allowedRoute => route.startsWith(allowedRoute));

@@ -7,7 +7,6 @@ export interface Student {
   student_id: string;
   full_name: string;
   email?: string;
-  phone?: string;
   gender?: 'male' | 'female';
   date_of_birth?: string;
   class_id?: string;
@@ -33,6 +32,7 @@ export interface Student {
 
 export const useStudents = (filters?: {
   class_id?: string;
+  class_ids?: string[]; // For filtering by multiple classes (e.g., teacher's assigned classes)
   department_id?: string;
   has_left?: boolean;
   search?: string;
@@ -50,14 +50,18 @@ export const useStudents = (filters?: {
         `)
         .order('created_at', { ascending: false });
 
+      // Single class filter takes precedence
       if (filters?.class_id) {
         query = query.eq('class_id', filters.class_id);
+      } else if (filters?.class_ids && filters.class_ids.length > 0) {
+        // Filter by multiple class IDs (for teacher access)
+        query = query.in('class_id', filters.class_ids);
       }
-      
+
       if (filters?.department_id) {
         query = query.eq('department_id', filters.department_id);
       }
-      
+
       if (filters?.has_left !== undefined) {
         query = query.eq('has_left', filters.has_left);
       }
@@ -65,7 +69,7 @@ export const useStudents = (filters?: {
       if (filters?.gender) {
         query = query.eq('gender', filters.gender);
       }
-      
+
       if (filters?.search) {
         query = query.or(
           `full_name.ilike.%${filters.search}%,student_id.ilike.%${filters.search}%,email.ilike.%${filters.search}%`
@@ -73,7 +77,7 @@ export const useStudents = (filters?: {
       }
 
       const { data, error } = await query;
-      
+
       if (error) {
         console.error('Error fetching students:', error);
         throw error;
@@ -90,7 +94,7 @@ export const useCreateStudent = () => {
   return useMutation({
     mutationFn: async (studentData: Omit<Student, 'id' | 'created_at' | 'updated_at' | 'class' | 'department'>) => {
       console.log('Creating student with data:', studentData);
-      
+
       const { data, error } = await supabase
         .from('students')
         .insert([studentData])

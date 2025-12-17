@@ -8,14 +8,15 @@ interface TeacherProtectedRouteProps {
  * TeacherProtectedRoute - Ensures only teachers and admins can access teacher-specific routes
  *
  * This component is used to protect teacher-only routes like:
- * - /teacher-dashboard
- * - /teacher/manage-results
+ * - /teacher/dashboard
+ * - /teacher/results/add
+ * - /teacher/results/manage
  *
  * Unlike ProtectedRoute which allows all authenticated users,
  * this component specifically checks for teacher or admin role.
  */
 const TeacherProtectedRoute = ({ children }: TeacherProtectedRouteProps) => {
-  const { isTeacher, isAdmin, loading } = useAuth();
+  const { isTeacher, isAdmin, loading, profileLoading, isAuthenticated } = useAuth();
   const disableAuth = import.meta.env.VITE_DISABLE_AUTH === "true";
 
   // If authentication is disabled, bypass all checks
@@ -23,8 +24,9 @@ const TeacherProtectedRoute = ({ children }: TeacherProtectedRouteProps) => {
     return <>{children}</>;
   }
 
-  // Show loading state while checking authentication
-  if (loading) {
+  // Show loading state while checking authentication or loading profile
+  // This prevents showing "Access Denied" while the profile is still being fetched
+  if (loading || (isAuthenticated && profileLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

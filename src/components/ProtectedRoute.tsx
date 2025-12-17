@@ -10,11 +10,32 @@ interface ProtectedRouteProps {
   requireAdmin?: boolean;
 }
 
+// Define which routes each role can access
+// If a route is not listed, it's accessible to all authenticated users
+const ADMIN_ONLY_ROUTES = [
+  '/classes',
+  '/subjects',
+  '/students/add-students', // Teachers can view students but not add them
+  '/mock-exams',
+  '/manage-sheets',
+  '/manage-transfers',
+  '/manage-teacher',
+  '/settings',
+  '/results/grading-settings',
+];
+
+// Check if a route requires admin access
+const requiresAdminAccess = (pathname: string): boolean => {
+  return ADMIN_ONLY_ROUTES.some(route =>
+    pathname === route || pathname.startsWith(route + '/')
+  );
+};
+
 const ProtectedRoute = ({
   children,
   requireAdmin = false,
 }: ProtectedRouteProps) => {
-  const { user, userProfile, loading, isAdmin, isAuthenticated } = useAuth();
+  const { userProfile, loading, profileLoading, isAdmin, isTeacher, isAuthenticated } = useAuth();
   const location = useLocation();
 
   const disableAuth = import.meta.env.VITE_DISABLE_AUTH === "true";
@@ -23,7 +44,8 @@ const ProtectedRoute = ({
     return <>{children}</>;
   }
 
-  if (loading) {
+  // Show loading while auth is initializing OR while profile is loading for authenticated users
+  if (loading || (isAuthenticated && profileLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <Card className="w-full max-w-md shadow-xl border-0 bg-white/95 backdrop-blur-sm">
@@ -56,11 +78,16 @@ const ProtectedRoute = ({
     );
   }
 
+  // Not authenticated - redirect to login
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (requireAdmin && !isAdmin) {
+  // Check if route requires admin and user is not admin
+  const routeRequiresAdmin = requireAdmin || requiresAdminAccess(location.pathname);
+
+  if (routeRequiresAdmin && !isAdmin) {
+    // For teachers trying to access admin routes, show access denied
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">
         <Card className="w-full max-w-lg shadow-xl border-0 bg-white/95 backdrop-blur-sm">

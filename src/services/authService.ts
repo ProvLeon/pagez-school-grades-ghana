@@ -32,7 +32,17 @@ class AuthService {
   }
 
   async signOut(): Promise<{ error: AuthError | null }> {
-    return supabase.auth.signOut();
+    try {
+      // Use 'local' scope to avoid 403 errors when session is already invalid
+      // 'local' only clears the session on this device, not all devices
+      const result = await supabase.auth.signOut({ scope: 'local' });
+      return result;
+    } catch (error) {
+      // If signOut fails (e.g., session already expired), we still want to
+      // clear local state and redirect to login
+      console.warn('Sign out error (session may already be invalid):', error);
+      return { error: null }; // Return success to allow redirect to login
+    }
   }
 
   async getSessionInfo(): Promise<SessionInfo> {

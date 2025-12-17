@@ -28,8 +28,9 @@ export class TemplateService {
       { header: 'Full Name*', key: 'full_name', width: 25, required: true, example: 'John Doe Mensah' },
       { header: 'Gender*', key: 'gender', width: 10, required: true, validation: { type: 'list', options: ['Male', 'Female'] }, example: 'Male' },
       { header: 'Date of Birth (DD/MM/YYYY)*', key: 'date_of_birth', width: 20, required: true, validation: { type: 'date', format: 'DD/MM/YYYY' }, example: '15/06/2010' },
+      { header: 'Department', key: 'department_id', width: 20, example: 'Primary' },
+      { header: 'Class', key: 'class_id', width: 15, example: 'Class 1' },
       { header: 'Email', key: 'email', width: 25, example: 'john.mensah@example.com' },
-      { header: 'Phone', key: 'phone', width: 15, example: '+233241234567' },
       { header: 'Guardian Name*', key: 'guardian_name', width: 25, required: true, example: 'Mary Mensah' },
       { header: 'Guardian Phone*', key: 'guardian_phone', width: 18, required: true, example: '+233241234568' },
       { header: 'Guardian Email', key: 'guardian_email', width: 25, example: 'mary.mensah@example.com' },
@@ -38,7 +39,7 @@ export class TemplateService {
     ];
 
     const workbook = XLSX.utils.book_new();
-    
+
     // Create instructions sheet
     const instructions = [
       ['STUDENT REGISTRATION TEMPLATE - INSTRUCTIONS'],
@@ -56,22 +57,28 @@ export class TemplateService {
       ['   - Academic Year: Current academic year'],
       [''],
       ['2. OPTIONAL FIELDS:'],
+      ['   - Department: Name of the department (e.g., Primary, JHS, SHS, KG)'],
+      ['   - Class: Name of the class (e.g., Class 1, JHS 1, SHS 1)'],
       ['   - Email: Student email (if available)'],
-      ['   - Phone: Student phone (if available)'],
       ['   - Guardian Email: Guardian email address'],
       [''],
-      ['3. GHANA-SPECIFIC GUIDELINES:'],
+      ['3. DEPARTMENT & CLASS ASSIGNMENT:'],
+      ['   - If Department/Class are left blank, you can assign them during import'],
+      ['   - Enter the exact department/class names as they appear in your school setup'],
+      ['   - The system will automatically match names to database records'],
+      [''],
+      ['4. GHANA-SPECIFIC GUIDELINES:'],
       ['   - Phone numbers should start with +233'],
       ['   - Address should include the region (e.g., Greater Accra, Ashanti)'],
       ['   - Names should reflect Ghanaian naming conventions'],
       [''],
-      ['4. DATA VALIDATION:'],
+      ['5. DATA VALIDATION:'],
       ['   - Duplicate Student IDs will be rejected'],
       ['   - Invalid date formats will cause errors'],
       ['   - Missing required fields will prevent upload'],
       [''],
-      className ? [`5. TARGET CLASS: ${className}`] : [],
-      departmentName ? [`6. TARGET DEPARTMENT: ${departmentName}`] : [],
+      className ? [`6. TARGET CLASS: ${className}`] : [],
+      departmentName ? [`7. TARGET DEPARTMENT: ${departmentName}`] : [],
       [''],
       ['After filling this template, save as Excel (.xlsx) and upload through the Bulk Operations section.']
     ].flat().map(instruction => [instruction]); // Convert to 2D array
@@ -82,18 +89,18 @@ export class TemplateService {
     // Create data sheet with headers and sample rows
     const headers = columns.map(col => col.header);
     const sampleRow = columns.map(col => col.example || '');
-    
+
     // Generate empty rows for data entry
     const dataRows = [headers];
     dataRows.push(sampleRow); // Sample row
-    
+
     // Add empty rows based on expected count
     for (let i = 0; i < expectedCount - 1; i++) {
       dataRows.push(new Array(columns.length).fill(''));
     }
 
     const dataSheet = XLSX.utils.aoa_to_sheet(dataRows);
-    
+
     // Set column widths
     const colWidths = columns.map(col => ({ width: col.width || 20 }));
     dataSheet['!cols'] = colWidths;
@@ -103,7 +110,7 @@ export class TemplateService {
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().slice(0, 10);
     const filename = `Student_Registration_Template_${className || 'All_Classes'}_${timestamp}.xlsx`;
-    
+
     XLSX.writeFile(workbook, filename);
   }
 
@@ -141,7 +148,7 @@ export class TemplateService {
     const allColumns = [...baseColumns, ...subjectColumns, ...attendanceColumns];
 
     const workbook = XLSX.utils.book_new();
-    
+
     // Create instructions sheet
     const instructions = [
       ['RESULTS ENTRY TEMPLATE - INSTRUCTIONS'],
@@ -186,7 +193,7 @@ export class TemplateService {
     // Create data sheet with headers and student data
     const headers = allColumns.map(col => col.header);
     const dataRows = [headers];
-    
+
     // Add student rows if provided
     if (students.length > 0) {
       students.forEach(student => {
@@ -211,7 +218,7 @@ export class TemplateService {
         '', '', ''
       ];
       dataRows.push(sampleRow);
-      
+
       // Add 20 empty rows for manual entry
       for (let i = 0; i < 20; i++) {
         dataRows.push(new Array(allColumns.length).fill(''));
@@ -219,7 +226,7 @@ export class TemplateService {
     }
 
     const dataSheet = XLSX.utils.aoa_to_sheet(dataRows);
-    
+
     // Set column widths
     const colWidths = allColumns.map(col => ({ width: col.width || 15 }));
     dataSheet['!cols'] = colWidths;
@@ -229,7 +236,7 @@ export class TemplateService {
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().slice(0, 10);
     const filename = `Results_Entry_Template_${className || 'All_Classes'}_${timestamp}.xlsx`;
-    
+
     XLSX.writeFile(workbook, filename);
   }
 
@@ -246,11 +253,11 @@ export class TemplateService {
     ];
 
     const workbook = XLSX.utils.book_new();
-    
+
     // Create data sheet
     const headers = columns.map(col => col.header);
     const dataRows = [headers];
-    
+
     // Add student rows if provided
     if (students.length > 0) {
       students.forEach(student => {
@@ -273,7 +280,7 @@ export class TemplateService {
 
     const timestamp = new Date().toISOString().slice(0, 10);
     const filename = `Attendance_Template_${className || 'All_Classes'}_${timestamp}.xlsx`;
-    
+
     XLSX.writeFile(workbook, filename);
   }
 }

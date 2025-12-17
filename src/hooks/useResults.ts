@@ -34,6 +34,18 @@ export interface Result {
   class?: any;
   teacher?: any;
   ca_type?: any;
+  subject_marks?: Array<{
+    id: string;
+    subject_id: string;
+    ca1_score?: number | null;
+    ca2_score?: number | null;
+    ca3_score?: number | null;
+    ca4_score?: number | null;
+    exam_score?: number | null;
+    total_score?: number | null;
+    grade?: string | null;
+    subject?: { id: string; name: string };
+  }>;
 }
 
 export const useResults = () => {
@@ -47,7 +59,8 @@ export const useResults = () => {
           student:students(*),
           class:classes(*, department:departments(*)),
           teacher:teachers(*),
-          ca_type:ca_types(*)
+          ca_type:ca_types(*),
+          subject_marks(*, subject:subjects(id, name))
         `)
         .order('created_at', { ascending: false });
 
@@ -66,7 +79,8 @@ export const useResults = () => {
           student_name: result.student?.full_name,
           class_name: result.class?.name,
           term: result.term,
-          academic_year: result.academic_year
+          academic_year: result.academic_year,
+          subject_marks_count: result.subject_marks?.length || 0
         });
       });
 

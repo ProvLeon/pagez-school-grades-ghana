@@ -12,19 +12,23 @@ const TeacherDashboard = () => {
   const { teacherRecord } = useAuth();
   const { getAssignedClasses, assignments } = useCanAccessClass();
   const { data: teacherResults = [] } = useTeacherResults();
-  
+
   const assignedClasses = getAssignedClasses();
-  const totalStudents = 0; // Will be calculated from actual student data
-  const approvedResults = teacherResults.filter(r => r.admin_approved).length;
-  const pendingResults = teacherResults.filter(r => !r.admin_approved).length;
+  const totalResults = teacherResults.length;
+  // Count unique students from results
+  const uniqueStudents = new Set(teacherResults.map(r => r.student_id)).size;
+  // Get current academic year results
+  const currentYear = new Date().getFullYear();
+  const academicYear = `${currentYear}/${currentYear + 1}`;
+  const currentYearResults = teacherResults.filter(r => r.academic_year === academicYear).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-blue-50 to-blue-200">
-      <Header 
-        title="Teacher Dashboard" 
+      <Header
+        title="Teacher Dashboard"
         subtitle="Manage your assigned classes and student results"
       />
-      
+
       <div className="p-3 sm:p-4 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
           {/* My Profile Section */}
@@ -47,11 +51,11 @@ const TeacherDashboard = () => {
                     Email: {teacherRecord?.email || 'Not provided'}
                   </p>
                   <p className="text-blue-100 text-xs sm:text-sm truncate">
-                    Phone: {teacherRecord?.phone || 'Not provided'}
+                    Assignments: {assignments.length || 0}
                   </p>
                 </div>
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
                   size="sm"
                   onClick={() => navigate('/teacher/profile')}
                   className="bg-blue-500 hover:bg-blue-400 text-white border-0 flex-shrink-0 min-h-[44px] px-4 sm:px-3"
@@ -79,22 +83,22 @@ const TeacherDashboard = () => {
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card className="border-blue-200 bg-blue-50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
                 <CardTitle className="text-xs sm:text-sm font-medium text-blue-800 leading-tight">
-                  Total Students
+                  Students Graded
                 </CardTitle>
                 <Users className="h-4 w-4 text-blue-600 flex-shrink-0" />
               </CardHeader>
               <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-                <div className="text-xl sm:text-2xl font-bold text-blue-900">{totalStudents}</div>
+                <div className="text-xl sm:text-2xl font-bold text-blue-900">{uniqueStudents}</div>
                 <p className="text-xs text-blue-600">
-                  Students in your classes
+                  Unique students
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card className="border-blue-200 bg-blue-50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
                 <CardTitle className="text-xs sm:text-sm font-medium text-blue-800 leading-tight">
@@ -109,18 +113,18 @@ const TeacherDashboard = () => {
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card className="border-blue-200 bg-blue-50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
                 <CardTitle className="text-xs sm:text-sm font-medium text-blue-800 leading-tight">
-                  Approved Results
+                  This Year
                 </CardTitle>
                 <TrendingUp className="h-4 w-4 text-blue-600 flex-shrink-0" />
               </CardHeader>
               <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-                <div className="text-xl sm:text-2xl font-bold text-blue-900">{approvedResults}</div>
+                <div className="text-xl sm:text-2xl font-bold text-blue-900">{currentYearResults}</div>
                 <p className="text-xs text-blue-600">
-                  {pendingResults} pending approval
+                  {academicYear}
                 </p>
               </CardContent>
             </Card>
@@ -136,14 +140,14 @@ const TeacherDashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-6">
-                <Button 
+                <Button
                   onClick={() => navigate('/teacher/results/add')}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white min-h-[48px] text-sm sm:text-base font-medium"
                   size="lg"
                 >
                   Add Student Results
                 </Button>
-                <Button 
+                <Button
                   onClick={() => navigate('/teacher/results/manage')}
                   variant="outline"
                   className="w-full border-blue-300 text-blue-700 hover:bg-blue-100 min-h-[48px] text-sm sm:text-base font-medium"

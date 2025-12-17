@@ -65,7 +65,6 @@ export const EditStudentDialog = ({
     student_id: "",
     full_name: "",
     email: "",
-    phone: "",
     gender: "",
     date_of_birth: "",
     class_id: "",
@@ -92,7 +91,6 @@ export const EditStudentDialog = ({
         student_id: student.student_id || "",
         full_name: student.full_name || "",
         email: student.email || "",
-        phone: student.phone || "",
         gender: student.gender || "",
         date_of_birth: student.date_of_birth || "",
         class_id: student.class_id || "",
@@ -394,20 +392,7 @@ export const EditStudentDialog = ({
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                        Phone
-                      </Label>
-                      <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, phone: e.target.value }))
-                        }
-                        placeholder="e.g., +233 XX XXX XXXX"
-                      />
-                    </div>
+
 
                     <div className="space-y-2">
                       <Label htmlFor="gender" className="flex items-center gap-1.5">

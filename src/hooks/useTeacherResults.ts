@@ -21,13 +21,14 @@ export const useTeacherResults = () => {
         .select(`
           *,
           student:students(*),
-          class:classes(*),
+          class:classes(*, department:departments(*)),
           teacher:teachers(*),
-          ca_type:ca_types(*)
+          ca_type:ca_types(*),
+          subject_marks(*, subject:subjects(id, name))
         `)
         .in('class_id', accessibleClassIds)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data as Result[];
     },

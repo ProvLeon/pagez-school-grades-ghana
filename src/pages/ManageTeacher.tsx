@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
-import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher, ExtendedTeacher } from "@/hooks/useTeachers";
+import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher, ExtendedTeacher, CreateTeacherData } from "@/hooks/useTeachers";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useToast } from "@/hooks/use-toast";
 import { useTeacherAssignments } from "@/hooks/useTeacherAssignments";
@@ -34,12 +34,14 @@ const ManageTeacher = () => {
   const updateTeacherMutation = useUpdateTeacher();
   const deleteTeacherMutation = useDeleteTeacher();
 
-  const handleAddTeacher = async (teacherData: any) => {
+  const handleAddTeacher = async (teacherData: CreateTeacherData) => {
     try {
-      await createTeacherMutation.mutateAsync(teacherData);
+      const result = await createTeacherMutation.mutateAsync(teacherData);
       toast({ title: "Teacher Added", description: "New teacher account created." });
+      return result; // Return the created teacher for post-creation prompt
     } catch (error) {
       toast({ title: "Failed to Add Teacher", variant: "destructive" });
+      throw error; // Re-throw so the dialog knows it failed
     }
   };
 

@@ -24,7 +24,7 @@ const TeacherManageResults = () => {
   const queryClient = useQueryClient();
   const { generateSingleReport } = useReportCards();
   const { getAccessibleClassIds } = useCanAccessClass();
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize, setPageSize] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,7 +35,7 @@ const TeacherManageResults = () => {
     resultId: "",
     studentName: ""
   });
-  
+
   const [filters, setFilters] = useState({
     class: "all",
     department: "all",
@@ -60,16 +60,16 @@ const TeacherManageResults = () => {
         .from('subject_marks')
         .delete()
         .eq('result_id', resultId);
-      
+
       if (subjectMarksError) throw subjectMarksError;
-      
+
       const { error: resultError } = await supabase
         .from('results')
         .delete()
         .eq('id', resultId);
-      
+
       if (resultError) throw resultError;
-      
+
       return resultId;
     },
     onSuccess: () => {
@@ -92,18 +92,18 @@ const TeacherManageResults = () => {
   // Filter and search logic
   const filteredResults = useMemo(() => {
     return results.filter(result => {
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         result.student?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         result.student?.student_id?.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesClass = filters.class === "all" || result.class_id === filters.class;
       const matchesDepartment = filters.department === "all" || result.class?.department_id === filters.department;
       const matchesSession = filters.session === "all" || result.academic_year === filters.session;
       const matchesTerm = filters.term === "all" || result.term === filters.term;
       const matchesTeacher = filters.teacher === "all" || result.teacher_id === filters.teacher;
 
-      return matchesSearch && matchesClass && matchesDepartment && matchesSession && 
-             matchesTerm && matchesTeacher;
+      return matchesSearch && matchesClass && matchesDepartment && matchesSession &&
+        matchesTerm && matchesTeacher;
     });
   }, [results, searchTerm, filters]);
 
@@ -123,7 +123,7 @@ const TeacherManageResults = () => {
   const handleDelete = (resultId: string) => {
     const result = results.find(r => r.id === resultId);
     const studentName = result?.student?.full_name || "Unknown Student";
-    
+
     setDeleteDialog({
       isOpen: true,
       resultId,
@@ -146,8 +146,8 @@ const TeacherManageResults = () => {
   };
 
   // Calculate summary stats
-  const approvedResults = results.filter(r => r.admin_approved).length;
-  const pendingResults = results.filter(r => !r.admin_approved).length;
+  const uniqueStudents = new Set(results.map(r => r.student_id)).size;
+  const uniqueClasses = new Set(results.map(r => r.class_id)).size;
 
   if (isLoading) {
     return <ManageResultsLoadingState />;
@@ -155,17 +155,17 @@ const TeacherManageResults = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <Header 
-        title="My Results" 
+      <Header
+        title="My Results"
         subtitle="Manage results for your assigned classes"
       />
-      
+
       <div className="p-3 sm:p-4 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
           <ManageResultsHeader
             totalEntries={totalEntries}
-            approvedResults={approvedResults}
-            pendingResults={pendingResults}
+            uniqueStudents={uniqueStudents}
+            uniqueClasses={uniqueClasses}
           />
 
           <ManageResultsContent
@@ -184,9 +184,9 @@ const TeacherManageResults = () => {
             onDelete={handleDelete}
             onView={handleView}
             onDownload={handleDownload}
-            onClearFilters={() => {}}
-            onSelectAll={() => {}}
-            onSelectResult={() => {}}
+            onClearFilters={() => { }}
+            onSelectAll={() => { }}
+            onSelectResult={() => { }}
           />
         </div>
       </div>

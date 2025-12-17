@@ -227,17 +227,84 @@ export async function seed() {
 
     // --- 2. Teachers ---
     console.log('Seeding Teachers...');
+
+    // Create a test teacher with auth user and profile (for testing teacher login)
+    const testTeacherEmail = 'teacher@example.com';
+    const testTeacherPassword = 'teacher123';
+    let testTeacherUserId = null;
+
+    try {
+      // Check if test teacher auth user exists
+      const { data: existingUsers } = await supabase.auth.admin.listUsers();
+      const existingTeacherUser = existingUsers?.users?.find(user => user.email === testTeacherEmail);
+
+      if (!existingTeacherUser) {
+        console.log('Creating test teacher auth user...');
+        const { data: teacherAuthData, error: teacherAuthError } = await supabase.auth.admin.createUser({
+          email: testTeacherEmail,
+          password: testTeacherPassword,
+          user_metadata: { full_name: 'Test Teacher', role: 'teacher' },
+          email_confirm: true
+        });
+
+        if (teacherAuthError) {
+          console.error('Failed to create test teacher auth user:', teacherAuthError);
+        } else {
+          testTeacherUserId = teacherAuthData.user.id;
+          console.log('Test teacher auth user created successfully.');
+
+          // Create profile for the test teacher
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              user_id: testTeacherUserId,
+              user_type: 'teacher'
+            }, { onConflict: 'user_id' });
+
+          if (profileError) {
+            console.error('Failed to create test teacher profile:', profileError);
+          } else {
+            console.log('Test teacher profile created successfully.');
+          }
+        }
+      } else {
+        testTeacherUserId = existingTeacherUser.id;
+        console.log('Test teacher auth user already exists. Ensuring profile exists...');
+
+        // Ensure profile exists
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            user_id: testTeacherUserId,
+            user_type: 'teacher'
+          }, { onConflict: 'user_id' });
+
+        if (profileError) {
+          console.error('Failed to create/update test teacher profile:', profileError);
+        } else {
+          console.log('Test teacher profile ensured.');
+        }
+      }
+    } catch (error) {
+      console.error('Error creating test teacher user:', error);
+    }
+
+    // Seed teachers (including linking test teacher to auth user)
+    const teachersData = [
+      { full_name: 'Test Teacher', email: testTeacherEmail, phone: '0200000000', department_id: primaryDept?.id, user_id: testTeacherUserId },
+      { full_name: 'Kwame Mensah', email: 'kwame.mensah@example.com', phone: '0244123456', department_id: primaryDept?.id },
+      { full_name: 'Ama Osei', email: 'ama.osei@example.com', phone: '0208987654', department_id: jhsDept?.id },
+      { full_name: 'John Doe', email: 'john.doe@example.com', phone: '0501234567', department_id: primaryDept?.id },
+      { full_name: 'Grace Asante', email: 'grace.asante@example.com', phone: '0271234567', department_id: shsDept?.id }
+    ];
+
     const { data: teachers, error: teachError } = await supabase
       .from('teachers')
-      .upsert([
-        { full_name: 'Kwame Mensah', email: 'kwame.mensah@example.com', phone: '0244123456', department_id: primaryDept?.id },
-        { full_name: 'Ama Osei', email: 'ama.osei@example.com', phone: '0208987654', department_id: jhsDept?.id },
-        { full_name: 'John Doe', email: 'john.doe@example.com', phone: '0501234567', department_id: primaryDept?.id },
-        { full_name: 'Grace Asante', email: 'grace.asante@example.com', phone: '0271234567', department_id: shsDept?.id }
-      ], { onConflict: 'email' })
+      .upsert(teachersData, { onConflict: 'email' })
       .select();
 
     if (teachError) throw new Error(`Teachers Error: ${teachError.message}`);
+    console.log(`Seeded ${teachers?.length || 0} teachers. Test teacher login: ${testTeacherEmail} / ${testTeacherPassword}`);
 
     // --- 3. Classes ---
     console.log('Seeding Classes...');
@@ -574,6 +641,18 @@ export async function seed() {
     }
 
     console.log('Seeding completed successfully!');
+    console.log('');
+    console.log('===========================================');
+    console.log('LOGIN CREDENTIALS FOR TESTING:');
+    console.log('===========================================');
+    console.log('Admin User:');
+    console.log('  Email:    admin@example.com');
+    console.log('  Password: password123');
+    console.log('');
+    console.log('Teacher User:');
+    console.log('  Email:    teacher@example.com');
+    console.log('  Password: teacher123');
+    console.log('===========================================');
 
   } catch (err) {
     console.error('Seeding Failed:', err);

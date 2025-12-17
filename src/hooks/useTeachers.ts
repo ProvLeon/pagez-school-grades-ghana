@@ -88,6 +88,21 @@ export const useCreateTeacher = () => {
         }
       } else if (authData.user) {
         userId = authData.user.id;
+
+        // Create profile record with user_type = 'teacher'
+        // This is required for the isTeacher check in AuthContext
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: userId,
+            user_type: 'teacher'
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          // Don't fail the whole operation, but log the error
+          // The profile might already exist or there could be a trigger creating it
+        }
       }
 
       // Create teacher record - only include columns that exist in the table
