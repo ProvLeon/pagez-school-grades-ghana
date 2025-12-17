@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, FileText, Search, Download, AlertCircle, CheckCircle, GraduationCap, Calendar, Users, Sparkles } from 'lucide-react';
+import { Loader2, FileText, Search, Download, AlertCircle, AlertTriangle, CheckCircle, CheckCircle2, GraduationCap, Calendar, Users, Sparkles, Info } from 'lucide-react';
 import { usePublicReportSearch, usePublicReportGeneration, usePublicSearchData } from '@/hooks/usePublicReports';
 
 const PublicReports = () => {

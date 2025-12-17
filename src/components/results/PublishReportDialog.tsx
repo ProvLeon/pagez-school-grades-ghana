@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Globe, Shield } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Globe, Shield, Copy, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -27,8 +28,34 @@ interface PublishReportDialogProps {
 export const PublishReportDialog = ({ isOpen, onClose, result }: PublishReportDialogProps) => {
   const [isPublic, setIsPublic] = useState(result.is_public || false);
   const [isLoading, setIsLoading] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Reset state when result changes
+  useEffect(() => {
+    setIsPublic(result.is_public || false);
+    setLinkCopied(false);
+  }, [result.id, result.is_public]);
+
+  // Reset linkCopied after 3 seconds
+  useEffect(() => {
+    if (linkCopied) {
+      const timer = setTimeout(() => setLinkCopied(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [linkCopied]);
+
+  const publicUrl = `${window.location.origin}/student-reports`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(publicUrl);
+    setLinkCopied(true);
+    toast({
+      title: "Link copied!",
+      description: "Public reports page link has been copied to clipboard.",
+    });
+  };
 
   const handlePublishToggle = async () => {
     setIsLoading(true);
@@ -42,8 +69,8 @@ export const PublishReportDialog = ({ isOpen, onClose, result }: PublishReportDi
 
       toast({
         title: isPublic ? "Report Published" : "Report Unpublished",
-        description: isPublic 
-          ? "Report is now publicly accessible" 
+        description: isPublic
+          ? "Report is now publicly accessible"
           : "Report is no longer publicly accessible",
       });
 
@@ -110,6 +137,42 @@ export const PublishReportDialog = ({ isOpen, onClose, result }: PublishReportDi
                 This report will only be accessible to authenticated users with proper permissions.
               </AlertDescription>
             </Alert>
+          )}
+
+          {/* Copy Link Section - shown when result is already public or when toggling to public */}
+          {(result.is_public || isPublic) && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Public Link</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={publicUrl}
+                  className="flex-1 text-sm bg-muted"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyLink}
+                  className="shrink-0"
+                >
+                  {linkCopied ? (
+                    <>
+                      <Check className="h-4 w-4 mr-1 text-green-600" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4 mr-1" />
+                      Copy Link
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Share this link with the student. They will need to enter their Student ID ({result.students?.student_id}) to view their report.
+              </p>
+            </div>
           )}
         </div>
 
