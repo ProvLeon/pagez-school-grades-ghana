@@ -25,6 +25,7 @@ CREATE TABLE classes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(50) NOT NULL,
   department_id UUID REFERENCES departments(id) ON DELETE CASCADE,
+  teacher_id UUID,
   academic_year VARCHAR(20) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -51,6 +52,14 @@ CREATE TABLE teachers (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Add foreign key constraint for teacher_id in classes (after teachers table exists)
+ALTER TABLE classes
+ADD CONSTRAINT fk_classes_teacher
+FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL;
+
+-- Create index for better query performance
+CREATE INDEX IF NOT EXISTS idx_classes_teacher_id ON classes(teacher_id);
 
 -- Create students table
 CREATE TABLE students (

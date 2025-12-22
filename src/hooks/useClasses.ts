@@ -10,7 +10,8 @@ export const useClasses = (departmentId?: string) => {
         .from('classes')
         .select(`
           *,
-          department:departments(*)
+          department:departments(*),
+          teacher:teachers(*)
         `)
         .order('name');
 
@@ -34,6 +35,7 @@ export const useCreateClass = () => {
       name: string;
       department_id: string;
       academic_year: string;
+      teacher_id?: string;
     }) => {
       const { data, error } = await supabase
         .from('classes')

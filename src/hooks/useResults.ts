@@ -52,7 +52,8 @@ export const useResults = () => {
   return useQuery({
     queryKey: ['results'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First try with all relations
+      let { data, error } = await supabase
         .from('results')
         .select(`
           *,
@@ -63,6 +64,23 @@ export const useResults = () => {
           subject_marks(*, subject:subjects(id, name))
         `)
         .order('created_at', { ascending: false });
+
+      // If 406 error (relation doesn't exist), try without optional relations
+      if (error && error.code === 'PGRST200') {
+        console.warn('Some relations not found, retrying with basic query...');
+        const fallbackResult = await supabase
+          .from('results')
+          .select(`
+            *,
+            student:students(*),
+            class:classes(*, department:departments(*)),
+            subject_marks(*, subject:subjects(id, name))
+          `)
+          .order('created_at', { ascending: false });
+
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+      }
 
       if (error) {
         console.error('Error fetching results:', error);

@@ -3,17 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Edit, MoreVertical, Award, TrendingUp, Users, Calendar } from "lucide-react";
+import { ArrowLeft, Download, Edit, Award, TrendingUp, Users } from "lucide-react";
 import { useReportCards } from "@/hooks/useReportCards";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOverallPosition } from "@/hooks/useOverallPosition";
-import { MobileStudentSummary } from "@/components/results/MobileStudentSummary";
-import { MobileSubjectCard } from "@/components/results/MobileSubjectCard";
 import { StudentInfoSection } from "@/components/results/StudentInfoSection";
 import { SubjectsTableSection } from "@/components/results/SubjectsTableSection";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
 const ViewResult = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +17,7 @@ const ViewResult = () => {
   const { generateSingleReport, isGenerating } = useReportCards();
   const isMobile = useIsMobile();
 
-  const { data: result, isLoading } = useQuery({
+  const { data: result, isLoading, error } = useQuery({
     queryKey: ['result', id],
     queryFn: async () => {
       if (!id) throw new Error('Result ID is required');
@@ -30,16 +26,31 @@ const ViewResult = () => {
         .from('results')
         .select(`
           *,
-          student:students(*),
-          class:classes(*, department:departments(*)),
+          student:students!inner(*),
+          class:classes!inner(*, department:departments(*)),
           teacher:teachers(*),
           ca_type:ca_types(*),
           subject_marks(*, subject:subjects(*))
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[ViewResult] Supabase error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Result not found');
+      }
+
+      console.log('[ViewResult] Fetched result:', {
+        id: data.id,
+        hasTeacher: !!data.teacher,
+        hasCaType: !!data.ca_type,
+        subjectMarksCount: data.subject_marks?.length
+      });
+
       return data;
     },
     enabled: !!id,
@@ -60,21 +71,25 @@ const ViewResult = () => {
         <div className="p-4 max-w-4xl mx-auto">
           <div className="space-y-6 animate-pulse">
             <div className="h-10 bg-muted rounded w-32"></div>
-            <Card><CardContent className="p-6 space-y-4">
-              <div className="h-6 bg-muted rounded w-48"></div>
-              <div className="h-24 bg-muted rounded"></div>
-            </CardContent></Card>
-            <Card><CardContent className="p-6 space-y-4">
-              <div className="h-6 bg-muted rounded w-48"></div>
-              <div className="h-48 bg-muted rounded"></div>
-            </CardContent></Card>
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div className="h-6 bg-muted rounded w-48"></div>
+                <div className="h-24 bg-muted rounded"></div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div className="h-6 bg-muted rounded w-48"></div>
+                <div className="h-48 bg-muted rounded"></div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!result) {
+  if (error || !result) {
     return (
       <div className="min-h-screen bg-background">
         <Header title="View Result" subtitle="Result not found" />
@@ -82,7 +97,9 @@ const ViewResult = () => {
           <Card>
             <CardContent className="py-12 text-center">
               <h3 className="text-lg font-semibold mb-2">Result Not Found</h3>
-              <p className="text-muted-foreground mb-4">The requested result could not be found.</p>
+              <p className="text-muted-foreground mb-4">
+                {error ? `Error: ${error.message}` : 'The requested result could not be found.'}
+              </p>
               <Button onClick={() => navigate('/results/manage-results')}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Results
@@ -96,10 +113,10 @@ const ViewResult = () => {
 
   const subjectMarks = result.subject_marks || [];
   const totalSubjects = subjectMarks.length;
-  const calculatedTotalScore = subjectMarks.reduce((sum, mark) => sum + (mark.total_score || 0), 0);
+  const calculatedTotalScore = subjectMarks.reduce((sum: number, mark: any) => sum + (mark.total_score || 0), 0);
   const averageScore = totalSubjects > 0 ? calculatedTotalScore / totalSubjects : 0;
-  const excellentGrades = subjectMarks.filter(mark => mark.grade === 'A').length;
-  const passedSubjects = subjectMarks.filter(mark => mark.grade && !['F', 'E'].includes(mark.grade)).length;
+  const excellentGrades = subjectMarks.filter((mark: any) => mark.grade === 'A').length;
+  const passedSubjects = subjectMarks.filter((mark: any) => mark.grade && !['F', 'E'].includes(mark.grade)).length;
   const passPercentage = totalSubjects > 0 ? (passedSubjects / totalSubjects) * 100 : 0;
 
   return (
@@ -123,7 +140,7 @@ const ViewResult = () => {
               <Edit className="w-4 h-4 mr-2" />
               Edit
             </Button>
-            <Button variant="outline" onClick={() => generateSingleReport(id)} disabled={isGenerating}>
+            <Button variant="outline" onClick={() => generateSingleReport(id!)} disabled={isGenerating}>
               <Download className="w-4 h-4 mr-2" />
               {isGenerating ? 'Generating...' : 'Download PDF'}
             </Button>

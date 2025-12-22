@@ -57,5 +57,5 @@ build/
 tmp/
 temp/
 .tmp/
-fix_db/
+#fix_db/
 *local.n

@@ -1,15 +1,19 @@
-
 import { Header } from "@/components/Header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2, AlertCircle } from "lucide-react";
 import AcademicSettingsCard from "@/components/grading/AcademicSettingsCard";
 import { useGradingSettingsForm } from "@/hooks/useGradingSettingsForm";
 import GradingTable from "@/components/grading/GradingTable";
 import CommentSection from "@/components/grading/CommentSection";
+import { useDepartments } from "@/hooks/useDepartments";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const GradingSettings = () => {
+  const { data: departments = [], isLoading: departmentsLoading } = useDepartments();
+
   const {
     // Academic settings
     academicYear,
@@ -25,10 +29,8 @@ const GradingSettings = () => {
     nextTermBegin,
     setNextTermBegin,
 
-    // Grading scales
-    kgGrading,
-    primaryGrading,
-    jhsGrading,
+    // Grading scales - now dynamic
+    gradingScales,
 
     // Comment options
     conductOptions,
@@ -53,6 +55,9 @@ const GradingSettings = () => {
       setTerm(value);
     }
   };
+
+  // Get the first department ID for default tab
+  const defaultDepartmentId = departments.length > 0 ? departments[0].id : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -96,43 +101,56 @@ const GradingSettings = () => {
               </p>
               <Card className="mt-6">
                 <CardContent className="p-6">
-                  <Tabs defaultValue="kg" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 h-auto">
-                      <TabsTrigger value="kg" className="py-2">KG</TabsTrigger>
-                      <TabsTrigger value="primary" className="py-2">PRIMARY</TabsTrigger>
-                      <TabsTrigger value="jhs" className="py-2">JUNIOR HIGH</TabsTrigger>
-                    </TabsList>
+                  {departmentsLoading ? (
+                    <div className="space-y-4">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-64 w-full" />
+                    </div>
+                  ) : departments.length === 0 ? (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        No departments found. Please create departments first in the{" "}
+                        <a href="/subjects/manage-departments" className="text-primary underline">
+                          Manage Departments
+                        </a>{" "}
+                        page.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Tabs defaultValue={defaultDepartmentId} className="w-full">
+                      <TabsList
+                        className="w-full bg-muted/50 p-1 h-auto flex-wrap"
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: `repeat(${Math.min(departments.length, 4)}, 1fr)`
+                        }}
+                      >
+                        {departments.map((dept) => (
+                          <TabsTrigger
+                            key={dept.id}
+                            value={dept.id}
+                            className="py-2 text-xs sm:text-sm"
+                          >
+                            {dept.name.toUpperCase()}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
 
-                    <TabsContent value="kg" className="pt-6">
-                      <GradingTable
-                        department="kg"
-                        grading={kgGrading}
-                        onAddRow={addGradingRow}
-                        onRemoveRow={removeGradingRow}
-                        onUpdateRow={updateGradingRow}
-                      />
-                    </TabsContent>
-
-                    <TabsContent value="primary" className="pt-6">
-                      <GradingTable
-                        department="primary"
-                        grading={primaryGrading}
-                        onAddRow={addGradingRow}
-                        onRemoveRow={removeGradingRow}
-                        onUpdateRow={updateGradingRow}
-                      />
-                    </TabsContent>
-
-                    <TabsContent value="jhs" className="pt-6">
-                      <GradingTable
-                        department="jhs"
-                        grading={jhsGrading}
-                        onAddRow={addGradingRow}
-                        onRemoveRow={removeGradingRow}
-                        onUpdateRow={updateGradingRow}
-                      />
-                    </TabsContent>
-                  </Tabs>
+                      {departments.map((dept) => (
+                        <TabsContent key={dept.id} value={dept.id} className="pt-6">
+                          <GradingTable
+                            departmentId={dept.id}
+                            departmentName={dept.name}
+                            grading={gradingScales[dept.id] || []}
+                            onAddRow={addGradingRow}
+                            onRemoveRow={removeGradingRow}
+                            onUpdateRow={updateGradingRow}
+                          />
+                        </TabsContent>
+                      ))}
+                    </Tabs>
+                  )}
                 </CardContent>
               </Card>
             </section>

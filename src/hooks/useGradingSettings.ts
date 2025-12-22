@@ -309,7 +309,8 @@ export const useSaveGradingScales = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ department, academicYear, term, scales }: {
+    mutationFn: async ({ department_id, department, academicYear, term, scales }: {
+      department_id?: string;
       department: string;
       academicYear: string;
       term: string;
@@ -320,7 +321,7 @@ export const useSaveGradingScales = () => {
         remark: string;
       }>;
     }) => {
-      console.log('Attempting to save grading scales:', { department, academicYear, term, scalesCount: scales.length });
+      console.log('Attempting to save grading scales:', { department_id, department, academicYear, term, scalesCount: scales.length });
 
       // Validate inputs
       if (!department || !academicYear || !term) {
@@ -332,15 +333,10 @@ export const useSaveGradingScales = () => {
         return [];
       }
 
-      // Normalize department name to exact database constraint value
-      const normalizedDept = normalizeDepartmentForGradingScales(department);
-      console.log(`Normalized department from "${department}" to "${normalizedDept}"`);
-
-      // Ensure normalized department is one of the allowed values for grading_scales table
-      const allowedDepartments = ['KG', 'PRIMARY', 'JHS'];
-      if (!allowedDepartments.includes(normalizedDept)) {
-        throw new Error(`Invalid department: ${normalizedDept}. Must be one of: ${allowedDepartments.join(', ')}`);
-      }
+      // Normalize department name - use the department name directly (uppercase)
+      // This allows dynamic departments from the database
+      const normalizedDept = department.toUpperCase().trim();
+      console.log(`Using department name: "${normalizedDept}"${department_id ? ` (id: ${department_id})` : ''}`);
 
       // Normalize term to lowercase (convert "First Term" -> "first", etc.)
       const normalizedTerm = normalizeTerm(term);
@@ -369,22 +365,42 @@ export const useSaveGradingScales = () => {
       }
 
       // Delete existing scales for this department/year/term
-      const { error: deleteError } = await supabase
-        .from('grading_scales')
-        .delete()
-        .eq('department', normalizedDept)
-        .eq('academic_year', academicYear)
-        .eq('term', normalizedTerm);
+      // Delete by BOTH department_id AND department name to prevent duplicates
+      // This ensures we clean up old records that may only have one identifier
 
-      if (deleteError) {
-        console.error('Error deleting existing scales:', deleteError);
-        throw new Error(`Failed to delete existing scales: ${deleteError.message}`);
+      // First, delete by department_id if available
+      if (department_id) {
+        const { error: deleteByIdError } = await supabase
+          .from('grading_scales')
+          .delete()
+          .eq('academic_year', academicYear)
+          .eq('term', normalizedTerm)
+          .eq('department_id', department_id);
+
+        if (deleteByIdError) {
+          console.error('Error deleting scales by department_id:', deleteByIdError);
+          throw new Error(`Failed to delete existing scales by id: ${deleteByIdError.message}`);
+        }
       }
 
-      // Insert new scales
+      // Also delete by department name to catch any old records without department_id
+      const { error: deleteByNameError } = await supabase
+        .from('grading_scales')
+        .delete()
+        .eq('academic_year', academicYear)
+        .eq('term', normalizedTerm)
+        .eq('department', normalizedDept);
+
+      if (deleteByNameError) {
+        console.error('Error deleting scales by department name:', deleteByNameError);
+        throw new Error(`Failed to delete existing scales by name: ${deleteByNameError.message}`);
+      }
+
+      // Insert new scales with department_id if available
       const scalesToInsert = scales.map(scale => ({
         ...scale,
         department: normalizedDept,
+        department_id: department_id || null,
         academic_year: academicYear,
         term: normalizedTerm
       }));

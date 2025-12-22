@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ export const AddClassDialog = ({ trigger }: AddClassDialogProps) => {
   const [departmentId, setDepartmentId] = useState("");
   const [teacherId, setTeacherId] = useState("");
   const [academicYear, setAcademicYear] = useState("2024/2025");
-  
+
   const { toast } = useToast();
   const createClass = useCreateClass();
   const { data: departments = [] } = useDepartments();
@@ -29,7 +29,7 @@ export const AddClassDialog = ({ trigger }: AddClassDialogProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim() || !departmentId) {
       toast({
         title: "Error",
@@ -46,12 +46,12 @@ export const AddClassDialog = ({ trigger }: AddClassDialogProps) => {
         academic_year: academicYear,
         teacher_id: teacherId || undefined,
       });
-      
+
       toast({
         title: "Success",
         description: "Class created successfully",
       });
-      
+
       setOpen(false);
       setName("");
       setDepartmentId("");
@@ -78,6 +78,9 @@ export const AddClassDialog = ({ trigger }: AddClassDialogProps) => {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add New Class</DialogTitle>
+          <DialogDescription>
+            Fill in the details below to create a new class.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -90,7 +93,7 @@ export const AddClassDialog = ({ trigger }: AddClassDialogProps) => {
               required
             />
           </div>
-          
+
           <div>
             <Label htmlFor="department">Department *</Label>
             <Select value={departmentId} onValueChange={setDepartmentId} required>
@@ -134,16 +137,16 @@ export const AddClassDialog = ({ trigger }: AddClassDialogProps) => {
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => setOpen(false)}
               className="border-gray-200 hover:bg-gray-50"
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={createClass.isPending}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >

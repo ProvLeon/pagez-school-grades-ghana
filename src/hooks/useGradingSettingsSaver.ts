@@ -1,4 +1,3 @@
-
 import {
   useSaveGradingSettings,
   useSaveGradingScales,
@@ -6,25 +5,12 @@ import {
 } from "@/hooks/useGradingSettings";
 import { toast } from "@/hooks/use-toast";
 import { GradingScale, CommentOption } from "@/types/gradingSettings";
-import { getAllDepartments } from "@/utils/departmentMapping";
 import { validateDepartmentGradingScales } from "@/utils/gradingHelpers";
 import { prepareAndValidateCommentOptions, getCommentTypeInfo } from "@/utils/commentOptionsHelpers";
+import { useDepartments } from "@/hooks/useDepartments";
 
-// Helper function to map department keys to grading_scales table values
-// The grading_scales table uses 'JHS' not 'JUNIOR HIGH'
-const getDepartmentForGradingScales = (departmentKey: string): string => {
-  const mapping: Record<string, string> = {
-    'kg': 'KG',
-    'primary': 'PRIMARY',
-    'jhs': 'JHS',
-    'shs': 'SHS',
-    'KG': 'KG',
-    'PRIMARY': 'PRIMARY',
-    'JUNIOR HIGH': 'JHS',
-    'SENIOR HIGH': 'SHS',
-  };
-  return mapping[departmentKey] || departmentKey.toUpperCase();
-};
+// Type for grading scales indexed by department ID
+type GradingScalesMap = Record<string, GradingScale[]>;
 
 // Helper function to normalize term values (e.g., "First Term" -> "first")
 const normalizeTerm = (term: string): "first" | "second" | "third" => {
@@ -55,9 +41,7 @@ interface SaveGradingSettingsParams {
   termBegin: string;
   termEnds: string;
   nextTermBegin: string;
-  kgGrading: GradingScale[];
-  primaryGrading: GradingScale[];
-  jhsGrading: GradingScale[];
+  gradingScales: GradingScalesMap;
   conductOptions: CommentOption[];
   attitudeOptions: CommentOption[];
   interestOptions: CommentOption[];
@@ -65,6 +49,7 @@ interface SaveGradingSettingsParams {
 }
 
 export const useGradingSettingsSaver = () => {
+  const { data: departments = [] } = useDepartments();
   const saveGradingSettings = useSaveGradingSettings();
   const saveGradingScales = useSaveGradingScales();
   const saveCommentOptions = useSaveCommentOptions();
@@ -77,9 +62,7 @@ export const useGradingSettingsSaver = () => {
       termBegin,
       termEnds,
       nextTermBegin,
-      kgGrading,
-      primaryGrading,
-      jhsGrading,
+      gradingScales,
       conductOptions,
       attitudeOptions,
       interestOptions,
@@ -87,30 +70,24 @@ export const useGradingSettingsSaver = () => {
     } = params;
 
     console.log('Starting save process...');
+    console.log('Grading scales to save:', gradingScales);
     let hasErrors = false;
 
     try {
-      // Step 1: Validate all data before saving
-      // Normalize term to ensure it's in the correct format
+      // Step 1: Normalize term to ensure it's in the correct format
       const normalizedTerm = normalizeTerm(term);
       console.log(`Normalized term from "${term}" to "${normalizedTerm}"`);
 
-      const departments = getAllDepartments().map(d => ({
-        ...d,
-        gradingScalesDbName: getDepartmentForGradingScales(d.key), // Use JHS for grading_scales table
-        scales:
-          d.key === "kg" ? kgGrading :
-            d.key === "primary" ? primaryGrading :
-              d.key === "jhs" ? jhsGrading : []
-      }));
+      // Step 2: Validate grading scales for all departments
+      for (const [departmentId, scales] of Object.entries(gradingScales)) {
+        const dept = departments.find(d => d.id === departmentId);
+        const deptName = dept?.name || departmentId;
 
-      // Validate grading scales
-      for (const dept of departments) {
-        const validationErrors = validateDepartmentGradingScales(dept.scales);
+        const validationErrors = validateDepartmentGradingScales(scales);
 
         if (validationErrors.length > 0) {
           toast({
-            title: `Validation Error in ${dept.displayName}`,
+            title: `Validation Error in ${deptName}`,
             description: validationErrors.join('. '),
             variant: "destructive",
           });
@@ -120,7 +97,7 @@ export const useGradingSettingsSaver = () => {
 
       if (hasErrors) return;
 
-      // Step 2: Save academic settings first
+      // Step 3: Save academic settings first
       await saveGradingSettings.mutateAsync({
         academic_year: academicYear,
         term: normalizedTerm,
@@ -130,10 +107,13 @@ export const useGradingSettingsSaver = () => {
         next_term_begin: nextTermBegin || undefined,
       });
 
-      // Step 3: Save grading scales
-      for (const dept of departments) {
+      // Step 4: Save grading scales for each department
+      for (const [departmentId, scales] of Object.entries(gradingScales)) {
+        const dept = departments.find(d => d.id === departmentId);
+        const deptName = dept?.name || departmentId;
+
         try {
-          const validScales = dept.scales.filter(scale =>
+          const validScales = scales.filter(scale =>
             scale.grade?.trim() &&
             scale.remark?.trim() &&
             typeof scale.from === 'number' &&
@@ -144,9 +124,10 @@ export const useGradingSettingsSaver = () => {
           );
 
           if (validScales.length > 0) {
-            console.log(`Saving grading scales for ${dept.displayName} with db name: ${dept.gradingScalesDbName}`);
+            console.log(`Saving grading scales for ${deptName} (${departmentId})`);
             await saveGradingScales.mutateAsync({
-              department: dept.gradingScalesDbName, // Use the grading_scales specific db name (JHS not JUNIOR HIGH)
+              department_id: departmentId,
+              department: deptName.toUpperCase(), // For backwards compatibility
               academicYear,
               term: normalizedTerm,
               scales: validScales.map(scale => ({
@@ -161,13 +142,13 @@ export const useGradingSettingsSaver = () => {
           hasErrors = true;
           toast({
             title: "Error",
-            description: `Failed to save grading scales for ${dept.displayName}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            description: `Failed to save grading scales for ${deptName}: ${error instanceof Error ? error.message : 'Unknown error'}`,
             variant: "destructive",
           });
         }
       }
 
-      // Step 4: Save and validate comment options with enhanced validation
+      // Step 5: Save and validate comment options with enhanced validation
       try {
         const { validOptions, invalidTypes, hasBlankValue, rejectedOptions } =
           prepareAndValidateCommentOptions(

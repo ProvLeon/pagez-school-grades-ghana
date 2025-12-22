@@ -796,13 +796,17 @@ export class ReportCardService {
     pdf.setFont('helvetica', 'bold');
     pdf.text("HEAD TEACHER'S REMARKS:", centerMargin, currentY);
 
+    let headRemarksHeight = 4; // Default height if no remarks
     if (data.behavior.heads_remarks) {
       pdf.setFont('helvetica', 'normal');
       const splitHeadRemarks = pdf.splitTextToSize(data.behavior.heads_remarks, 110);
       pdf.text(splitHeadRemarks, centerMargin + 50, currentY);
+      // Calculate actual height of remarks (approximately 4mm per line)
+      headRemarksHeight = splitHeadRemarks.length * 4;
     }
 
-    currentY += 8; // Reduced spacing to close gap
+    // Move past the head remarks text before rendering headteacher section
+    currentY += Math.max(headRemarksHeight, 8) + 6;
 
     // === HEADTEACHER SECTION ===
 
@@ -812,12 +816,15 @@ export class ReportCardService {
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
     pdf.text("HEADTEACHER:", centerX, currentY, { align: 'center' });
+    currentY += 5;
 
     if (data.school.headteacher_name) {
       pdf.setFontSize(8);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(data.school.headteacher_name, centerX, currentY + 4, { align: 'center' });
+      pdf.text(data.school.headteacher_name, centerX, currentY, { align: 'center' });
     }
+
+    currentY += 4; // Space between name and signature
 
     // Add signature image if available
     if (data.school.headteacher_signature_url) {
@@ -828,7 +835,7 @@ export class ReportCardService {
           const imgWidth = 40;
           const imgHeight = 15;
           const imgX = centerX - imgWidth / 2;
-          pdf.addImage(img, 'PNG', imgX, currentY + 8, imgWidth, imgHeight);
+          pdf.addImage(img, 'PNG', imgX, currentY, imgWidth, imgHeight);
         };
         img.src = data.school.headteacher_signature_url;
 
@@ -838,29 +845,29 @@ export class ReportCardService {
             const imgWidth = 40;
             const imgHeight = 15;
             const imgX = centerX - imgWidth / 2;
-            pdf.addImage(img, 'PNG', imgX, currentY + 8, imgWidth, imgHeight);
+            pdf.addImage(img, 'PNG', imgX, currentY, imgWidth, imgHeight);
             resolve(true);
           };
           img.onerror = () => resolve(false);
         });
-        currentY += 18; // Account for image height
+        currentY += 16; // Account for image height
       } catch (error) {
         console.error('Error loading signature image:', error);
         // Fallback to signature line
         pdf.setLineWidth(0.5);
-        pdf.line(centerX - 30, currentY + 8, centerX + 30, currentY + 8);
-        currentY += 12;
+        pdf.line(centerX - 30, currentY + 4, centerX + 30, currentY + 4);
+        currentY += 8;
       }
     } else {
       // No signature image, show signature line
       pdf.setLineWidth(0.5);
-      pdf.line(centerX - 30, currentY + 8, centerX + 30, currentY + 8);
-      currentY += 12;
+      pdf.line(centerX - 30, currentY + 4, centerX + 30, currentY + 4);
+      currentY += 8;
     }
 
     pdf.setFontSize(8);
     const generatedDate = new Date().toLocaleDateString('en-GB');
-    pdf.text(generatedDate, centerX, currentY + 4, { align: 'center' });
+    pdf.text(generatedDate, centerX, currentY + 2, { align: 'center' });
 
     // Add school motto at bottom left corner
     if (data.school.motto) {

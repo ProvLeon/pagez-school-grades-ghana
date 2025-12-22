@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useSchoolSettings } from '@/hooks/useSchoolSettings';
 import { hexToHsl, hslToHex } from '@/utils/colorUtils';
@@ -29,8 +28,26 @@ export const useSettingsForm = () => {
 
   // Color picker state
   const [colorHue, setColorHue] = useState(348);
-  const [colorSaturation, setSaturation] = useState(83);
-  const [colorLightness, setLightness] = useState(47);
+  const [colorSaturation, setColorSaturation] = useState(83);
+  const [colorLightness, setColorLightness] = useState(47);
+
+  // Refs to track current color values (avoids stale closure issues)
+  const colorHueRef = useRef(colorHue);
+  const colorSaturationRef = useRef(colorSaturation);
+  const colorLightnessRef = useRef(colorLightness);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    colorHueRef.current = colorHue;
+  }, [colorHue]);
+
+  useEffect(() => {
+    colorSaturationRef.current = colorSaturation;
+  }, [colorSaturation]);
+
+  useEffect(() => {
+    colorLightnessRef.current = colorLightness;
+  }, [colorLightness]);
 
   // Load settings into form when available
   useEffect(() => {
@@ -52,28 +69,39 @@ export const useSettingsForm = () => {
       if (settings.primary_color) {
         const hsl = hexToHsl(settings.primary_color);
         setColorHue(hsl.h);
-        setSaturation(hsl.s);
-        setLightness(hsl.l);
+        setColorSaturation(hsl.s);
+        setColorLightness(hsl.l);
+        // Also update refs immediately
+        colorHueRef.current = hsl.h;
+        colorSaturationRef.current = hsl.s;
+        colorLightnessRef.current = hsl.l;
       }
     }
   }, [settings]);
 
-  const handleColorChange = (saturation: number, lightness: number) => {
-    setSaturation(saturation);
-    setLightness(lightness);
-    const newColor = hslToHex(colorHue, saturation, lightness);
+  const handleColorChange = useCallback((saturation: number, lightness: number) => {
+    setColorSaturation(saturation);
+    setColorLightness(lightness);
+    // Update refs immediately for use in handleHueChange
+    colorSaturationRef.current = saturation;
+    colorLightnessRef.current = lightness;
+    // Use ref for hue to get the latest value
+    const newColor = hslToHex(colorHueRef.current, saturation, lightness);
     setFormData(prev => ({ ...prev, primary_color: newColor }));
-  };
+  }, []);
 
-  const handleHueChange = (hue: number) => {
+  const handleHueChange = useCallback((hue: number) => {
     setColorHue(hue);
-    const newColor = hslToHex(hue, colorSaturation, colorLightness);
+    // Update ref immediately
+    colorHueRef.current = hue;
+    // Use refs to get the latest saturation and lightness values
+    const newColor = hslToHex(hue, colorSaturationRef.current, colorLightnessRef.current);
     setFormData(prev => ({ ...prev, primary_color: newColor }));
-  };
+  }, []);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = useCallback((field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
   const handleLogoChange = useCallback(async (logoUrl: string | null) => {
     console.log('Logo URL changed to:', logoUrl);
@@ -87,7 +115,7 @@ export const useSettingsForm = () => {
         title: "Logo Updated",
         description: logoUrl ? "School logo has been saved" : "School logo has been removed",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error auto-saving logo:', error);
       toast({
         title: "Error",
@@ -109,7 +137,7 @@ export const useSettingsForm = () => {
         title: "Signature Updated",
         description: signatureUrl ? "Headteacher signature has been saved" : "Signature has been removed",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error auto-saving signature:', error);
       toast({
         title: "Error",
@@ -119,13 +147,12 @@ export const useSettingsForm = () => {
     }
   }, [updateSettings, toast]);
 
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = useCallback(async () => {
     setSaving(true);
     try {
       console.log('=== SAVE SETTINGS DEBUG ===');
       console.log('Current formData:', formData);
-      console.log('Logo URL being saved:', formData.logo_url);
-      console.log('Signature URL being saved:', formData.headteacher_signature_url);
+      console.log('Primary color being saved:', formData.primary_color);
 
       // Prepare the update data
       const updateData = {
@@ -145,24 +172,23 @@ export const useSettingsForm = () => {
       const result = await updateSettings(updateData);
 
       console.log('Update result:', result);
-      console.log('Logo URL in result:', result?.logo_url);
 
       toast({
         title: "Settings Updated",
         description: "School settings have been saved successfully",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving settings:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
+      const errorMessage = error instanceof Error ? error.message : "Failed to save settings. Please try again.";
       toast({
         title: "Error",
-        description: error.message || "Failed to save settings. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setSaving(false);
     }
-  };
+  }, [formData, updateSettings, toast]);
 
   return {
     loading,
