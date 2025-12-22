@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -7,18 +7,54 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Eye, EyeOff, Info, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Info, CheckCircle2, AlertTriangle, AlertCircle, Loader2 } from "lucide-react";
 import { WalkthroughTrigger } from "@/components/walkthrough";
+import { supabase } from "@/lib/supabase";
+
+// Generate a username from name + 3 random digits
+const generateUsername = (name: string): string => {
+  // Clean the name: lowercase, remove spaces and special characters
+  const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  // Generate 3 random digits
+  const randomDigits = Math.floor(100 + Math.random() * 900).toString();
+  return `${cleanName}${randomDigits}`;
+};
 
 const ManageProfile = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const [showGuides, setShowGuides] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Check if username needs to be generated
+  const needsUsernameGeneration = (): boolean => {
+    const existingUsername = user?.user_metadata?.username;
+    // Needs generation if no username or if it's the old dummy format
+    return !existingUsername || existingUsername.match(/^[a-z]+\d{10,}$/);
+  };
+
+  // Get existing username or generate one from the user's name
+  const getInitialUsername = (): string => {
+    const existingUsername = user?.user_metadata?.username;
+
+    // Check if username exists and is NOT the old dummy format
+    // Old format was like "kokomlemlebasic1378303665" - very long with many digits
+    if (existingUsername && !existingUsername.match(/^[a-z]+\d{10,}$/)) {
+      return existingUsername;
+    }
+
+    // Generate from full_name or email prefix
+    const name = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'user';
+    return generateUsername(name);
+  };
+
+  const [usernameWasGenerated, setUsernameWasGenerated] = useState(needsUsernameGeneration());
+
   const [formData, setFormData] = useState({
-    fullName: user?.user_metadata?.full_name || "Paul Boateng",
-    email: user?.email || "paulboat58@gmail.com",
-    username: user?.user_metadata?.username || "kokomlemlebasic1378303665",
+    fullName: user?.user_metadata?.full_name || "",
+    email: user?.email || "",
+    username: getInitialUsername(),
     newPassword: ""
   });
 
@@ -26,12 +62,114 @@ const ManageProfile = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Auto-save username if it was newly generated
+  useEffect(() => {
+    const saveGeneratedUsername = async () => {
+      if (usernameWasGenerated && user && formData.username) {
+        try {
+          console.log("Auto-saving generated username:", formData.username);
+          const { error } = await supabase.auth.updateUser({
+            data: {
+              username: formData.username,
+            },
+          });
+
+          if (error) {
+            console.error("Failed to auto-save username:", error);
+          } else {
+            console.log("Username auto-saved successfully");
+            setUsernameWasGenerated(false); // Don't save again
+            if (refreshUser) {
+              await refreshUser();
+            }
+          }
+        } catch (err) {
+          console.error("Error auto-saving username:", err);
+        }
+      }
+    };
+
+    saveGeneratedUsername();
+  }, [usernameWasGenerated, user, formData.username, refreshUser]);
+
   const handleSaveProfile = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update your profile",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
     console.log("Saving profile:", formData);
-    toast({
-      title: "Profile Updated",
-      description: "Your profile has been saved successfully",
-    });
+
+    try {
+      // Update user metadata in Supabase Auth
+      const updates: { email?: string; password?: string; data?: Record<string, string> } = {
+        data: {
+          full_name: formData.fullName,
+          username: formData.username,
+        },
+      };
+
+      // Only update email if it changed
+      if (formData.email !== user.email) {
+        updates.email = formData.email;
+      }
+
+      // Only update password if provided
+      if (formData.newPassword && formData.newPassword.trim() !== "") {
+        updates.password = formData.newPassword;
+      }
+
+      const { error: authError } = await supabase.auth.updateUser(updates);
+
+      if (authError) {
+        console.error("Auth update error:", authError);
+        throw authError;
+      }
+
+      // Note: The profiles table only has id, user_id, user_type, created_at, updated_at
+      // Full name, email, and username are stored in Supabase Auth user_metadata (updated above)
+      // We only update the updated_at timestamp in the profiles table
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id);
+
+      if (profileError) {
+        // Profile table might not exist, log but don't fail
+        console.warn("Profile table update warning:", profileError);
+      }
+
+      // Refresh the user data in context
+      if (refreshUser) {
+        await refreshUser();
+      }
+
+      // Clear password field after successful save
+      setFormData(prev => ({ ...prev, newPassword: "" }));
+
+      toast({
+        title: "Profile Updated",
+        description: formData.email !== user.email
+          ? "Your profile has been saved. Please check your email to confirm the new email address."
+          : "Your profile has been saved successfully",
+      });
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -167,12 +305,15 @@ const ManageProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Username</label>
+                  <label className="text-sm font-medium">Username (Display Only)</label>
                   <Input
                     value={formData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
                     disabled
+                    className="bg-muted/50"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    This is your display identifier. Login uses your email address.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -192,8 +333,16 @@ const ManageProfile = () => {
                 <Button
                   onClick={handleSaveProfile}
                   className="px-8 py-2"
+                  disabled={isSaving}
                 >
-                  Save Profile
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Profile"
+                  )}
                 </Button>
               </div>
             </CardContent>
