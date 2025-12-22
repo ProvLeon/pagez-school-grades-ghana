@@ -1,0 +1,21 @@
+# Render.com deployment configuration
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: pagez-school-grades
+    runtime: node
+    plan: starter # Upgrade from free tier for more memory
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=4096
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+    healthCheckPath: /
+    autoDeploy: true

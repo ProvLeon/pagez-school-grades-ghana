@@ -111,12 +111,17 @@ const ViewResult = () => {
     );
   }
 
-  const subjectMarks = result.subject_marks || [];
+  interface SubjectMark {
+    total_score?: number;
+    grade?: string;
+  }
+
+  const subjectMarks: SubjectMark[] = result.subject_marks || [];
   const totalSubjects = subjectMarks.length;
-  const calculatedTotalScore = subjectMarks.reduce((sum: number, mark: any) => sum + (mark.total_score || 0), 0);
+  const calculatedTotalScore = subjectMarks.reduce((sum: number, mark: SubjectMark) => sum + (mark.total_score || 0), 0);
   const averageScore = totalSubjects > 0 ? calculatedTotalScore / totalSubjects : 0;
-  const excellentGrades = subjectMarks.filter((mark: any) => mark.grade === 'A').length;
-  const passedSubjects = subjectMarks.filter((mark: any) => mark.grade && !['F', 'E'].includes(mark.grade)).length;
+  const excellentGrades = subjectMarks.filter((mark: SubjectMark) => mark.grade === 'A').length;
+  const passedSubjects = subjectMarks.filter((mark: SubjectMark) => mark.grade && !['F', 'E'].includes(mark.grade)).length;
   const passPercentage = totalSubjects > 0 ? (passedSubjects / totalSubjects) * 100 : 0;
 
   return (
