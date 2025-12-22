@@ -20,6 +20,7 @@ interface AuthContextType {
   loading: boolean;
   profileLoading: boolean;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   isTeacher: boolean;
   isAdmin: boolean;
   isAuthenticated: boolean;
@@ -39,6 +40,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const isTeacher = userProfile?.user_type === 'teacher' || !!teacherRecord;
   const isAdmin = ['admin', 'super_admin'].includes((userProfile?.user_type as string) ?? '');
   const isAuthenticated = !!user;
+
+  // Function to refresh user data from Supabase
+  const refreshUser = useCallback(async () => {
+    try {
+      const { data: { user: refreshedUser }, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error('Error refreshing user:', error);
+        return;
+      }
+      if (refreshedUser) {
+        setUser(refreshedUser);
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+    }
+  }, []);
 
   const signOut = useCallback(async () => {
     try {
@@ -161,6 +178,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loading: contextLoading,
     profileLoading,
     signOut,
+    refreshUser,
     isTeacher,
     isAdmin,
     isAuthenticated,
