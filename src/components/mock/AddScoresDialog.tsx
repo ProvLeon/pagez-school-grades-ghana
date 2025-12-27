@@ -509,71 +509,75 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
               </CardContent>
             </Card>
 
-            {/* Scores Tabs */}
-            <Tabs defaultValue="core" className="flex-1 overflow-hidden flex flex-col">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="core" className="gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Core Subjects ({coreCount}/{subjectConfig.coreCount})
-                </TabsTrigger>
-                <TabsTrigger value="electives" className="gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  {examType === "bece" ? "Electives" : "Electives"} ({electiveCount})
-                </TabsTrigger>
-              </TabsList>
+            {/* All Subjects - Simplified View */}
+            <ScrollArea className="flex-1">
+              <div className="space-y-4 pr-4">
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Enter the raw score (0-100) for each subject. All subjects are displayed in order.
+                  </AlertDescription>
+                </Alert>
 
-              <ScrollArea className="flex-1 mt-4">
-                <TabsContent value="core" className="mt-0 space-y-4 pr-4">
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      {examType === "bece"
-                        ? "All 4 core subjects are required for BECE aggregate calculation."
-                        : "All 4 core subjects are required for WASSCE."}
-                    </AlertDescription>
-                  </Alert>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {subjectConfig.core.map((subj) =>
-                      renderSubjectInput(subj, true)
-                    )}
+                {/* Subject Input Grid - All subjects in one view */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-[1fr,100px] gap-2 text-sm font-medium text-muted-foreground border-b pb-2">
+                    <span>Subject</span>
+                    <span className="text-center">Raw Score</span>
                   </div>
-                </TabsContent>
 
-                <TabsContent value="electives" className="mt-0 space-y-4 pr-4">
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      {examType === "bece"
-                        ? "Best 2 elective subjects will be used for aggregate calculation."
-                        : "Enter scores for the student's 4 elective subjects based on their program."}
-                    </AlertDescription>
-                  </Alert>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {subjectConfig.electives.map((subj) =>
-                      renderSubjectInput(subj, false)
-                    )}
-                  </div>
-                </TabsContent>
-              </ScrollArea>
-            </Tabs>
+                  {/* Core Subjects First */}
+                  {subjectConfig.core.map((subj) => (
+                    <div key={subj.key} className="grid grid-cols-[1fr,100px] gap-2 items-center">
+                      <Label htmlFor={`score-${subj.key}`} className="text-sm">
+                        {subj.name}
+                      </Label>
+                      <Input
+                        id={`score-${subj.key}`}
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={scores[subj.key] ?? ""}
+                        onChange={(e) => handleScoreChange(subj.key, e.target.value)}
+                        placeholder="0-100"
+                        className={cn(
+                          "text-center",
+                          typeof scores[subj.key] === "number" && (scores[subj.key]! < 0 || scores[subj.key]! > 100) && "border-destructive"
+                        )}
+                      />
+                    </div>
+                  ))}
 
-            {/* Score Summary */}
-            <div className="mt-4 p-4 bg-muted rounded-lg">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-sm text-muted-foreground">Core Total</p>
-                  <p className="text-xl font-bold">{coreTotal}</p>
+                  {/* Elective Subjects */}
+                  {subjectConfig.electives.map((subj) => (
+                    <div key={subj.key} className="grid grid-cols-[1fr,100px] gap-2 items-center">
+                      <Label htmlFor={`score-${subj.key}`} className="text-sm">
+                        {subj.name}
+                      </Label>
+                      <Input
+                        id={`score-${subj.key}`}
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={scores[subj.key] ?? ""}
+                        onChange={(e) => handleScoreChange(subj.key, e.target.value)}
+                        placeholder="0-100"
+                        className={cn(
+                          "text-center",
+                          typeof scores[subj.key] === "number" && (scores[subj.key]! < 0 || scores[subj.key]! > 100) && "border-destructive"
+                        )}
+                      />
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Electives Total</p>
-                  <p className="text-xl font-bold">{electiveTotal}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Grand Total</p>
-                  <p className="text-xl font-bold text-primary">{grandTotal}</p>
+
+                {/* Grand Total Only */}
+                <div className="p-3 bg-muted rounded-lg text-center">
+                  <p className="text-sm text-muted-foreground">Total Raw Score</p>
+                  <p className="text-2xl font-bold text-primary">{grandTotal}</p>
                 </div>
               </div>
-            </div>
+            </ScrollArea>
 
             {/* Validation Errors */}
             {invalidScores.length > 0 && (

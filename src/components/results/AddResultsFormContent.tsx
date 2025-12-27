@@ -87,6 +87,7 @@ const AddResultsFormContent = ({ isEditMode = false, resultId }: AddResultsFormC
           attitudeOptions={attitudeOptions}
           interestOptions={interestOptions}
           teacherCommentOptions={teacherCommentOptions}
+          gradingSettings={gradingSettings}
         />
 
         {/* Action Buttons */}

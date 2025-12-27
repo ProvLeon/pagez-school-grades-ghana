@@ -22,7 +22,6 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { PerformanceOverview } from "@/components/dashboard/PerformanceOverview";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { UpcomingEvents } from "@/components/dashboard/UpcomingEvents";
-import { SystemStatus } from "@/components/dashboard/SystemStatus";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWalkthrough } from "@/contexts/WalkthroughContext";
@@ -244,7 +243,6 @@ const AdminDashboardContent = () => {
         <QuickActions />
         <RecentActivity notifications={notifications} />
         <UpcomingEvents />
-        <SystemStatus />
       </div>
     </div>
   );
@@ -258,11 +256,13 @@ const Dashboard = () => {
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    // Check if user should see the welcome modal
-    if (!loading && !hasCompletedWalkthrough() && !hasCompleted) {
+    // Check if user should see the welcome modal - only show once per session
+    // and only if the walkthrough has never been completed
+    if (!loading && !hasCompletedWalkthrough() && !hasCompleted && !sessionStorage.getItem('welcome_shown')) {
       // Small delay to let the dashboard render first
       const timer = setTimeout(() => {
         setShowWelcome(true);
+        sessionStorage.setItem('welcome_shown', 'true');
       }, 1000);
       return () => clearTimeout(timer);
     }

@@ -26,7 +26,26 @@ export const useAddResultsFormDerivedData = (formData: FormData, gradingSettings
   const { data: allClasses = [] } = useClasses();
   const { data: allStudents = [] } = useStudents();
   const { data: subjects = [] } = useSubjects();
-  const { data: caTypes = [] } = useCATypes();
+  const { data: allCATypes = [] } = useCATypes();
+
+  // Filter CA types to only show SBA types (50/50, 30/70, 40/60)
+  // Remove 4-CA Split and CA only as per requirements
+  const caTypes = useMemo(() => {
+    const allowedTypes = ['SBA 50/50', 'SBA 30/70', 'SBA 40/60', '50/50', '30/70', '40/60'];
+    return allCATypes.filter(type => {
+      const typeName = type.name?.toLowerCase() || '';
+      // Include types that match the allowed SBA patterns
+      return allowedTypes.some(allowed =>
+        typeName.includes(allowed.toLowerCase()) ||
+        typeName === allowed.toLowerCase()
+      ) &&
+        // Exclude 4-CA Split and CA only types
+        !typeName.includes('4-ca') &&
+        !typeName.includes('4 ca') &&
+        !typeName.includes('ca only') &&
+        !typeName.includes('ca-only');
+    });
+  }, [allCATypes]);
   const { data: teachers = [] } = useTeachers();
   const { data: commentOptions = [] } = useCommentOptions();
 

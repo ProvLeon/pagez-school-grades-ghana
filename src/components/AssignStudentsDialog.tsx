@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Users, Search } from "lucide-react";
-import { useStudents } from "@/hooks/useStudents";
-import { useClasses, useUpdateClass } from "@/hooks/useClasses";
+import { useStudents, useUpdateStudent } from "@/hooks/useStudents";
+import { useClasses } from "@/hooks/useClasses";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AssignStudentsDialogProps {
   trigger?: React.ReactNode;
@@ -22,9 +23,9 @@ export const AssignStudentsDialog = ({ trigger }: AssignStudentsDialogProps) => 
   const [searchTerm, setSearchTerm] = useState("");
 
   const { toast } = useToast();
-  const { data: students = [] } = useStudents();
-  const { data: classes = [] } = useClasses();
-  const updateClass = useUpdateClass();
+  const { data: students = [], refetch: refetchStudents } = useStudents();
+  const { data: classes = [], refetch: refetchClasses } = useClasses();
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Filter students without a class and by search term
   const availableStudents = students.filter(student =>
@@ -42,15 +43,35 @@ export const AssignStudentsDialog = ({ trigger }: AssignStudentsDialogProps) => 
       return;
     }
 
-    try {
-      // Update student count for the selected class
-      const currentClass = classes.find(cls => cls.id === selectedClassId);
-      const newStudentCount = (currentClass?.student_count || 0) + selectedStudents.length;
+    setIsAssigning(true);
 
-      await updateClass.mutateAsync({
-        id: selectedClassId,
-        student_count: newStudentCount,
-      });
+    try {
+      // Get the selected class to also get the department_id
+      const currentClass = classes.find(cls => cls.id === selectedClassId);
+
+      // Update each student's class_id (and department_id if available)
+      const updatePromises = selectedStudents.map(studentId =>
+        supabase
+          .from('students')
+          .update({
+            class_id: selectedClassId,
+            department_id: currentClass?.department_id || undefined
+          })
+          .eq('id', studentId)
+      );
+
+      const results = await Promise.all(updatePromises);
+
+      // Check for errors
+      const errors = results.filter(r => r.error);
+      if (errors.length > 0) {
+        console.error('Some students failed to update:', errors);
+        throw new Error(`Failed to assign ${errors.length} student(s)`);
+      }
+
+      // Refetch data to update the UI
+      await refetchStudents();
+      await refetchClasses();
 
       toast({
         title: "Success",
@@ -61,12 +82,14 @@ export const AssignStudentsDialog = ({ trigger }: AssignStudentsDialogProps) => 
       setSelectedClassId("");
       setSelectedStudents([]);
       setSearchTerm("");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to assign students",
+        description: error.message || "Failed to assign students",
         variant: "destructive",
       });
+    } finally {
+      setIsAssigning(false);
     }
   };
 
@@ -165,10 +188,10 @@ export const AssignStudentsDialog = ({ trigger }: AssignStudentsDialogProps) => 
             </Button>
             <Button
               onClick={handleAssignStudents}
-              disabled={updateClass.isPending || selectedStudents.length === 0}
+              disabled={isAssigning || selectedStudents.length === 0 || !selectedClassId}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {updateClass.isPending ? "Assigning..." : `Assign ${selectedStudents.length} Students`}
+              {isAssigning ? "Assigning..." : `Assign ${selectedStudents.length} Students`}
             </Button>
           </div>
         </div>

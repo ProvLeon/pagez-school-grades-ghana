@@ -77,14 +77,21 @@ export const WalkthroughProvider: React.FC<WalkthroughProviderProps> = ({
   }, []);
 
   // Auto-start walkthrough for new users (after auth is loaded)
+  // Only auto-start once per session to prevent the tour from popping up every navigation
   useEffect(() => {
+    const walkthroughAutoStarted = sessionStorage.getItem('walkthrough_auto_started');
+
     if (
       !loading &&
       isAuthenticated &&
       !hasCompletedWalkthrough() &&
       location.pathname === "/" &&
-      steps.length > 0
+      steps.length > 0 &&
+      !walkthroughAutoStarted
     ) {
+      // Mark as auto-started for this session
+      sessionStorage.setItem('walkthrough_auto_started', 'true');
+
       // Small delay to let the dashboard render
       const timer = setTimeout(() => {
         setIsActive(true);

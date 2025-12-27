@@ -20,7 +20,6 @@ export const AddClassDialog = ({ trigger }: AddClassDialogProps) => {
   const [name, setName] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [teacherId, setTeacherId] = useState("");
-  const [academicYear, setAcademicYear] = useState("2024/2025");
 
   const { toast } = useToast();
   const createClass = useCreateClass();
@@ -43,7 +42,7 @@ export const AddClassDialog = ({ trigger }: AddClassDialogProps) => {
       await createClass.mutateAsync({
         name: name.trim(),
         department_id: departmentId,
-        academic_year: academicYear,
+        academic_year: "", // Will be set from grading settings
         teacher_id: teacherId || undefined,
       });
 
@@ -108,16 +107,6 @@ export const AddClassDialog = ({ trigger }: AddClassDialogProps) => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="academic-year">Academic Year</Label>
-            <Input
-              id="academic-year"
-              value={academicYear}
-              onChange={(e) => setAcademicYear(e.target.value)}
-              placeholder="2024/2025"
-            />
           </div>
 
           <div>

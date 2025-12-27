@@ -356,7 +356,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 border-t">
         <div className="text-xs text-muted-foreground text-center">
-          © {new Date().getFullYear()} {schoolName}. v1.2.0
+          @2025 e-Result v 1.2.0 | PB Pagez LTD
         </div>
       </SidebarFooter>
     </Sidebar>

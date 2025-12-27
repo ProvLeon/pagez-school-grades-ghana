@@ -377,24 +377,6 @@ export const EditStudentDialog = ({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                        Email
-                      </Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, email: e.target.value }))
-                        }
-                        placeholder="student@example.com"
-                      />
-                    </div>
-
-
-
-                    <div className="space-y-2">
                       <Label htmlFor="gender" className="flex items-center gap-1.5">
                         <User className="w-3.5 h-3.5 text-muted-foreground" />
                         Gender
@@ -639,7 +621,7 @@ export const EditStudentDialog = ({
                 <Button
                   type="submit"
                   disabled={updateStudent.isPending}
-                  className="gap-1.5 bg-primary/60"
+                  className="gap-1.5"
                 >
                   {updateStudent.isPending ? (
                     <>

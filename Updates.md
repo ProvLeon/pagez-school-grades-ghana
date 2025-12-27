@@ -1,0 +1,124 @@
+- [ ] login page 
+	- [ ] App logo: change to the new logo
+	- [ ] Change app name to "e-Results GH"
+	- [ ] name at footer, change to "e-Results GH v 1.0.0 | PB Pagez LTD"
+	- [ ] Forgot password is not working.
+	- [ ] sign up functionality.
+- [ ] Dashboard
+	- [ ] System status should be taken off.
+	- [ ] The tour guide pops up every time the user navigates to the dashboard
+	- [ ] footer of navbar, change to the "@2025 e-Result v 1.2.0 | PB Pagez LTD" 
+	- [ ] Class Performance Overview card on the dashboard is not active.
+	- [ ] the bg of the opened navbar on mobile devices appears to be transparent.
+- [ ] My Profiles
+	- [ ] *Replace username field with phone number which should be collected during sign up. 
+- [ ] Classes
+	- [ ] *Academic Year can be taken out of the Add New Class dialog box since the general settings for Academic Year is under the Grading Settings and that, once the classes are created, they won’t be created again in another Academic Year.
+	- [ ] The filter button does not work under classes.
+	- [ ] Number of students and Class Teachers assigned not reflecting at Manage Classes page.  ![[Screenshot 2025-12-27 at 08.15.39.png]]
+	- [ ] Under the Class Statistics card, the values for Total Students and Average per Class are not reflecting. 
+	- [ ] Please take out Academic Year from Bulk Edit Classes dialog box.
+	- [ ] Filters button is not responsive.
+	- [ ] Assign Students to Class under the Quick Actions card is not working properly. ![[Screenshot 2025-12-27 at 08.18.33.png]]
+- [ ] ~~SUBJECTS~~
+	- [ ] ~~Bulk delete subjects not working~~
+	- [ ] ~~Bulk delete departments not working
+	- [ ] ~~Bulk delete subjects combination not working
+- [ ] STUDENTS 
+	- [ ] Under Add Students, Academic Year (2024/2025) should change once a new academic year is entered under Grading Settings
+	- [ ] Student email should be taken off and on the Excel Template as well.![[Screenshot 2025-12-27 at 08.24.42.png]]
+	- [ ] Under Manage Students, there should be bulk delete button to delete selected number of students.
+	- [ ] Colour scheme for Edit Student under Manage Students page should be adjusted to suit the primary color scheme. ![[Screenshot 2025-12-27 at 08.27.53.png]]
+- [ ] RESULTS
+	- [ ] The Academic Year setting under the Grading Settings once set, should be seen everywhere the Academic Year is required in the software.
+	- [ ] Under Add Results page and Assessment Configuration card, take out the Teaching Staff field.
+	- [ ] Under Add Results and Subject Marks card, add data validation to each field that accepts subject mark inputs such that, the marks entered for 
+		- CA Type SBA 50/50 should have the CA field accepting values <=50 and Exam field accepting values <=100 (NB: the Exam field will convert to 50% by the app)
+		- CA Type SBA 30/70 should have the CA field accepting values <=30 and Exam field accepting values <=100 (NB: the Exam field will convert to 70% by the app)
+		- CA Type SBA 40/60 should have the CA field accepting values <=40 and Exam field accepting values <=100 (NB: the Exam field will convert to 60% by the app)
+	- [ ] Take out these CA Types: 4-CA Split, CA only.
+	- [ ] Under the Term Information & Remarks card on the Add Results page, there should be a field (Days Present) to accept input for the student’s attendance for the term.
+	- [ ] The student’s attendance must appear on the results sheet. For each student, the system should display attendance by pulling the value from Days Present against Attendance for Term (Under Grading Settings).
+	- [ ] On the PDF of the results sheet, we want to have at the bottom of the page, © GES SBA SYSTEM
+	- [ ] The drop-down lists cannot be scrolled and does not accept input most especially the student fields. The Admin should be able to search a student name and the system automatically brings up the full name of the student with student ID.
+	- [ ] The Download All button under Manage Results is not responsive.
+- [ ] MOCK EXAMS
+	- [ ] Under Create Mock Exam Session, take out the Academic Year and Term field. The data will be pulled from Grading Settings.
+	- [ ] ~~All the 10 subjects should be displayed instead of 2-column (the division into core and electives). However, the core subjects should be the first four subjects with Arabic being the last. 
+	- [ ]  Disable Save and Save & Add Another until all the marks are entered for various subjects.
+	- [ ] We can take off the Core Total, Electives Total and Grand Total card to give more space for the subject fields. The Add Scores dialog could be more simpler.
+	- [ ] But the main focus is, The Grade column should be replaced with Raw Score
+	- [ ] Originally, the export PDF should show these:
+		- Mock Results showing various scores for each subject, Student name, raw score, aggregate position and details of the school and term.
+	- [ ] The second page showing various grades for each subject.
+	- [ ] The Add Scores dialog box looks clumsy 
+- [ ] MANAGE SHEETS
+	- [ ] Student Registration
+		- [ ] The Student Registration Template should not allow users to enter student IDs. Once the students are uploaded, the system should automatically generate IDs for the said students. The ID generation should follow the same structure as in the system.
+		- [ ] Take out the Email column for both students and guardians in the template. 
+		- [ ] Take out the Academic Year from the Student Registration Template
+		- [ ] Under the Bulk Student Registration, the Configure Options card should come before Download Template card and should not be optional.
+	- [ ] Results Bulk Entry
+		- [ ] Under the Select Class & Download Template, Assessment Type (SBA) and Academic Year should be added to that card and the template downloaded should have the specific Assessment Type selected just as it is on the Add Results page.
+		- [ ] Also, when the results are uploaded, we realize the both View Results and Report Sheet (PDF) are not showing the correct info uploaded, both the heading (CA Type, Exam) and their corresponding values. 
+		- [ ] When results are uploaded, the system should automatically fix the remarks on the report sheets based on the scores entered.
+	- [ ] History
+		- [ ] The Recent Operations card is not responsive.
+- [ ] MANAGE TRANSFER
+	- [ ] Bulk graduation of students or deletion of past students from the system should be included under this page.
+	- [ ]  on the Bulk Promotion dialog box, it's should be scrollable. User finds it difficult to reach the other fields and buttons.
+	- [ ] Additional Notes field in new transfer can be removed so that the cancel and create transfer buttons becomes more visible on small screens.
+- [ ] MANAGE TEACHERS 
+	- [ ] The main admin page signs out when a new teacher account is created. It automatically signs into the teacher’s account.
+- [ ] SETTINGS 
+	- [ ] It will be fine if the Theme Colour only applies to the report sheet and not the entire system. The theme color of the main app is blue.
+- [ ] ~~STUDENT REPORT & MOCK PORTALS~~
+	- [ ] ~~Can we have the homepage headers showing on these two pages and if there are any modifications on the page.
+		-  Mock: https://pb-sch-grades.onrender.com/mock-results/9bd0e644-dccc-418d-b801-6ed2a39744a5 
+		- Student reports: https://pb-sch-grades.onrender.com/student-reports
+	- These are public URLs, and students or parents shouldn't get access to the routing system of the app.
+- [ ] HOMEPAGE & SIGN-UP PAGES 
+	- [ ] Similar to https://resultarena.com/ but better.
+	- [ ] 15. Sign Up should take these fields:
+		-  Full Name
+		- School Name
+		- Phone Number
+		- Password
+
+- [ ] ~~15. SUBSCRIPTIONS & PAYMENTS
+	- [ ] ~~We prefer to use Paystack.com to receive payments.
+- [ ] ~~Subscription packages
+	The charge is GHS 1.00(Basic) /GHS 2.00 (Premium) per number of students of the school and subscription is renewal every term. NB: The system should limit adding of students to the number of students subscribed for. 
+- [ ] ~~SUPER ADMIN BACKEND
+	- [ ] ~~Dashboard Analytics~~
+		- ~~Revenue tracking (GHS per term, yearly)~~
+		- ~~Active vs expired subscriptions~~
+		- ~~School registration trends~~ 
+		- ~~Usage statistics per school~~ 
+	- [ ] ~~School Management~~ 
+		- ~~Register new schools~~ 
+		- ~~Suspend/reactivate accounts~~ 
+		- ~~View school details and usage~~ 
+		- ~~Send notifications to school Admin accounts~~ 
+		- ~~Manual subscription management~~
+	- [ ] ~~Financial Management~~
+		- ~~Payment verification~~ 
+		- ~~Revenue reports~~ 
+		- ~~Failed payment tracking~~ 
+		- ~~Refund processing~~
+	- [ ] ~~Support System~~ 
+		- ~~Ticket management (already have support_tickets table)~~
+		- ~~SMS/Email communication logs~~
+		- ~~User activity monitoring~~
+	- [ ] ~~System Configuration~~ 
+		- ~~Set subscription pricing~~ 
+		- ~~Configure SMS templates~~ 
+		- ~~Homepage Configuration e.g. Contact~~ 
+		- ~~Manage payment gateway settings~~ 
+		- ~~System maintenance mode~~
+- [ ] ~~SMS INTEGRATION~~
+	- [ ] ~~SMS Functionality:~~
+		1. ~~Payment Confirmation SMS~~ 
+		2. ~~Report Sheet Delivery SMS (with download link)~~ 
+		3. ~~Subscription reminders~~ 
+		4. ~~System notifications~~

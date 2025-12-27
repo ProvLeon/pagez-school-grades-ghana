@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -18,6 +18,7 @@ import {
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import { EditClassDialog } from "@/components/EditClassDialog";
 import { useDeleteClass } from "@/hooks/useClasses";
+import { useStudents } from "@/hooks/useStudents";
 import { useToast } from "@/hooks/use-toast";
 import { Class } from "@/lib/supabase";
 import { MoreHorizontal, Edit, Trash2, GraduationCap } from "lucide-react";
@@ -37,6 +38,18 @@ export const ClassesTable = ({ classes, searchTerm, onAdd }: ClassesTableProps) 
 
   const deleteClass = useDeleteClass();
   const { toast } = useToast();
+  const { data: students = [] } = useStudents({ has_left: false });
+
+  // Calculate actual student counts per class
+  const studentCountByClass = useMemo(() => {
+    const counts: Record<string, number> = {};
+    students.forEach(student => {
+      if (student.class_id) {
+        counts[student.class_id] = (counts[student.class_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [students]);
 
   // Filter classes based on search term
   const filteredClasses = classes.filter((cls) => {
@@ -121,7 +134,7 @@ export const ClassesTable = ({ classes, searchTerm, onAdd }: ClassesTableProps) 
                   </Badge>
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">
-                  {cls.student_count || 0}
+                  {studentCountByClass[cls.id] || 0}
                 </TableCell>
                 <TableCell className="hidden lg:table-cell text-muted-foreground">
                   {cls.teacher?.full_name || "Not assigned"}

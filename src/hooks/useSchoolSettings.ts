@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { schoolSettingsService } from '@/services/schoolSettingsService';
-import { applyThemeColor } from '@/utils/themeUtils';
 import { SchoolSettings, AcademicSession, AcademicTerm } from '@/types/schoolSettings';
 
 export const useSchoolSettings = () => {
@@ -54,11 +53,9 @@ export const useSchoolSettings = () => {
     try {
       const data = await schoolSettingsService.updateSettings(updates);
       setSettings(data);
-      
-      // Apply theme changes immediately if primary_color was updated
-      if (updates.primary_color) {
-        applyThemeColor(updates.primary_color);
-      }
+
+      // Primary color is stored for report sheets only
+      // It no longer applies to the main app theme (which stays blue)
 
       return data;
     } catch (error) {
@@ -112,7 +109,7 @@ export const useSchoolSettings = () => {
 
       await schoolSettingsService.switchTerm(currentSession.id, termName);
       await fetchTerms();
-      
+
       toast({
         title: "Term Switched",
         description: `Current term changed to ${termName}`,
@@ -137,12 +134,8 @@ export const useSchoolSettings = () => {
     loadData();
   }, []);
 
-  // Apply theme color on load
-  useEffect(() => {
-    if (settings?.primary_color) {
-      applyThemeColor(settings.primary_color);
-    }
-  }, [settings?.primary_color]);
+  // Theme color is used for report sheets only, not applied to main app
+  // The main app theme remains blue as defined in index.css
 
   return {
     settings,

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -9,13 +10,45 @@ import { useAddResultsForm } from "@/contexts/AddResultsFormContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
+interface FormData {
+  conduct?: string;
+  attitude?: string;
+  interest?: string;
+  teachers_comment?: string;
+  heads_remarks?: string;
+  days_present?: string;
+  days_school_opened?: string;
+  class_id?: string;
+  attendance?: string;
+  [key: string]: string | undefined;
+}
+
+interface GradingSettings {
+  academic_year?: string;
+  term?: string;
+  attendance_for_term?: number;
+  [key: string]: unknown;
+}
+
+interface SubjectMark {
+  subject_name?: string;
+  total_score?: number;
+  exam_score?: number;
+  ca1_score?: number;
+  ca2_score?: number;
+  ca3_score?: number;
+  ca4_score?: number;
+  grade?: string;
+}
+
 interface TermInformationCardProps {
-  formData: any;
-  setFormData: (data: any) => void;
+  formData: FormData;
+  setFormData: (data: FormData) => void;
   conductOptions?: Array<{ id: string; value: string }>;
   attitudeOptions?: Array<{ id: string; value: string }>;
   interestOptions?: Array<{ id: string; value: string }>;
   teacherCommentOptions?: Array<{ id: string; value: string }>;
+  gradingSettings?: GradingSettings;
 }
 
 const TermInformationCard = ({
@@ -25,6 +58,7 @@ const TermInformationCard = ({
   attitudeOptions = [],
   interestOptions = [],
   teacherCommentOptions = [],
+  gradingSettings,
 }: TermInformationCardProps) => {
   const { subjectMarks, selectedStudent, selectedClass } = useAddResultsForm();
   const [aiLoading, setAiLoading] = useState(false);
@@ -44,8 +78,8 @@ const TermInformationCard = ({
     try {
       // Prepare subject data for AI
       const subjectsData = Object.entries(subjectMarks)
-        .filter(([_, mark]: [string, any]) => mark && (mark.total_score !== undefined || mark.exam_score !== undefined))
-        .map(([subjectId, mark]: [string, any]) => ({
+        .filter(([_, mark]: [string, SubjectMark]) => mark && (mark.total_score !== undefined || mark.exam_score !== undefined))
+        .map(([subjectId, mark]: [string, SubjectMark]) => ({
           subject_id: subjectId,
           name: mark.subject_name || subjectId,
           total_score: mark.total_score ?? (
@@ -63,9 +97,9 @@ const TermInformationCard = ({
       });
 
       // Calculate average score
-      const validScores = subjectsData.filter((s) => typeof s.total_score === "number");
+      const validScores = subjectsData.filter((s): s is typeof s & { total_score: number } => typeof s.total_score === "number");
       const averageScore = validScores.length > 0
-        ? validScores.reduce((sum, s) => sum + s.total_score, 0) / validScores.length
+        ? validScores.reduce((sum: number, s) => sum + s.total_score, 0) / validScores.length
         : 0;
 
       // Prepare request body
@@ -130,12 +164,44 @@ const TermInformationCard = ({
     return "F";
   };
 
+  // Calculate attendance display
+  const attendanceForTerm = gradingSettings?.attendance_for_term || formData.days_school_opened || 0;
+  const daysPresent = formData.days_present || 0;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Term Information & Remarks</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Days Present / Attendance Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+          <div className="space-y-2">
+            <Label htmlFor="days_present">Days Present</Label>
+            <Input
+              id="days_present"
+              type="number"
+              min="0"
+              max={attendanceForTerm}
+              placeholder="Enter days present"
+              value={formData.days_present || ""}
+              onChange={(e) => setFormData({ ...formData, days_present: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter the number of days the student was present this term.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Attendance for Term</Label>
+            <div className="p-3 bg-background rounded-md border">
+              <p className="font-medium">{attendanceForTerm} days</p>
+              <p className="text-xs text-muted-foreground">
+                Total school days this term (from Grading Settings)
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Label htmlFor="conduct">Conduct</Label>

@@ -11,14 +11,7 @@ import { ArrowLeft, Eye, EyeOff, Info, CheckCircle2, AlertTriangle, AlertCircle,
 import { WalkthroughTrigger } from "@/components/walkthrough";
 import { supabase } from "@/lib/supabase";
 
-// Generate a username from name + 3 random digits
-const generateUsername = (name: string): string => {
-  // Clean the name: lowercase, remove spaces and special characters
-  const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-  // Generate 3 random digits
-  const randomDigits = Math.floor(100 + Math.random() * 900).toString();
-  return `${cleanName}${randomDigits}`;
-};
+
 
 const ManageProfile = () => {
   const navigate = useNavigate();
@@ -27,34 +20,12 @@ const ManageProfile = () => {
   const [showGuides, setShowGuides] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Check if username needs to be generated
-  const needsUsernameGeneration = (): boolean => {
-    const existingUsername = user?.user_metadata?.username;
-    // Needs generation if no username or if it's the old dummy format
-    return !existingUsername || existingUsername.match(/^[a-z]+\d{10,}$/);
-  };
 
-  // Get existing username or generate one from the user's name
-  const getInitialUsername = (): string => {
-    const existingUsername = user?.user_metadata?.username;
-
-    // Check if username exists and is NOT the old dummy format
-    // Old format was like "kokomlemlebasic1378303665" - very long with many digits
-    if (existingUsername && !existingUsername.match(/^[a-z]+\d{10,}$/)) {
-      return existingUsername;
-    }
-
-    // Generate from full_name or email prefix
-    const name = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'user';
-    return generateUsername(name);
-  };
-
-  const [usernameWasGenerated, setUsernameWasGenerated] = useState(needsUsernameGeneration());
 
   const [formData, setFormData] = useState({
     fullName: user?.user_metadata?.full_name || "",
     email: user?.email || "",
-    username: getInitialUsername(),
+    phoneNumber: user?.user_metadata?.phone_number || "",
     newPassword: ""
   });
 
@@ -62,35 +33,7 @@ const ManageProfile = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Auto-save username if it was newly generated
-  useEffect(() => {
-    const saveGeneratedUsername = async () => {
-      if (usernameWasGenerated && user && formData.username) {
-        try {
-          console.log("Auto-saving generated username:", formData.username);
-          const { error } = await supabase.auth.updateUser({
-            data: {
-              username: formData.username,
-            },
-          });
 
-          if (error) {
-            console.error("Failed to auto-save username:", error);
-          } else {
-            console.log("Username auto-saved successfully");
-            setUsernameWasGenerated(false); // Don't save again
-            if (refreshUser) {
-              await refreshUser();
-            }
-          }
-        } catch (err) {
-          console.error("Error auto-saving username:", err);
-        }
-      }
-    };
-
-    saveGeneratedUsername();
-  }, [usernameWasGenerated, user, formData.username, refreshUser]);
 
   const handleSaveProfile = async () => {
     if (!user) {
@@ -110,7 +53,7 @@ const ManageProfile = () => {
       const updates: { email?: string; password?: string; data?: Record<string, string> } = {
         data: {
           full_name: formData.fullName,
-          username: formData.username,
+          phone_number: formData.phoneNumber,
         },
       };
 
@@ -305,14 +248,14 @@ const ManageProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Username (Display Only)</label>
+                  <label className="text-sm font-medium">Phone Number</label>
                   <Input
-                    value={formData.username}
-                    disabled
-                    className="bg-muted/50"
+                    value={formData.phoneNumber}
+                    onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                    placeholder="e.g., 0201234567"
                   />
                   <p className="text-xs text-muted-foreground">
-                    This is your display identifier. Login uses your email address.
+                    Your phone number for contact purposes.
                   </p>
                 </div>
 

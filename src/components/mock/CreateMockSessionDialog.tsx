@@ -5,13 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Info, GraduationCap } from "lucide-react";
+import { Plus, Info, GraduationCap, Calendar } from "lucide-react";
 import { useCreateMockExamSession } from "@/hooks/useMockExams";
 import {
   useMockExamDepartments,
   useMockExamClasses,
   getExamTypeName,
 } from "@/hooks/useMockExamDepartments";
+import { useGradingSettings } from "@/hooks/useGradingSettings";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,12 +26,15 @@ interface Props {
 export function CreateMockSessionDialog({ trigger, onSuccess }: Props) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [year, setYear] = useState("2024/2025");
-  const [term, setTerm] = useState("Term 1");
   const [date, setDate] = useState<string>("");
   const [published, setPublished] = useState(false);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
+
+  // Get academic year and term from grading settings
+  const { data: gradingSettings } = useGradingSettings();
+  const academicYear = gradingSettings?.academic_year || "2024/2025";
+  const term = gradingSettings?.term ? `Term ${gradingSettings.term === 'first' ? '1' : gradingSettings.term === 'second' ? '2' : '3'}` : "Term 1";
 
   // Only JHS and SHS departments for mock exams
   const { departments, isLoading: departmentsLoading } = useMockExamDepartments();
@@ -69,8 +73,6 @@ export function CreateMockSessionDialog({ trigger, onSuccess }: Props) {
 
   const resetForm = () => {
     setName("");
-    setYear("2024/2025");
-    setTerm("Term 1");
     setDate("");
     setPublished(false);
     setSelectedDepartmentId("");
@@ -84,10 +86,11 @@ export function CreateMockSessionDialog({ trigger, onSuccess }: Props) {
     // Create session with metadata about target classes
     // Note: Since the mock_exam_sessions table doesn't have class columns,
     // we'll store the session and the class context will come from results
+    // Academic year and term are pulled from grading settings
     const result = await createSession.mutateAsync({
       name: name.trim(),
-      academic_year: year,
-      term,
+      academic_year: academicYear,
+      term: term,
       exam_date: date || null,
       is_published: published,
       status: "draft",
@@ -136,29 +139,21 @@ export function CreateMockSessionDialog({ trigger, onSuccess }: Props) {
                 />
               </div>
 
-              {/* Academic Year and Term */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="year">Academic Year</Label>
-                  <Input
-                    id="year"
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                    placeholder="2024/2025"
-                  />
+              {/* Academic Year and Term - Display only (from Grading Settings) */}
+              <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Calendar className="h-4 w-4" />
+                  Academic Period (from Grading Settings)
                 </div>
-                <div className="space-y-2">
-                  <Label>Term</Label>
-                  <Select value={term} onValueChange={setTerm}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select term" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Term 1">Term 1</SelectItem>
-                      <SelectItem value="Term 2">Term 2</SelectItem>
-                      <SelectItem value="Term 3">Term 3</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Academic Year</p>
+                    <p className="font-medium">{academicYear}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Term</p>
+                    <p className="font-medium">{term}</p>
+                  </div>
                 </div>
               </div>
 

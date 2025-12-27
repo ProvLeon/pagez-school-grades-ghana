@@ -7,7 +7,7 @@ import { Eye, EyeOff, Mail, Lock, AlertCircle, LogIn } from "lucide-react";
 import { authService, LoginCredentials } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 
 const Login = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -73,7 +73,7 @@ const Login = () => {
       if (result.success) {
         toast({
           title: "Login Successful",
-          description: "Welcome back to PB Pagez!",
+          description: "Welcome back to e-Results GH!",
           variant: "default",
         });
         // AuthContext will update and trigger re-render with Navigate
@@ -104,10 +104,10 @@ const Login = () => {
       <Card className="w-full max-w-md shadow-2xl border bg-card/80 backdrop-blur-sm">
         <CardHeader className="text-center pb-6">
           <div className="flex justify-center mb-4">
-            <img src="/lovable-uploads/97e233bb-185f-4d11-9bc3-52cabe2bef85.png" alt="Logo" className="w-20 h-20" />
+            <img src="/ERESULTS_LOGO.png" alt="e-Results GH Logo" className="w-20 h-20" />
           </div>
           <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">
-            PB Pagez School System
+            e-Results GH
           </CardTitle>
           <p className="text-muted-foreground text-sm sm:text-base mt-2">
             Secure access to your academic dashboard
@@ -202,22 +202,16 @@ const Login = () => {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
-              Need access?{" "}
-              <button
-                type="button"
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
                 className="text-primary hover:underline font-medium"
-                onClick={() => {
-                  toast({
-                    title: "Contact Administrator",
-                    description: "Please contact your system administrator at admin@pbpagez.com for account assistance.",
-                  });
-                }}
               >
-                Contact Admin
-              </button>
+                Sign Up
+              </Link>
             </p>
             <p className="text-xs text-muted-foreground mt-4">
-              PB Pagez v{import.meta.env.VITE_APP_VERSION || '1.0.0'} | Secure Academic Management
+              e-Results GH v 1.0.0 | PB Pagez LTD
             </p>
           </div>
         </CardContent>

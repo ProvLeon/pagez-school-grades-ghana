@@ -5,12 +5,38 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { GradingScale } from "@/hooks/useGradingSettings";
 import { calculateTotalScore, getGradeFromScale } from "@/utils/gradeCalculations";
+import { useMemo } from "react";
+
+interface Subject {
+  id: string;
+  name: string;
+  department_id?: string;
+}
+
+interface SubjectMark {
+  ca1_score?: number;
+  ca2_score?: number;
+  ca3_score?: number;
+  ca4_score?: number;
+  ca_score?: number;
+  exam_score?: number;
+  total_score?: number;
+  grade?: string;
+  [key: string]: number | string | undefined;
+}
+
+interface CAType {
+  id: string;
+  name: string;
+  configuration: Record<string, number>;
+  description?: string;
+}
 
 interface SubjectMarksCardProps {
-  subjects: any[];
-  subjectMarks: Record<string, any>;
-  setSubjectMarks: (marks: Record<string, any>) => void;
-  selectedCAType: any;
+  subjects: Subject[];
+  subjectMarks: Record<string, SubjectMark>;
+  setSubjectMarks: (marks: Record<string, SubjectMark>) => void;
+  selectedCAType: CAType | null;
   gradingScales?: GradingScale[];
 }
 
@@ -22,9 +48,40 @@ const SubjectMarksCard = ({
   gradingScales = []
 }: SubjectMarksCardProps) => {
 
+  // Get max values for CA and Exam based on SBA type
+  const getMaxValues = useMemo(() => {
+    if (!selectedCAType?.name) return { ca: 100, exam: 100 };
+
+    const typeName = selectedCAType.name.toLowerCase();
+
+    // SBA 50/50: CA <=50, Exam <=100 (converted to 50%)
+    if (typeName.includes('50/50')) {
+      return { ca: 50, exam: 100 };
+    }
+    // SBA 30/70: CA <=30, Exam <=100 (converted to 70%)
+    if (typeName.includes('30/70')) {
+      return { ca: 30, exam: 100 };
+    }
+    // SBA 40/60: CA <=40, Exam <=100 (converted to 60%)
+    if (typeName.includes('40/60')) {
+      return { ca: 40, exam: 100 };
+    }
+
+    return { ca: 100, exam: 100 };
+  }, [selectedCAType?.name]);
+
   const updateSubjectMark = (subjectId: string, field: string, value: string) => {
     const parsed = value === "" ? undefined : Number(value);
-    const numValue = parsed === undefined || Number.isNaN(parsed) ? undefined : Math.max(0, parsed);
+    let numValue = parsed === undefined || Number.isNaN(parsed) ? undefined : Math.max(0, parsed);
+
+    // Apply max validation based on field type
+    if (numValue !== undefined) {
+      if (field === 'ca1_score' || field === 'ca_score') {
+        numValue = Math.min(numValue, getMaxValues.ca);
+      } else if (field === 'exam_score') {
+        numValue = Math.min(numValue, getMaxValues.exam);
+      }
+    }
 
     const updatedSubjectData = { ...subjectMarks[subjectId], [field]: numValue };
     const totalScore = calculateTotalScore(updatedSubjectData, selectedCAType);
@@ -69,19 +126,29 @@ const SubjectMarksCard = ({
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {inputFields.map((field) => (
-                  <div key={field.key} className="space-y-1">
-                    <Label htmlFor={`${subject.id}_${field.key}`} className="text-xs">{field.label}</Label>
-                    <Input
-                      id={`${subject.id}_${field.key}`}
-                      type="number"
-                      min={0}
-                      placeholder="0"
-                      value={marks[field.key] ?? ""}
-                      onChange={(e) => updateSubjectMark(subject.id, field.key, e.target.value)}
-                    />
-                  </div>
-                ))}
+                {inputFields.map((field) => {
+                  const isCAField = field.key === 'ca1_score' || field.key === 'ca_score';
+                  const isExamField = field.key === 'exam_score';
+                  const maxValue = isCAField ? getMaxValues.ca : isExamField ? getMaxValues.exam : 100;
+
+                  return (
+                    <div key={field.key} className="space-y-1">
+                      <Label htmlFor={`${subject.id}_${field.key}`} className="text-xs">
+                        {field.label}
+                        <span className="text-muted-foreground ml-1">(max: {maxValue})</span>
+                      </Label>
+                      <Input
+                        id={`${subject.id}_${field.key}`}
+                        type="number"
+                        min={0}
+                        max={maxValue}
+                        placeholder="0"
+                        value={marks[field.key] ?? ""}
+                        onChange={(e) => updateSubjectMark(subject.id, field.key, e.target.value)}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );

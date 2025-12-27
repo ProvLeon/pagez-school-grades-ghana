@@ -24,7 +24,6 @@ export const BulkEditClassesDialog = ({ trigger }: BulkEditClassesDialogProps) =
   const [bulkChanges, setBulkChanges] = useState({
     department_id: "no-change",
     teacher_id: "no-change",
-    academic_year: "",
   });
 
   const { toast } = useToast();
@@ -98,7 +97,6 @@ export const BulkEditClassesDialog = ({ trigger }: BulkEditClassesDialogProps) =
       setBulkChanges({
         department_id: "no-change",
         teacher_id: "no-change",
-        academic_year: "",
       });
       setSearchTerm("");
     } catch (error) {
@@ -171,7 +169,7 @@ export const BulkEditClassesDialog = ({ trigger }: BulkEditClassesDialogProps) =
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Department</Label>
               <Select
@@ -210,15 +208,6 @@ export const BulkEditClassesDialog = ({ trigger }: BulkEditClassesDialogProps) =
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div>
-              <Label>Academic Year</Label>
-              <Input
-                placeholder="Change academic year (optional)"
-                value={bulkChanges.academic_year}
-                onChange={(e) => setBulkChanges(prev => ({ ...prev, academic_year: e.target.value }))}
-              />
             </div>
           </div>
 

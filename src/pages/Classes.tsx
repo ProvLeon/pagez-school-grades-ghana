@@ -7,18 +7,46 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Plus, Search, Filter, LayoutGrid, List, Info, X } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
+import { useDepartments } from "@/hooks/useDepartments";
 import { AddClassDialog } from "@/components/AddClassDialog";
 import { ClassesTable } from "@/components/ClassesTable";
 import { ClassesStats } from "@/components/ClassesStats";
 import { ClassesQuickActions } from "@/components/ClassesQuickActions";
 import { ClassesRecentUpdates } from "@/components/ClassesRecentUpdates";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Classes = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [showGuides, setShowGuides] = useState(true);
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
 
   const { data: classes = [], isLoading, error } = useClasses();
+  const { data: departments = [] } = useDepartments();
+
+  // Filter classes by selected departments
+  const filteredClasses = selectedDepartments.length > 0
+    ? classes.filter(cls => cls.department_id && selectedDepartments.includes(cls.department_id))
+    : classes;
+
+  const toggleDepartmentFilter = (departmentId: string) => {
+    setSelectedDepartments(prev =>
+      prev.includes(departmentId)
+        ? prev.filter(id => id !== departmentId)
+        : [...prev, departmentId]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedDepartments([]);
+  };
 
   if (isLoading) {
     return (
@@ -85,19 +113,55 @@ const Classes = () => {
                 </Button>
               }
             />
-            <Button variant="outline">
-              <Filter className="w-4 h-4 mr-2" />
-              Filters
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className={selectedDepartments.length > 0 ? "border-primary" : ""}>
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filters
+                  {selectedDepartments.length > 0 && (
+                    <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
+                      {selectedDepartments.length}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Filter by Department</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {departments.map((dept) => (
+                  <DropdownMenuCheckboxItem
+                    key={dept.id}
+                    checked={selectedDepartments.includes(dept.id)}
+                    onCheckedChange={() => toggleDepartmentFilter(dept.id)}
+                  >
+                    {dept.name}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                {selectedDepartments.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start text-muted-foreground"
+                      onClick={clearFilters}
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Clear Filters
+                    </Button>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           <div className="xl:col-span-3">
-            <ClassesTable classes={classes} searchTerm={searchTerm} />
+            <ClassesTable classes={filteredClasses} searchTerm={searchTerm} />
           </div>
           <div className="space-y-6">
-            <ClassesStats classes={classes} />
+            <ClassesStats classes={filteredClasses} />
             <ClassesQuickActions />
             <ClassesRecentUpdates classes={classes} />
           </div>

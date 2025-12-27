@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { applyThemeColor } from '@/utils/themeUtils';
 
 interface ThemeContextType {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
-  primaryColor: string | null;
+  primaryColor: string | null;  // Used for report sheets only, not main app theme
   isLoadingTheme: boolean;
 }
 
@@ -32,20 +31,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
         if (error) {
           console.error('Error fetching theme color:', error);
-          // Apply default color if fetch fails
-          applyThemeColor('#e11d48');
+          // Use default color for report sheets if fetch fails
+          setPrimaryColor('#e11d48');
+          primaryColorRef.current = '#e11d48';
         } else if (data?.primary_color) {
+          // Store the color for report sheet use only - don't apply to main app
           setPrimaryColor(data.primary_color);
           primaryColorRef.current = data.primary_color;
-          applyThemeColor(data.primary_color);
         } else {
-          // Apply default color if no settings found
-          applyThemeColor('#e11d48');
+          // Use default color for report sheets if no settings found
+          setPrimaryColor('#e11d48');
+          primaryColorRef.current = '#e11d48';
         }
       } catch (error) {
         console.error('Error fetching theme color:', error);
-        // Apply default color on error
-        applyThemeColor('#e11d48');
+        // Use default color for report sheets on error
+        setPrimaryColor('#e11d48');
+        primaryColorRef.current = '#e11d48';
       } finally {
         setIsLoadingTheme(false);
       }
@@ -66,9 +68,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         (payload) => {
           const newColor = payload.new?.primary_color;
           if (newColor && newColor !== primaryColorRef.current) {
+            // Store the color for report sheet use only - don't apply to main app
             setPrimaryColor(newColor);
             primaryColorRef.current = newColor;
-            applyThemeColor(newColor);
           }
         }
       )

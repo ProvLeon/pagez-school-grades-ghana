@@ -29,6 +29,8 @@ import NotFound from "./pages/NotFound";
 import PublicReports from "./pages/PublicReports";
 import PublicMockResults from "./pages/PublicMockResults";
 import MockExams from "./pages/MockExams";
+import ForgotPassword from "./pages/ForgotPassword";
+import SignUp from "./pages/SignUp";
 
 // Subject pages
 import ManageSubjects from "./pages/subjects/ManageSubjects";
@@ -177,6 +179,8 @@ const App = () => {
                   <Routes>
                     {/* Public Routes */}
                     <Route path="/login" element={disableAuth ? <ForceRedirect to="/" /> : <Login />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/signup" element={<SignUp />} />
                     <Route path="/student-reports" element={<PublicReports />} />
                     <Route path="/mock-results/:sessionId" element={<PublicMockResults />} />
 
