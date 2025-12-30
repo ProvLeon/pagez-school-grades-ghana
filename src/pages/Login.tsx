@@ -211,7 +211,7 @@ const Login = () => {
               </Link>
             </p>
             <p className="text-xs text-muted-foreground mt-4">
-              e-Results GH v 1.0.0 | PB Pagez LTD
+              e-Results GH v 1.2.0 | PB Pagez LTD
             </p>
           </div>
         </CardContent>
