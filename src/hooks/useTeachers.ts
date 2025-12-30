@@ -253,7 +253,19 @@ export const useDeleteTeacher = () => {
 
   return useMutation({
     mutationFn: async (teacherId: string) => {
-      // First get the teacher to find their user_id
+      // Verify session is valid before making requests
+      // This prevents CORS errors from stale/invalid sessions
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !sessionData?.session) {
+        // Try to refresh the session
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          throw new Error('Session expired. Please refresh the page and try again.');
+        }
+      }
+
+      // First get the teacher to find their info
       const { data: teacher, error: fetchError } = await supabase
         .from('teachers')
         .select('user_id, full_name')
@@ -262,10 +274,14 @@ export const useDeleteTeacher = () => {
 
       if (fetchError) {
         console.error('Error fetching teacher:', fetchError);
+        // Check if it's a network/CORS error
+        if (fetchError.message?.includes('NetworkError') || fetchError.code === '') {
+          throw new Error('Network error. Please check your connection and try again.');
+        }
         throw new Error('Failed to find teacher record');
       }
 
-      // Delete the teacher record (this will cascade delete due to foreign key)
+      // Delete the teacher record
       const { error: deleteError } = await supabase
         .from('teachers')
         .delete()
@@ -273,22 +289,23 @@ export const useDeleteTeacher = () => {
 
       if (deleteError) {
         console.error('Error deleting teacher:', deleteError);
+        // Check if it's a network/CORS error
+        if (deleteError.message?.includes('NetworkError') || deleteError.code === '') {
+          throw new Error('Network error. Please check your connection and try again.');
+        }
         throw new Error('Failed to delete teacher record');
       }
 
-      // If teacher has a linked auth user, try to delete that too
-      // Note: This requires service role key which may not be available on client
-      if (teacher.user_id) {
-        try {
-          const { error: authDeleteError } = await supabase.auth.admin.deleteUser(teacher.user_id);
-          if (authDeleteError) {
-            console.error('Error deleting auth user (may require service role):', authDeleteError);
-            // Don't throw here as the teacher record is already deleted
-          }
-        } catch (authError) {
-          console.error('Could not delete auth user (service role may be required):', authError);
-        }
-      }
+      // NOTE: We intentionally do NOT try to delete the auth user here.
+      // The admin.deleteUser() API requires a service role key which is not
+      // available on the client side. Attempting to call it causes 403 errors.
+      //
+      // The auth user will remain in Supabase Auth but won't be able to do
+      // anything since their teacher record is deleted. To fully clean up
+      // orphaned auth users, use the Supabase dashboard or a server-side function.
+      //
+      // If needed in the future, create a Supabase Edge Function with service role
+      // to handle auth user deletion securely.
 
       return teacher;
     },
