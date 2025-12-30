@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, Teacher } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -52,7 +51,6 @@ export const useCreateTeacher = () => {
   return useMutation({
     mutationFn: async (teacherData: CreateTeacherData) => {
       const email = teacherData.email || `${teacherData.username}@school.local`;
-      let userId: string | null = null;
 
       // Check if user already exists with this email
       const { data: existingTeacher } = await supabase
@@ -65,60 +63,25 @@ export const useCreateTeacher = () => {
         throw new Error(`A teacher with email ${email} already exists`);
       }
 
-      // Try to create Supabase Auth user using admin API to avoid auto-signing in
-      // This prevents the admin from being logged out when creating a teacher
+      // CRITICAL: Save the current admin session BEFORE signUp
+      // signUp() automatically signs in the new user, which would log out the admin
+      const { data: currentSessionData } = await supabase.auth.getSession();
+      const adminSession = currentSessionData?.session;
+
+      if (!adminSession) {
+        throw new Error('No admin session found. Please log in again.');
+      }
+
+      // Store the admin's tokens for later restoration
+      const adminAccessToken = adminSession.access_token;
+      const adminRefreshToken = adminSession.refresh_token;
+
+      let userId: string | null = null;
+      let signUpSucceeded = false;
+
       try {
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: email,
-          password: teacherData.password,
-          email_confirm: true, // Auto-confirm the email
-          user_metadata: {
-            user_type: 'teacher',
-            full_name: teacherData.full_name,
-          }
-        });
-
-        if (authError) {
-          // If admin API fails (e.g., no service role), fall back to regular signUp
-          // but warn about the potential sign-out issue
-          console.warn('Admin API failed, falling back to signUp:', authError.message);
-
-          // Fall back to regular signUp (will cause auto-login issue)
-          const { data: fallbackData, error: fallbackError } = await supabase.auth.signUp({
-            email: email,
-            password: teacherData.password,
-            options: {
-              data: {
-                user_type: 'teacher',
-                full_name: teacherData.full_name,
-              }
-            }
-          });
-
-          if (fallbackError) {
-            if (fallbackError.message.includes('already registered')) {
-              console.warn('Auth user already exists, creating teacher record without auth link');
-              userId = null;
-            } else {
-              console.error('Auth user creation error:', fallbackError);
-              throw new Error(`Failed to create authentication account: ${fallbackError.message}`);
-            }
-          } else if (fallbackData.user) {
-            userId = fallbackData.user.id;
-
-            // Sign back out the newly created user to restore admin session
-            // This is a workaround for the auto-signin issue
-            await supabase.auth.signOut({ scope: 'local' });
-
-            // Re-establish the admin session from storage
-            await supabase.auth.getSession();
-          }
-        } else if (authData.user) {
-          userId = authData.user.id;
-        }
-      } catch (adminApiError) {
-        console.warn('Admin API not available, using signUp fallback');
-        // If admin API throws, use regular signUp
+        // Create the new teacher auth user
+        // NOTE: This will auto-sign in as the new user (Supabase behavior)
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: email,
           password: teacherData.password,
@@ -132,16 +95,51 @@ export const useCreateTeacher = () => {
 
         if (authError) {
           if (authError.message.includes('already registered')) {
-            console.warn('Auth user already exists, creating teacher record without auth link');
+            console.warn('Auth user already exists, will create teacher record without auth link');
             userId = null;
           } else {
-            console.error('Auth user creation error:', authError);
             throw new Error(`Failed to create authentication account: ${authError.message}`);
           }
         } else if (authData.user) {
           userId = authData.user.id;
+          signUpSucceeded = true;
+        }
+      } catch (signUpError) {
+        // Restore admin session even if signUp fails
+        await supabase.auth.setSession({
+          access_token: adminAccessToken,
+          refresh_token: adminRefreshToken,
+        });
+        throw signUpError;
+      }
+
+      // CRITICAL: Restore the admin session immediately after signUp
+      // This is essential because signUp auto-signed in as the new teacher
+      const { error: restoreError } = await supabase.auth.setSession({
+        access_token: adminAccessToken,
+        refresh_token: adminRefreshToken,
+      });
+
+      if (restoreError) {
+        console.error('Failed to restore admin session:', restoreError);
+        // Try to refresh the session
+        const { error: refreshError } = await supabase.auth.refreshSession({
+          refresh_token: adminRefreshToken,
+        });
+        if (refreshError) {
+          throw new Error('Failed to restore admin session. Please log in again.');
         }
       }
+
+      // Verify we're back as the admin
+      const { data: verifySession } = await supabase.auth.getSession();
+      if (!verifySession?.session || verifySession.session.user.id !== adminSession.user.id) {
+        console.error('Session mismatch after restoration');
+        // Force refresh
+        await supabase.auth.refreshSession({ refresh_token: adminRefreshToken });
+      }
+
+      // Now we're authenticated as the admin again - create the profile and teacher records
 
       // Create profile record with user_type = 'teacher' if we have a userId
       if (userId) {
@@ -154,13 +152,12 @@ export const useCreateTeacher = () => {
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          // Don't fail the whole operation, but log the error
-          // The profile might already exist or there could be a trigger creating it
+          // Don't fail the whole operation - profile might be created by a trigger
+          // or there might be existing data
         }
       }
 
-      // Create teacher record - only include columns that exist in the table
-      // Base columns that definitely exist
+      // Create teacher record
       const teacherInsertData: Record<string, unknown> = {
         full_name: teacherData.full_name,
         email: email,
@@ -182,8 +179,9 @@ export const useCreateTeacher = () => {
       if (teacherError) {
         console.error('Teacher record creation error:', teacherError);
         // If teacher creation fails and we created an auth user, try to clean up
-        if (userId) {
+        if (userId && signUpSucceeded) {
           try {
+            // Note: admin.deleteUser requires service role, may not work from client
             await supabase.auth.admin.deleteUser(userId);
           } catch (cleanupError) {
             console.error('Failed to cleanup auth user:', cleanupError);
