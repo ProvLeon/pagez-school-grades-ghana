@@ -15,19 +15,44 @@ import { supabase } from "@/lib/supabase";
 
 const ManageProfile = () => {
   const navigate = useNavigate();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, teacherRecord, isTeacher } = useAuth();
   const { toast } = useToast();
   const [showGuides, setShowGuides] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Get phone number from teacher record if available, otherwise from user metadata
+  const getPhoneNumber = () => {
+    if (isTeacher && teacherRecord?.phone) {
+      return teacherRecord.phone;
+    }
+    return user?.user_metadata?.phone_number || "";
+  };
 
+  // Get full name from teacher record if available, otherwise from user metadata
+  const getFullName = () => {
+    if (isTeacher && teacherRecord?.full_name) {
+      return teacherRecord.full_name;
+    }
+    return user?.user_metadata?.full_name || "";
+  };
 
   const [formData, setFormData] = useState({
-    fullName: user?.user_metadata?.full_name || "",
+    fullName: getFullName(),
     email: user?.email || "",
-    phoneNumber: user?.user_metadata?.phone_number || "",
+    phoneNumber: getPhoneNumber(),
     newPassword: ""
   });
+
+  // Update form data when teacherRecord loads
+  useEffect(() => {
+    if (isTeacher && teacherRecord) {
+      setFormData(prev => ({
+        ...prev,
+        fullName: teacherRecord.full_name || prev.fullName,
+        phoneNumber: teacherRecord.phone || prev.phoneNumber,
+      }));
+    }
+  }, [isTeacher, teacherRecord]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -87,6 +112,21 @@ const ManageProfile = () => {
       if (profileError) {
         // Profile table might not exist, log but don't fail
         console.warn("Profile table update warning:", profileError);
+      }
+
+      // For teachers, also update the teachers table
+      if (isTeacher && teacherRecord) {
+        const { error: teacherError } = await supabase
+          .from("teachers")
+          .update({
+            full_name: formData.fullName,
+            phone: formData.phoneNumber,
+          })
+          .eq("id", teacherRecord.id);
+
+        if (teacherError) {
+          console.warn("Teacher table update warning:", teacherError);
+        }
       }
 
       // Refresh the user data in context

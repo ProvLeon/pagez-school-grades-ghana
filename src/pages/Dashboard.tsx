@@ -120,19 +120,19 @@ const TeacherDashboardContent = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             <Link to="/results/add-results">
-              <Button className="w-full justify-start" variant="outline">
+              <Button className="w-full justify-start mb-2" variant="outline">
                 <FileText className="h-4 w-4 mr-2" />
                 Add New Results
               </Button>
             </Link>
             <Link to="/results/manage-results">
-              <Button className="w-full justify-start" variant="outline">
+              <Button className="w-full justify-start mb-2" variant="outline">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 View My Results
               </Button>
             </Link>
             <Link to="/profile">
-              <Button className="w-full justify-start" variant="outline">
+              <Button className="w-full justify-start mb-2" variant="outline">
                 <Users className="h-4 w-4 mr-2" />
                 My Profile
               </Button>
