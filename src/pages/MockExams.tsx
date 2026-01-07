@@ -349,33 +349,413 @@ export default function MockExams() {
 
   const currentSession = sessions.find((s) => s.id === selectedSessionId);
 
-  // Export PDF
+  // Export PDF with detailed student results and subject scores
   const handleExportPDF = () => {
     if (!currentSession || filteredResults.length === 0) return;
 
     const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text(`Mock Exam Results - ${currentSession.name}`, 14, 20);
-    doc.setFontSize(10);
-    doc.text(`Academic Year: ${currentSession.academic_year} | Term: ${currentSession.term}`, 14, 28);
-    doc.text(`Total Students: ${stats.totalStudents} | Average Score: ${stats.avgScore}%`, 14, 34);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 14;
+    const primaryColor: [number, number, number] = [59, 130, 246];
+    const headerColor: [number, number, number] = [30, 64, 175];
 
+    // Get all unique subjects from the results
+    const allSubjects = new Set<string>();
+    filteredResults.forEach(r => {
+      r.subject_scores?.forEach(s => allSubjects.add(s.subject_name));
+    });
+    const subjectList = Array.from(allSubjects).sort();
+
+    // === PAGE 1: Summary Report ===
+    let currentY = 15;
+
+    // Header with border
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(margin - 4, 8, pageWidth - (margin * 2) + 8, 30, 2, 2);
+
+    // Title
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...headerColor);
+    doc.text('MOCK EXAMINATION RESULTS', pageWidth / 2, currentY + 5, { align: 'center' });
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    doc.text(currentSession.name, pageWidth / 2, currentY + 12, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.text(`Academic Year: ${currentSession.academic_year} | Term: ${currentSession.term}`, pageWidth / 2, currentY + 18, { align: 'center' });
+
+    currentY = 45;
+
+    // Statistics Cards
+    doc.setFillColor(240, 249, 255);
+    doc.roundedRect(margin, currentY, (pageWidth - margin * 2 - 10) / 4, 20, 2, 2, 'F');
+    doc.roundedRect(margin + (pageWidth - margin * 2 - 10) / 4 + 3, currentY, (pageWidth - margin * 2 - 10) / 4, 20, 2, 2, 'F');
+    doc.roundedRect(margin + ((pageWidth - margin * 2 - 10) / 4 + 3) * 2, currentY, (pageWidth - margin * 2 - 10) / 4, 20, 2, 2, 'F');
+    doc.roundedRect(margin + ((pageWidth - margin * 2 - 10) / 4 + 3) * 3, currentY, (pageWidth - margin * 2 - 10) / 4, 20, 2, 2, 'F');
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...primaryColor);
+    const statBoxWidth = (pageWidth - margin * 2 - 10) / 4;
+    doc.text('Total Students', margin + statBoxWidth / 2, currentY + 6, { align: 'center' });
+    doc.text('Average Score', margin + statBoxWidth + 3 + statBoxWidth / 2, currentY + 6, { align: 'center' });
+    doc.text('Avg Aggregate', margin + (statBoxWidth + 3) * 2 + statBoxWidth / 2, currentY + 6, { align: 'center' });
+    doc.text('Pass Rate', margin + (statBoxWidth + 3) * 3 + statBoxWidth / 2, currentY + 6, { align: 'center' });
+
+    doc.setFontSize(14);
+    doc.setTextColor(30, 30, 30);
+    doc.text(stats.totalStudents.toString(), margin + statBoxWidth / 2, currentY + 14, { align: 'center' });
+    doc.text(`${stats.avgScore}%`, margin + statBoxWidth + 3 + statBoxWidth / 2, currentY + 14, { align: 'center' });
+    doc.text(stats.avgAggregate.toString(), margin + (statBoxWidth + 3) * 2 + statBoxWidth / 2, currentY + 14, { align: 'center' });
+    doc.text(`${stats.passRate}%`, margin + (statBoxWidth + 3) * 3 + statBoxWidth / 2, currentY + 14, { align: 'center' });
+
+    currentY = 72;
+
+    // Summary Table Header
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...headerColor);
+    doc.text('RESULTS SUMMARY', margin, currentY);
+    currentY += 5;
+
+    // Summary Table
     autoTable(doc, {
-      startY: 42,
-      head: [["Pos", "Student Name", "Raw Score", "Aggregate", "Grade"]],
+      startY: currentY,
+      head: [['Rank', 'Student Name', 'Raw Score', 'Aggregate', 'Grade']],
       body: filteredResults.map((r, index) => [
         index + 1,
         r.student_name,
         `${r.total_score || 0}%`,
-        r.position || "-",
+        r.position || '-',
         calculateMockGrade(Number(r.position) || 54),
       ]),
-      theme: "grid",
-      headStyles: { fillColor: [59, 130, 246] },
+      theme: 'grid',
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 15, halign: 'center' },
+        1: { cellWidth: 60 },
+        2: { cellWidth: 25, halign: 'center' },
+        3: { cellWidth: 25, halign: 'center' },
+        4: { cellWidth: 20, halign: 'center' },
+      },
+      margin: { left: margin, right: margin },
     });
 
+    // === PAGE 2+: Detailed Subject Scores ===
+    if (subjectList.length > 0) {
+      doc.addPage();
+      currentY = 15;
+
+      // Header
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...headerColor);
+      doc.text('DETAILED SUBJECT SCORES', pageWidth / 2, currentY, { align: 'center' });
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      doc.text(`${currentSession.name} - ${currentSession.academic_year}`, pageWidth / 2, currentY + 6, { align: 'center' });
+
+      currentY = 28;
+
+      // Create subject score table
+      const subjectHeaders = ['Rank', 'Student Name', ...subjectList.slice(0, 6), 'Total', 'Agg', 'Grade'];
+
+      const subjectTableBody = filteredResults.map((r, index) => {
+        const row: (string | number)[] = [
+          index + 1,
+          r.student_name.length > 20 ? r.student_name.substring(0, 18) + '...' : r.student_name,
+        ];
+
+        // Add each subject score (limit to 6 subjects for page width)
+        subjectList.slice(0, 6).forEach(subjectName => {
+          const subjectScore = r.subject_scores?.find(s => s.subject_name === subjectName);
+          row.push(subjectScore?.total_score ?? '-');
+        });
+
+        row.push(`${r.total_score || 0}%`);
+        row.push(r.position || '-');
+        row.push(calculateMockGrade(Number(r.position) || 54));
+
+        return row;
+      });
+
+      // Calculate dynamic column widths
+      const fixedWidth = 15 + 35 + 20 + 15 + 18; // Rank + Name + Total + Agg + Grade
+      const availableWidth = pageWidth - margin * 2 - fixedWidth;
+      const subjectColWidth = Math.min(18, availableWidth / Math.min(subjectList.length, 6));
+
+      const columnStyles: { [key: number]: { cellWidth: number; halign?: 'center' | 'left' | 'right' } } = {
+        0: { cellWidth: 15, halign: 'center' },
+        1: { cellWidth: 35 },
+      };
+
+      subjectList.slice(0, 6).forEach((_, idx) => {
+        columnStyles[idx + 2] = { cellWidth: subjectColWidth, halign: 'center' };
+      });
+
+      const lastIdx = subjectList.slice(0, 6).length + 2;
+      columnStyles[lastIdx] = { cellWidth: 20, halign: 'center' };
+      columnStyles[lastIdx + 1] = { cellWidth: 15, halign: 'center' };
+      columnStyles[lastIdx + 2] = { cellWidth: 18, halign: 'center' };
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [subjectHeaders],
+        body: subjectTableBody,
+        theme: 'grid',
+        styles: {
+          fontSize: 7,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 7,
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+        columnStyles,
+        margin: { left: margin, right: margin },
+      });
+
+      // If more than 6 subjects, add another table for remaining subjects
+      if (subjectList.length > 6) {
+        const remainingSubjects = subjectList.slice(6);
+        const finalY = (doc as any).lastAutoTable?.finalY || currentY + 100;
+
+        if (finalY > pageHeight - 80) {
+          doc.addPage();
+          currentY = 20;
+        } else {
+          currentY = finalY + 10;
+        }
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...headerColor);
+        doc.text('Additional Subjects', margin, currentY);
+        currentY += 5;
+
+        const additionalHeaders = ['Rank', 'Student Name', ...remainingSubjects];
+        const additionalBody = filteredResults.map((r, index) => {
+          const row: (string | number)[] = [index + 1, r.student_name];
+          remainingSubjects.forEach(subjectName => {
+            const subjectScore = r.subject_scores?.find(s => s.subject_name === subjectName);
+            row.push(subjectScore?.total_score ?? '-');
+          });
+          return row;
+        });
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [additionalHeaders],
+          body: additionalBody,
+          theme: 'grid',
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+          alternateRowStyles: { fillColor: [248, 250, 252] },
+          margin: { left: margin, right: margin },
+        });
+      }
+    }
+
+    // Add footer to all pages
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...primaryColor);
+      doc.text('© GES SBA SYSTEM', pageWidth - margin, pageHeight - 8, { align: 'right' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, margin, pageHeight - 8);
+    }
+
     doc.save(`mock-results-${currentSession.name.replace(/\s+/g, "-").toLowerCase()}.pdf`);
-    toast({ title: "PDF Exported", description: "Results have been exported successfully." });
+    toast({ title: "PDF Exported", description: "Detailed results have been exported successfully." });
+  };
+
+  // Export individual student PDF
+  const handleExportStudentPDF = (result: EnrichedMockExamResult) => {
+    if (!currentSession) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 14;
+    const primaryColor: [number, number, number] = [59, 130, 246];
+    const headerColor: [number, number, number] = [30, 64, 175];
+
+    let currentY = 15;
+
+    // Header border
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(0.8);
+    doc.roundedRect(margin - 4, 8, pageWidth - (margin * 2) + 8, 35, 2, 2);
+
+    // Title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...headerColor);
+    doc.text('MOCK EXAMINATION RESULT', pageWidth / 2, currentY + 5, { align: 'center' });
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    doc.text(currentSession.name, pageWidth / 2, currentY + 12, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.text(`Academic Year: ${currentSession.academic_year} | Term: ${currentSession.term}`, pageWidth / 2, currentY + 18, { align: 'center' });
+
+    currentY = 50;
+
+    // Student Info Card
+    doc.setFillColor(240, 249, 255);
+    doc.roundedRect(margin, currentY, pageWidth - margin * 2, 25, 2, 2, 'F');
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin, currentY, pageWidth - margin * 2, 25, 2, 2);
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 30, 30);
+    doc.text(result.student_name, margin + 5, currentY + 8);
+
+    const studentClass = allClasses.find((c) => c.id === result.class_id)?.name || '-';
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Class: ${studentClass}`, margin + 5, currentY + 15);
+
+    // Summary stats on right side of card
+    const aggregate = result.position || 54;
+    const grade = calculateMockGrade(aggregate);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...headerColor);
+    doc.text(`Score: ${result.total_score || 0}%`, pageWidth - margin - 60, currentY + 10);
+    doc.text(`Aggregate: ${aggregate}`, pageWidth - margin - 60, currentY + 17);
+
+    doc.setFillColor(aggregate <= 24 ? 34 : 239, aggregate <= 24 ? 197 : 68, aggregate <= 24 ? 94 : 68);
+    doc.roundedRect(pageWidth - margin - 25, currentY + 5, 20, 15, 2, 2, 'F');
+    doc.setFontSize(11);
+    doc.setTextColor(255, 255, 255);
+    doc.text(String(grade), pageWidth - margin - 15, currentY + 15, { align: 'center' });
+
+    currentY = 82;
+
+    // Subject Scores Header
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...headerColor);
+    doc.text('SUBJECT SCORES', margin, currentY);
+    currentY += 5;
+
+    // Subject Scores Table
+    if (result.subject_scores && result.subject_scores.length > 0) {
+      const subjectData = result.subject_scores.map((s, idx) => [
+        idx + 1,
+        s.subject_name,
+        s.exam_score ?? '-',
+        s.total_score ?? '-',
+      ]);
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['#', 'Subject', 'Exam Score', 'Total Score']],
+        body: subjectData,
+        theme: 'grid',
+        styles: {
+          fontSize: 10,
+          cellPadding: 4,
+        },
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 10,
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+        columnStyles: {
+          0: { cellWidth: 15, halign: 'center' },
+          1: { cellWidth: 80 },
+          2: { cellWidth: 35, halign: 'center' },
+          3: { cellWidth: 35, halign: 'center' },
+        },
+        margin: { left: margin, right: margin },
+      });
+
+      currentY = (doc as any).lastAutoTable?.finalY + 10 || currentY + 60;
+    } else {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(120, 120, 120);
+      doc.text('No subject scores available', margin, currentY + 10);
+      currentY += 20;
+    }
+
+    // Summary Box
+    doc.setFillColor(240, 249, 255);
+    doc.roundedRect(margin, currentY, pageWidth - margin * 2, 30, 2, 2, 'F');
+    doc.setDrawColor(...primaryColor);
+    doc.roundedRect(margin, currentY, pageWidth - margin * 2, 30, 2, 2);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...headerColor);
+    doc.text('OVERALL PERFORMANCE', margin + 5, currentY + 8);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    doc.text(`Total Average Score: ${result.total_score || 0}%`, margin + 5, currentY + 16);
+    doc.text(`Aggregate: ${aggregate}`, margin + 5, currentY + 23);
+    doc.text(`Grade: ${String(grade)}`, margin + 80, currentY + 16);
+    doc.text(`Status: ${aggregate <= 24 ? 'PASS' : 'NEEDS IMPROVEMENT'}`, margin + 80, currentY + 23);
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, margin, pageHeight - 10);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...primaryColor);
+    doc.text('© GES SBA SYSTEM', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+    const fileName = `${result.student_name.replace(/\s+/g, '-')}-mock-result-${currentSession.name.replace(/\s+/g, '-')}.pdf`.toLowerCase();
+    doc.save(fileName);
+    toast({ title: "PDF Downloaded", description: `Result for ${result.student_name} downloaded.` });
   };
 
   // Delete all results
@@ -750,6 +1130,7 @@ export default function MockExams() {
                                 <TableHead className="text-right">Avg Score</TableHead>
                                 <TableHead className="text-right">Aggregate</TableHead>
                                 <TableHead className="text-center">Grade</TableHead>
+                                <TableHead className="text-center w-20">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -784,6 +1165,16 @@ export default function MockExams() {
                                       >
                                         {grade}
                                       </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleExportStudentPDF(result)}
+                                        title={`Download result for ${result.student_name}`}
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </Button>
                                     </TableCell>
                                   </TableRow>
                                 );
