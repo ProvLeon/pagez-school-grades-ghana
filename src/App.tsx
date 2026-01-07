@@ -30,6 +30,7 @@ import PublicReports from "./pages/PublicReports";
 import PublicMockResults from "./pages/PublicMockResults";
 import MockExams from "./pages/MockExams";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import SignUp from "./pages/SignUp";
 
 // Subject pages
@@ -180,6 +181,7 @@ const App = () => {
                     {/* Public Routes */}
                     <Route path="/login" element={disableAuth ? <ForceRedirect to="/" /> : <Login />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/student-reports" element={<PublicReports />} />
                     <Route path="/mock-results/:sessionId" element={<PublicMockResults />} />
