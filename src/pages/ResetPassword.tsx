@@ -24,20 +24,27 @@ const ResetPassword = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    let subscription: { unsubscribe: () => void } | null = null;
-
     // Check for error parameters in URL (Supabase redirects with these when link expires)
     const urlError = searchParams.get('error');
     const errorCode = searchParams.get('error_code');
     const errorDescription = searchParams.get('error_description');
 
-    if (urlError || errorCode) {
+    // Also check hash for errors (Supabase sometimes puts errors there)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const hashError = hashParams.get('error');
+    const hashErrorCode = hashParams.get('error_code');
+    const hashErrorDescription = hashParams.get('error_description');
+
+    const finalError = urlError || hashError;
+    const finalErrorCode = errorCode || hashErrorCode;
+    const finalErrorDescription = errorDescription || hashErrorDescription;
+
+    if (finalError || finalErrorCode) {
       // Link has expired or is invalid
-      if (errorCode === 'otp_expired') {
+      if (finalErrorCode === 'otp_expired') {
         setErrorMessage("This password reset link has expired. Please request a new one.");
-      } else if (errorDescription) {
-        setErrorMessage(errorDescription.replace(/\+/g, ' '));
+      } else if (finalErrorDescription) {
+        setErrorMessage(decodeURIComponent(finalErrorDescription.replace(/\+/g, ' ')));
       } else {
         setErrorMessage("This password reset link is invalid or has expired.");
       }
@@ -45,73 +52,52 @@ const ResetPassword = () => {
       return;
     }
 
-    // Check for hash fragment with access token (Supabase PKCE flow)
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token');
-    const type = hashParams.get('type');
+    // Set up auth state listener - Supabase client automatically handles code exchange
+    // via detectSessionInUrl: true, so we just need to listen for the events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event, session ? 'has session' : 'no session');
 
-    if (accessToken && type === 'recovery') {
-      // Set the session from the hash tokens
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken || '',
-      }).then(({ error }) => {
-        if (error) {
-          console.error('Error setting session:', error);
-          setErrorMessage("Failed to verify reset link. Please try again.");
-          setIsValidRecovery(false);
-        } else {
-          setIsValidRecovery(true);
-        }
-      });
-      return;
-    }
+      if (event === 'PASSWORD_RECOVERY') {
+        // This is the primary event we're looking for
+        setIsValidRecovery(true);
+      } else if (event === 'SIGNED_IN' && session) {
+        // With PKCE, recovery often comes as SIGNED_IN after automatic code exchange
+        // If we have a session after coming from a reset link, allow password reset
+        setIsValidRecovery(true);
+      } else if (event === 'INITIAL_SESSION' && session) {
+        // Session was already established (code was already exchanged)
+        setIsValidRecovery(true);
+      }
+    });
 
-    // Listen for auth state changes - PASSWORD_RECOVERY event is triggered when user clicks email link
-    const checkRecoverySession = () => {
-      const { data } = supabase.auth.onAuthStateChange((event, session) => {
-        console.log('Auth event:', event);
-        if (event === 'PASSWORD_RECOVERY' && session) {
-          // Valid recovery session from email link
-          setIsValidRecovery(true);
-        } else if (event === 'SIGNED_IN' && session) {
-          // Check if this is from a recovery flow by checking the URL or session
-          // Sometimes PASSWORD_RECOVERY comes as SIGNED_IN
-          const hashType = new URLSearchParams(window.location.hash.substring(1)).get('type');
-          if (hashType === 'recovery') {
-            setIsValidRecovery(true);
-          } else {
-            // Regular sign in - not a valid recovery
-            setIsValidRecovery(false);
-          }
-        } else if (event === 'INITIAL_SESSION') {
-          // Check if there's already a session and tokens in URL
-          if (!session && !accessToken) {
-            // No session and no tokens - invalid access
-            setIsValidRecovery(false);
-          }
-        }
-      });
-      subscription = data.subscription;
+    // Check for existing session (user might have already been authenticated via the link)
+    const checkExistingSession = async () => {
+      // Small delay to let Supabase client process the URL and exchange code automatically
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Set a timeout - if no recovery event received, check for existing valid session
-      timeoutId = setTimeout(() => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        // Has a valid session - allow password reset
+        setIsValidRecovery(true);
+        return;
+      }
+
+      // No session yet - wait a bit more for auth state change, then mark as invalid
+      setTimeout(() => {
         setIsValidRecovery((current) => {
           if (current === null) {
-            // Still null - no valid recovery detected
             return false;
           }
           return current;
         });
-      }, 3000);
+      }, 2000);
     };
 
-    checkRecoverySession();
+    checkExistingSession();
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (subscription) subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, [searchParams]);
 
@@ -167,10 +153,10 @@ const ResetPassword = () => {
       }, 2000);
     } catch (err: unknown) {
       console.error("Password reset error:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to reset password. Please try again.";
+      const message = err instanceof Error ? err.message : "Failed to reset password. Please try again.";
       toast({
         title: "Error",
-        description: errorMessage,
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -190,7 +176,7 @@ const ResetPassword = () => {
     );
   }
 
-  // Invalid or expired recovery link (or user navigated directly without email link)
+  // Invalid or expired recovery link
   if (isValidRecovery === false) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-primary/10 flex items-center justify-center p-4">

@@ -112,6 +112,19 @@ const SignUp = () => {
       }
 
       if (data.user) {
+        // Create profile with admin role for new school owner
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert({
+            user_id: data.user.id,
+            user_type: "admin",
+          });
+
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+          // Don't fail the signup for this, but log it
+        }
+
         // Create school_settings entry for the new school
         const { error: settingsError } = await supabase
           .from("school_settings")
@@ -131,11 +144,12 @@ const SignUp = () => {
           description: "Your account has been created successfully!",
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Sign up error:", err);
 
       let errorMessage = "Failed to create account. Please try again.";
-      if (err.message?.includes("already registered")) {
+      const errorObj = err as { message?: string };
+      if (errorObj.message?.includes("already registered")) {
         errorMessage = "An account with this phone number already exists.";
       }
 
