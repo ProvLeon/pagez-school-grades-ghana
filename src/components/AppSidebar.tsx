@@ -311,7 +311,7 @@ export function AppSidebar() {
                     onClick={() => toggleExpanded(item.title)}
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                      isActive(item.url) ? "text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      isActive(item.url) ? "text-primary dark:text-blue-500" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                     data-tour={item.tourId}
                   >
@@ -327,7 +327,7 @@ export function AppSidebar() {
                           to={subItem.url}
                           className={cn(
                             "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                            isActive(subItem.url, true) ? "text-primary bg-muted" : "text-muted-foreground hover:text-foreground"
+                            isActive(subItem.url, true) ? "text-primary dark:text-blue-500 bg-muted" : "text-muted-foreground hover:text-foreground"
                           )}
                         >
                           {subItem.title}
@@ -341,7 +341,7 @@ export function AppSidebar() {
                   to={item.url}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                    isActive(item.url, true) ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    isActive(item.url, true) ? "bg-muted text-primary dark:text-blue-500" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                   data-tour={item.tourId}
                 >
