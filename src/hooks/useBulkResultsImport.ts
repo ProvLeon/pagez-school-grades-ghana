@@ -4,6 +4,14 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { ParsedResultData } from '@/hooks/useResultsExcelParser';
 
+interface GradingScale {
+  id: string;
+  grade: string;
+  from_percentage: number;
+  to_percentage: number;
+  remark: string;
+}
+
 export interface BulkResultsImportResult {
   success: boolean;
   totalProcessed: number;
@@ -102,6 +110,16 @@ export const useBulkResultsImport = () => {
         const subjectByName = new Map(subjects?.map(s => [s.name.toLowerCase().trim(), s.id]) || []);
         const subjectByCode = new Map(subjects?.map(s => [s.code?.toLowerCase().trim(), s.id]) || []);
 
+        // Fetch grading scales for automatic remark generation
+        const { data: gradingScales, error: gradingScalesError } = await supabase
+          .from('grading_scales')
+          .select('id, grade, from_percentage, to_percentage, remark')
+          .order('from_percentage', { ascending: false });
+
+        if (gradingScalesError) {
+          console.warn('Failed to fetch grading scales:', gradingScalesError.message);
+        }
+
         // Get CA type configuration if provided
         let caConfiguration: Record<string, number> | null = null;
         if (caTypeId) {
@@ -112,6 +130,26 @@ export const useBulkResultsImport = () => {
             .single();
           caConfiguration = caType?.configuration as Record<string, number> | null;
         }
+
+        // Helper function to get remark based on score
+        const getRemarkForScore = (score: number): string => {
+          if (!gradingScales || gradingScales.length === 0) {
+            // Default remarks if no grading scales available
+            if (score >= 80) return 'Excellent';
+            if (score >= 70) return 'Very Good';
+            if (score >= 60) return 'Good';
+            if (score >= 50) return 'Credit';
+            if (score >= 40) return 'Pass';
+            return 'Fail';
+          }
+
+          for (const scale of gradingScales) {
+            if (score >= scale.from_percentage && score <= scale.to_percentage) {
+              return scale.remark || 'N/A';
+            }
+          }
+          return 'N/A';
+        };
 
         // Phase 4: Import results
         updateProgress({
@@ -289,6 +327,9 @@ export const useBulkResultsImport = () => {
               // Calculate grade based on total score
               const grade = calculateGrade(totalScore);
 
+              // Get automatic remark based on total score
+              const autoRemark = getRemarkForScore(totalScore);
+
               // Check if subject mark already exists
               const { data: existingMark } = await supabase
                 .from('subject_marks')
@@ -306,7 +347,8 @@ export const useBulkResultsImport = () => {
                 ca4_score: subjectData.ca4_score ?? null,
                 exam_score: subjectData.exam_score ?? null,
                 total_score: totalScore,
-                grade: grade
+                grade: grade,
+                subject_teacher_remarks: autoRemark
               };
 
               if (existingMark) {
