@@ -197,8 +197,8 @@ export class ReportCardService {
         academic: {
           term: result.term,
           academic_year: result.academic_year,
-          days_school_opened: gradingSettings?.attendance_for_term || 0,
-          days_present: Math.max(0, (gradingSettings?.attendance_for_term || 0) - (result.days_absent || 0)),
+          days_school_opened: result.days_school_opened || gradingSettings?.attendance_for_term || 0,
+          days_present: result.days_present || 0,
           days_absent: result.days_absent || 0,
           term_begin: result.term_begin || '',
           term_ends: result.term_ends || '',
