@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { GradingScale } from "@/hooks/useGradingSettings";
 import { calculateTotalScore, getGradeFromScale } from "@/utils/gradeCalculations";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 
 interface Subject {
   id: string;
@@ -107,6 +107,19 @@ const SubjectMarksCard = ({
   };
 
   const inputFields = getInputFields();
+
+  // Debug logging to trace subjects and marks
+  useEffect(() => {
+    console.log('=== SubjectMarksCard Debug ===');
+    console.log('Subjects received:', subjects);
+    console.log('Subject count:', subjects.length);
+    console.log('SubjectMarks state:', subjectMarks);
+    console.log('Selected CA Type:', selectedCAType);
+    console.log('Input fields:', inputFields);
+    if (subjects.length === 0) {
+      console.warn('WARNING: No subjects passed to SubjectMarksCard!');
+    }
+  }, [subjects, subjectMarks, selectedCAType, inputFields]);
 
   return (
     <Card>

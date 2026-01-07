@@ -77,7 +77,18 @@ export const useAddResultsFormDerivedData = (formData: FormData, gradingSettings
     , [formData.class_id, classes]);
 
   const classSubjects = useMemo(() => {
-    if (!formData.class_id) return [];
+    console.log('=== classSubjects derivation ===');
+    console.log('formData.class_id:', formData.class_id);
+    console.log('isTeacher:', isTeacher);
+    console.log('assignments:', assignments);
+    console.log('selectedClass:', selectedClass);
+    console.log('selectedClass?.department_id:', selectedClass?.department_id);
+    console.log('All subjects:', subjects);
+
+    if (!formData.class_id) {
+      console.log('No class_id, returning empty array');
+      return [];
+    }
 
     // For teachers, filter subjects based on their assignments
     if (isTeacher && assignments.length > 0) {
@@ -86,13 +97,21 @@ export const useAddResultsFormDerivedData = (formData: FormData, gradingSettings
         .map(assignment => assignment.subject)
         .filter(Boolean);
 
+      console.log('Teacher subjects:', teacherSubjects);
       return teacherSubjects;
     }
 
     // For admins, show all subjects in the department
-    return selectedClass?.department_id
-      ? subjects.filter(subject => subject.department_id === selectedClass.department_id)
-      : [];
+    if (!selectedClass?.department_id) {
+      console.warn('WARNING: selectedClass has no department_id!');
+      return [];
+    }
+
+    const filteredSubjects = subjects.filter(subject => subject.department_id === selectedClass.department_id);
+    console.log('Admin filtered subjects (by department_id):', filteredSubjects);
+    console.log('Matching department_id:', selectedClass.department_id);
+
+    return filteredSubjects;
   }, [formData.class_id, isTeacher, assignments, selectedClass?.department_id, subjects]);
 
   // Standardized department mapping to match database constraints
