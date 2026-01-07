@@ -228,7 +228,7 @@ export const EditStudentDialog = ({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0">
         <div className="flex flex-col h-full max-h-[90vh]">
           {/* Header with Photo */}
-          <div className="bg-primary/60 px-6 py-5 text-white">
+          <div className="bg-primary px-6 py-5 text-white">
             <div className="flex items-start gap-4">
               {/* Photo Section */}
               <div className="relative group flex-shrink-0">
@@ -290,7 +290,7 @@ export const EditStudentDialog = ({
                   <DialogTitle className="text-xl font-semibold text-white truncate">
                     {formData.full_name || "Edit Student"}
                   </DialogTitle>
-                  <DialogDescription className="text-primary/10 flex items-center gap-2">
+                  <DialogDescription className="text-white/80 flex items-center gap-2">
                     <Hash className="w-3.5 h-3.5" />
                     {formData.student_id || "No ID"}
                   </DialogDescription>
