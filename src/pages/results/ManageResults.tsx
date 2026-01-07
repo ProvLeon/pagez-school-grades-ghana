@@ -27,7 +27,8 @@ const ManageResults = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { generateSingleReport } = useReportCards();
+  const { generateSingleReport, isGenerating } = useReportCards();
+  const [isDownloadingBulk, setIsDownloadingBulk] = useState(false);
   const { isTeacher, isAdmin } = useAuth();
   const {
     getAccessibleClassIds,
@@ -167,6 +168,50 @@ const ManageResults = () => {
     setSelectedResults([]);
   };
 
+  // Bulk download function for selected results
+  const handleBulkDownload = async () => {
+    if (selectedResults.length === 0) return;
+
+    setIsDownloadingBulk(true);
+    toast({
+      title: "Generating Reports",
+      description: `Starting download of ${selectedResults.length} report(s)...`,
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < selectedResults.length; i++) {
+      const resultId = selectedResults[i];
+      try {
+        await generateSingleReport(resultId);
+        successCount++;
+        // Small delay between downloads to prevent browser blocking
+        if (i < selectedResults.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
+      } catch (error) {
+        console.error(`Failed to download report for result ${resultId}:`, error);
+        failCount++;
+      }
+    }
+
+    setIsDownloadingBulk(false);
+
+    if (failCount === 0) {
+      toast({
+        title: "Download Complete",
+        description: `Successfully downloaded ${successCount} report(s).`,
+      });
+    } else {
+      toast({
+        title: "Download Partially Complete",
+        description: `Downloaded ${successCount} report(s). ${failCount} failed.`,
+        variant: "destructive",
+      });
+    }
+  };
+
   const activeFilters = Object.values(filters).filter(Boolean).length + (searchTerm ? 1 : 0);
 
   const isAllSelected = currentResults.length > 0 && currentResults.every(r => selectedResults.includes(r.id));
@@ -276,9 +321,10 @@ const ManageResults = () => {
               <ManageResultsBulkActions
                 selectedCount={selectedResults.length}
                 onBulkDelete={() => setBulkDeleteDialog({ isOpen: true, count: selectedResults.length })}
-                onBulkDownload={() => { }}
+                onBulkDownload={handleBulkDownload}
                 onClearSelection={() => setSelectedResults([])}
                 isDeleting={bulkDeleteMutation.isPending}
+                isDownloading={isDownloadingBulk || isGenerating}
               />
             )}
 

@@ -1,7 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trash2, Download, X } from "lucide-react";
+import { Trash2, Download, X, Loader2 } from "lucide-react";
 
 interface ManageResultsBulkActionsProps {
   selectedCount: number;
@@ -9,6 +8,7 @@ interface ManageResultsBulkActionsProps {
   onBulkDownload: () => void;
   onClearSelection: () => void;
   isDeleting: boolean;
+  isDownloading?: boolean;
 }
 
 const ManageResultsBulkActions = ({
@@ -16,7 +16,8 @@ const ManageResultsBulkActions = ({
   onBulkDelete,
   onBulkDownload,
   onClearSelection,
-  isDeleting
+  isDeleting,
+  isDownloading = false
 }: ManageResultsBulkActionsProps) => {
   return (
     <Card className="border-blue-200 bg-blue-50/50">
@@ -31,20 +32,39 @@ const ManageResultsBulkActions = ({
                 variant="outline"
                 size="sm"
                 onClick={onBulkDownload}
+                disabled={isDownloading || isDeleting}
                 className="text-green-600 border-green-200 hover:bg-green-50"
               >
-                <Download className="w-4 h-4 mr-2" />
-                Download All
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download All
+                  </>
+                )}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={onBulkDelete}
-                disabled={isDeleting}
+                disabled={isDeleting || isDownloading}
                 className="text-red-600 border-red-200 hover:bg-red-50"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                {isDeleting ? 'Deleting...' : 'Delete All'}
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete All
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -52,6 +72,7 @@ const ManageResultsBulkActions = ({
             variant="ghost"
             size="sm"
             onClick={onClearSelection}
+            disabled={isDeleting || isDownloading}
             className="text-gray-500 hover:text-gray-700"
           >
             <X className="w-4 h-4 mr-1" />
