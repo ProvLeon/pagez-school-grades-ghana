@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Download, Filter, Edit, Trash2, Plus, Search, MoreHorizontal, Eye, Users, X, Info, Loader2 } from "lucide-react";
 import { useStudents, useDeleteStudent, Student } from "@/hooks/useStudents";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useClasses } from "@/hooks/useClasses";
 import { useDepartments } from "@/hooks/useDepartments";
@@ -26,6 +27,7 @@ import { useCanAccessClass } from "@/hooks/useTeacherClassAccess";
 const ManageStudents = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { isTeacher, isAdmin, teacherRecord } = useAuth();
   const {
     getAccessibleClassIds,
@@ -119,17 +121,22 @@ const ManageStudents = () => {
 
       if (error) throw error;
 
+      // Invalidate queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['students'] });
+      await queryClient.invalidateQueries({ queryKey: ['classes'] });
+
       toast({
         title: "Students Deleted",
         description: `Successfully deleted ${selectedStudents.length} student(s).`,
       });
       setSelectedStudents([]);
       setShowBulkDeleteConfirm(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Bulk delete error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete students. Please try again.";
       toast({
         title: "Error",
-        description: error.message || "Failed to delete students. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
