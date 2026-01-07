@@ -153,7 +153,7 @@ const Results = () => {
             <AlertDescription>
               Record, organize, and monitor student grades and performance. Track results across academic terms and generate reports.
             </AlertDescription>
-            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => setShowGuide(false)}>
+            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 p-2" onClick={() => setShowGuide(false)}>
               <X className="h-4 w-4" />
             </Button>
           </Alert>
