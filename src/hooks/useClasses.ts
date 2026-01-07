@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, Class } from '@/lib/supabase';
 
@@ -6,6 +5,7 @@ export const useClasses = (departmentId?: string) => {
   return useQuery({
     queryKey: ['classes', departmentId],
     queryFn: async () => {
+      // First, fetch all classes with their relations
       let query = supabase
         .from('classes')
         .select(`
@@ -19,10 +19,43 @@ export const useClasses = (departmentId?: string) => {
         query = query.eq('department_id', departmentId);
       }
 
-      const { data, error } = await query;
+      const { data: classes, error: classesError } = await query;
 
-      if (error) throw error;
-      return data as Class[];
+      if (classesError) throw classesError;
+
+      if (!classes || classes.length === 0) {
+        return [] as Class[];
+      }
+
+      // Get student counts for all classes in a single query
+      const { data: studentCounts, error: countError } = await supabase
+        .from('students')
+        .select('class_id')
+        .not('class_id', 'is', null);
+
+      if (countError) {
+        console.error('Error fetching student counts:', countError);
+        // Return classes without counts if there's an error
+        return classes as Class[];
+      }
+
+      // Count students per class
+      const countsByClassId: Record<string, number> = {};
+      if (studentCounts) {
+        for (const student of studentCounts) {
+          if (student.class_id) {
+            countsByClassId[student.class_id] = (countsByClassId[student.class_id] || 0) + 1;
+          }
+        }
+      }
+
+      // Merge student counts into classes
+      const classesWithCounts = classes.map(cls => ({
+        ...cls,
+        student_count: countsByClassId[cls.id] || 0
+      }));
+
+      return classesWithCounts as Class[];
     },
   });
 };
@@ -61,7 +94,7 @@ export const useUpdateClass = () => {
       name?: string;
       department_id?: string;
       academic_year?: string;
-      student_count?: number;
+      teacher_id?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('classes')
