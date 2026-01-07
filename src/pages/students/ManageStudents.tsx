@@ -219,9 +219,9 @@ const ManageStudents = () => {
         )}
 
         {teacherHasNoAssignments && (
-          <Alert variant="destructive">
-            <Info className="h-4 w-4" />
-            <AlertDescription>
+          <Alert className="bg-amber-50 border-amber-200">
+            <Info className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-700">
               You don't have any class assignments yet. Please contact your administrator to be assigned to classes before you can view students.
             </AlertDescription>
           </Alert>
@@ -291,16 +291,7 @@ const ManageStudents = () => {
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
-        ) : teacherRecordMissing ? (
-          <div className="text-center py-20">
-            <Users className="mx-auto h-12 w-12 text-destructive" />
-            <h3 className="mt-4 text-lg font-semibold text-destructive">Teacher Account Not Linked</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Your user account is not connected to a teacher record.<br />
-              Please contact your administrator to link your account.
-            </p>
-          </div>
-        ) : teacherHasNoAssignments ? (
+        ) : teacherRecordMissing || teacherHasNoAssignments ? (
           <div className="text-center py-20">
             <Users className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">No Class Assignments</h3>

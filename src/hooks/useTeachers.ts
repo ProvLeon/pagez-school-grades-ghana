@@ -50,147 +50,44 @@ export const useCreateTeacher = () => {
 
   return useMutation({
     mutationFn: async (teacherData: CreateTeacherData) => {
-      const email = teacherData.email || `${teacherData.username}@school.local`;
+      // Get the current session to pass auth to the edge function
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
-      // Check if user already exists with this email
-      const { data: existingTeacher } = await supabase
-        .from('teachers')
-        .select('id, email, user_id')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (existingTeacher) {
-        throw new Error(`A teacher with email ${email} already exists`);
+      if (sessionError || !sessionData?.session) {
+        throw new Error('No active session. Please log in again.');
       }
 
-      // CRITICAL: Save the current admin session BEFORE signUp
-      // signUp() automatically signs in the new user, which would log out the admin
-      const { data: currentSessionData } = await supabase.auth.getSession();
-      const adminSession = currentSessionData?.session;
+      const accessToken = sessionData.session.access_token;
 
-      if (!adminSession) {
-        throw new Error('No admin session found. Please log in again.');
-      }
-
-      // Store the admin's tokens for later restoration
-      const adminAccessToken = adminSession.access_token;
-      const adminRefreshToken = adminSession.refresh_token;
-
-      let userId: string | null = null;
-      let signUpSucceeded = false;
-
-      try {
-        // Create the new teacher auth user
-        // NOTE: This will auto-sign in as the new user (Supabase behavior)
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: email,
-          password: teacherData.password,
-          options: {
-            data: {
-              user_type: 'teacher',
-              full_name: teacherData.full_name,
-            }
-          }
-        });
-
-        if (authError) {
-          if (authError.message.includes('already registered')) {
-            console.warn('Auth user already exists, will create teacher record without auth link');
-            userId = null;
-          } else {
-            throw new Error(`Failed to create authentication account: ${authError.message}`);
-          }
-        } else if (authData.user) {
-          userId = authData.user.id;
-          signUpSucceeded = true;
+      // Call the edge function which uses admin API to create users with email_confirm: true
+      // This ensures the teacher can log in immediately without email verification
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-teacher`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            full_name: teacherData.full_name,
+            email: teacherData.email,
+            password: teacherData.password,
+            phone: teacherData.phone,
+            department_id: teacherData.department_id,
+            username: teacherData.username,
+          }),
         }
-      } catch (signUpError) {
-        // Restore admin session even if signUp fails
-        await supabase.auth.setSession({
-          access_token: adminAccessToken,
-          refresh_token: adminRefreshToken,
-        });
-        throw signUpError;
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create teacher');
       }
 
-      // CRITICAL: Restore the admin session immediately after signUp
-      // This is essential because signUp auto-signed in as the new teacher
-      const { error: restoreError } = await supabase.auth.setSession({
-        access_token: adminAccessToken,
-        refresh_token: adminRefreshToken,
-      });
-
-      if (restoreError) {
-        console.error('Failed to restore admin session:', restoreError);
-        // Try to refresh the session
-        const { error: refreshError } = await supabase.auth.refreshSession({
-          refresh_token: adminRefreshToken,
-        });
-        if (refreshError) {
-          throw new Error('Failed to restore admin session. Please log in again.');
-        }
-      }
-
-      // Verify we're back as the admin
-      const { data: verifySession } = await supabase.auth.getSession();
-      if (!verifySession?.session || verifySession.session.user.id !== adminSession.user.id) {
-        console.error('Session mismatch after restoration');
-        // Force refresh
-        await supabase.auth.refreshSession({ refresh_token: adminRefreshToken });
-      }
-
-      // Now we're authenticated as the admin again - create the profile and teacher records
-
-      // Create profile record with user_type = 'teacher' if we have a userId
-      if (userId) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: userId,
-            user_type: 'teacher'
-          });
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          // Don't fail the whole operation - profile might be created by a trigger
-          // or there might be existing data
-        }
-      }
-
-      // Create teacher record
-      const teacherInsertData: Record<string, unknown> = {
-        full_name: teacherData.full_name,
-        email: email,
-        phone: teacherData.phone || null,
-        department_id: teacherData.department_id || null,
-      };
-
-      // Only add user_id if we created an auth user
-      if (userId) {
-        teacherInsertData.user_id = userId;
-      }
-
-      const { data: teacherRecord, error: teacherError } = await supabase
-        .from('teachers')
-        .insert(teacherInsertData)
-        .select()
-        .single();
-
-      if (teacherError) {
-        console.error('Teacher record creation error:', teacherError);
-        // If teacher creation fails and we created an auth user, try to clean up
-        if (userId && signUpSucceeded) {
-          try {
-            // Note: admin.deleteUser requires service role, may not work from client
-            await supabase.auth.admin.deleteUser(userId);
-          } catch (cleanupError) {
-            console.error('Failed to cleanup auth user:', cleanupError);
-          }
-        }
-        throw new Error(`Failed to create teacher record: ${teacherError.message}`);
-      }
-
-      return teacherRecord;
+      return result.teacher;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
@@ -253,8 +150,7 @@ export const useDeleteTeacher = () => {
 
   return useMutation({
     mutationFn: async (teacherId: string) => {
-      // Verify session is valid before making requests
-      // This prevents CORS errors from stale/invalid sessions
+      // Get the current session to pass auth to the edge function
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !sessionData?.session) {
@@ -265,49 +161,34 @@ export const useDeleteTeacher = () => {
         }
       }
 
-      // First get the teacher to find their info
-      const { data: teacher, error: fetchError } = await supabase
-        .from('teachers')
-        .select('user_id, full_name')
-        .eq('id', teacherId)
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching teacher:', fetchError);
-        // Check if it's a network/CORS error
-        if (fetchError.message?.includes('NetworkError') || fetchError.code === '') {
-          throw new Error('Network error. Please check your connection and try again.');
-        }
-        throw new Error('Failed to find teacher record');
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) {
+        throw new Error('No active session. Please log in again.');
       }
 
-      // Delete the teacher record
-      const { error: deleteError } = await supabase
-        .from('teachers')
-        .delete()
-        .eq('id', teacherId);
-
-      if (deleteError) {
-        console.error('Error deleting teacher:', deleteError);
-        // Check if it's a network/CORS error
-        if (deleteError.message?.includes('NetworkError') || deleteError.code === '') {
-          throw new Error('Network error. Please check your connection and try again.');
+      // Call the edge function which uses admin API to delete both teacher record and auth user
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-teacher`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            teacher_id: teacherId,
+          }),
         }
-        throw new Error('Failed to delete teacher record');
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete teacher');
       }
 
-      // NOTE: We intentionally do NOT try to delete the auth user here.
-      // The admin.deleteUser() API requires a service role key which is not
-      // available on the client side. Attempting to call it causes 403 errors.
-      //
-      // The auth user will remain in Supabase Auth but won't be able to do
-      // anything since their teacher record is deleted. To fully clean up
-      // orphaned auth users, use the Supabase dashboard or a server-side function.
-      //
-      // If needed in the future, create a Supabase Edge Function with service role
-      // to handle auth user deletion securely.
-
-      return teacher;
+      return { full_name: result.teacher_name };
     },
     onSuccess: (deletedTeacher) => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });

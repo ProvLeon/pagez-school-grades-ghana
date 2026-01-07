@@ -227,7 +227,8 @@ export default function MockExams() {
     }
 
     // For teachers, only show results for their assigned classes
-    if (isTeacher && !isAdmin && accessibleClassIds.length > 0) {
+    // If teacher has no assignments, they see nothing
+    if (isTeacher && !isAdmin) {
       filtered = filtered.filter((r) => r.class_id && accessibleClassIds.includes(r.class_id));
     }
 
