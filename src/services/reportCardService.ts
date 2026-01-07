@@ -448,12 +448,10 @@ export class ReportCardService {
     pdf.setLineWidth(0.3);
     pdf.roundedRect(5, 5, pageWidth - 10, pageHeight - 10, 2, 2);
 
-    // Add decorative corner elements
+    // Add decorative corner elements (top corners only to avoid footer overlap)
     pdf.setFillColor(primaryRGB.r, primaryRGB.g, primaryRGB.b);
     pdf.circle(10, 10, 2, 'F');
     pdf.circle(pageWidth - 10, 10, 2, 'F');
-    pdf.circle(10, pageHeight - 10, 2, 'F');
-    pdf.circle(pageWidth - 10, pageHeight - 10, 2, 'F');
 
     // Add school logo watermark with transparency effect
     try {
@@ -668,7 +666,7 @@ export class ReportCardService {
       subject.teacher_remarks || this.getRemarkForGrade(subject.grade, data.grading_scale)
     ]);
 
-    // Add empty rows to make 10 total (reduced from 12 for better fit)
+    // Add empty rows to make minimum 6 total (reduced for better fit)
     while (tableData.length < 10) {
       tableData.push(['', '', '', '', '', '']);
     }
@@ -683,8 +681,8 @@ export class ReportCardService {
       startY: currentY,
       theme: 'grid',
       styles: {
-        fontSize: 10,
-        cellPadding: 3,
+        fontSize: 9,
+        cellPadding: 2,
         lineColor: [180, 180, 180],
         lineWidth: 0.3,
         valign: 'middle',
@@ -695,10 +693,10 @@ export class ReportCardService {
         fillColor: [primaryRGB.r, primaryRGB.g, primaryRGB.b],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 9,
+        fontSize: 8,
         halign: 'center',
         lineWidth: 0.5,
-        cellPadding: 4
+        cellPadding: 2.5
       },
       columnStyles: {
         0: { cellWidth: 40, halign: 'left', fontStyle: 'bold' },
@@ -717,13 +715,13 @@ export class ReportCardService {
       margin: { left: centerMargin, right: centerMargin }
     });
 
-    currentY = (pdf as any).lastAutoTable.finalY + 6; // Reduced spacing
+    currentY = (pdf as any).lastAutoTable.finalY + 4; // Reduced spacing
 
     // === SUMMARY SECTION ===
-    // Create attractive summary cards
+    // Create attractive summary cards (more compact)
     pdf.setFillColor(headerColor.r, headerColor.g, headerColor.b);
-    pdf.roundedRect(centerMargin, currentY, 80, 12, 2, 2, 'F');
-    pdf.roundedRect(centerMargin + 95, currentY, 75, 12, 2, 2, 'F');
+    pdf.roundedRect(centerMargin, currentY, 80, 10, 2, 2, 'F');
+    pdf.roundedRect(centerMargin + 95, currentY, 75, 10, 2, 2, 'F');
 
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
@@ -748,143 +746,178 @@ export class ReportCardService {
     // === BEHAVIORAL SECTION ===
     // Section header with background
     pdf.setFillColor(240, 240, 240);
-    pdf.rect(centerMargin, currentY - 2, 170, 6, 'F');
-    pdf.setFontSize(10);
+    pdf.rect(centerMargin, currentY - 2, 170, 5, 'F');
+    pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
     pdf.text("BEHAVIORAL ASSESSMENT", centerMargin + 2, currentY + 1);
     currentY += 8;
 
-    pdf.setFontSize(9);
+    pdf.setFontSize(8);
     pdf.setFont('helvetica', 'bold');
     pdf.text("CONDUCT:", centerMargin, currentY);
     pdf.setFont('helvetica', 'normal');
     drawCleanLine(centerMargin + 21, currentY, 145, data.behavior.conduct);
 
-    currentY += fieldSpacing;
+    currentY += 5;
 
     pdf.setFont('helvetica', 'bold');
     pdf.text("ATTITUDE:", centerMargin, currentY);
     pdf.setFont('helvetica', 'normal');
     drawCleanLine(centerMargin + 21, currentY, 145, data.behavior.attitude);
 
-    currentY += fieldSpacing;
+    currentY += 5;
 
     pdf.setFont('helvetica', 'bold');
     pdf.text("INTEREST:", centerMargin, currentY);
     pdf.setFont('helvetica', 'normal');
     drawCleanLine(centerMargin + 21, currentY, 145, data.behavior.interest);
 
-    currentY += 8; // Reduced spacing
+    currentY += 6;
 
     // === COMMENTS SECTION ===
-    currentY += 2;
-    pdf.setFontSize(9);
+    pdf.setFontSize(8);
     pdf.setFont('helvetica', 'bold');
     pdf.text("CLASS TEACHER'S REMARKS:", centerMargin, currentY);
 
     if (data.behavior.teachers_comment) {
       pdf.setFont('helvetica', 'normal');
       const splitComment = pdf.splitTextToSize(data.behavior.teachers_comment, 110);
-      pdf.text(splitComment, centerMargin + 50, currentY);
+      pdf.text(splitComment, centerMargin + 48, currentY);
     }
 
-    currentY += 10; // Reduced spacing
+    currentY += 8;
 
     // === HEAD TEACHER'S REMARKS ===
-    currentY += 2;
-    pdf.setFontSize(9);
+    pdf.setFontSize(8);
     pdf.setFont('helvetica', 'bold');
     pdf.text("HEAD TEACHER'S REMARKS:", centerMargin, currentY);
 
-    let headRemarksHeight = 4; // Default height if no remarks
+    let headRemarksHeight = 3;
     if (data.behavior.heads_remarks) {
       pdf.setFont('helvetica', 'normal');
       const splitHeadRemarks = pdf.splitTextToSize(data.behavior.heads_remarks, 110);
-      pdf.text(splitHeadRemarks, centerMargin + 50, currentY);
-      // Calculate actual height of remarks (approximately 4mm per line)
-      headRemarksHeight = splitHeadRemarks.length * 4;
+      pdf.text(splitHeadRemarks, centerMargin + 48, currentY);
+      headRemarksHeight = splitHeadRemarks.length * 3.5;
     }
 
     // Move past the head remarks text before rendering headteacher section
-    currentY += Math.max(headRemarksHeight, 8) + 6;
+    currentY += Math.max(headRemarksHeight, 5) + 3;
 
-    // === HEADTEACHER SECTION ===
+    // === HEADTEACHER SECTION (Compact Layout) ===
+    const centerX = pageWidth / 2;
 
-    // Center the headteacher section
-    const centerX = centerMargin + 85; // Center of the page width (170/2)
+    // Calculate space available before footer
+    const footerStartY = pageHeight - 22;
 
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text("HEADTEACHER:", centerX, currentY, { align: 'center' });
-    currentY += 5;
+    // Only render headteacher section if there's enough space
+    if (currentY < footerStartY - 30) {
+      // Headteacher label
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("HEADTEACHER:", centerX, currentY, { align: 'center' });
+      currentY += 5;
 
-    if (data.school.headteacher_name) {
-      pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(data.school.headteacher_name, centerX, currentY, { align: 'center' });
-    }
+      // Add signature image if available
+      if (data.school.headteacher_signature_url) {
+        try {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
 
-    currentY += 4; // Space between name and signature
+          // Wait for image to load
+          const signatureLoaded = await new Promise<boolean>(resolve => {
+            img.onload = () => {
+              try {
+                const imgWidth = 45;
+                const imgHeight = 18;
+                const imgX = centerX - imgWidth / 2;
+                pdf.addImage(img, 'PNG', imgX, currentY, imgWidth, imgHeight);
+                resolve(true);
+              } catch (e) {
+                resolve(false);
+              }
+            };
+            img.onerror = () => resolve(false);
+            img.src = data.school.headteacher_signature_url;
+          });
 
-    // Add signature image if available
-    if (data.school.headteacher_signature_url) {
-      try {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          const imgWidth = 40;
-          const imgHeight = 15;
-          const imgX = centerX - imgWidth / 2;
-          pdf.addImage(img, 'PNG', imgX, currentY, imgWidth, imgHeight);
-        };
-        img.src = data.school.headteacher_signature_url;
-
-        // Wait for image to load
-        await new Promise(resolve => {
-          img.onload = () => {
-            const imgWidth = 40;
-            const imgHeight = 15;
-            const imgX = centerX - imgWidth / 2;
-            pdf.addImage(img, 'PNG', imgX, currentY, imgWidth, imgHeight);
-            resolve(true);
-          };
-          img.onerror = () => resolve(false);
-        });
-        currentY += 16; // Account for image height
-      } catch (error) {
-        console.error('Error loading signature image:', error);
-        // Fallback to signature line
+          if (signatureLoaded) {
+            currentY += 20;
+          } else {
+            // Fallback to signature line
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.5);
+            pdf.line(centerX - 30, currentY + 6, centerX + 30, currentY + 6);
+            currentY += 10;
+          }
+        } catch (error) {
+          console.error('Error loading signature image:', error);
+          pdf.setDrawColor(0, 0, 0);
+          pdf.setLineWidth(0.5);
+          pdf.line(centerX - 30, currentY + 6, centerX + 30, currentY + 6);
+          currentY += 10;
+        }
+      } else {
+        // No signature image, show signature line
+        pdf.setDrawColor(0, 0, 0);
         pdf.setLineWidth(0.5);
-        pdf.line(centerX - 30, currentY + 4, centerX + 30, currentY + 4);
-        currentY += 8;
+        pdf.line(centerX - 30, currentY + 6, centerX + 30, currentY + 6);
+        currentY += 10;
       }
-    } else {
-      // No signature image, show signature line
-      pdf.setLineWidth(0.5);
-      pdf.line(centerX - 30, currentY + 4, centerX + 30, currentY + 4);
-      currentY += 8;
+
+      // Add headteacher name below signature
+      if (data.school.headteacher_name) {
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(data.school.headteacher_name.toUpperCase(), centerX, currentY, { align: 'center' });
+        currentY += 4;
+      }
+
+      // Add generated date
+      pdf.setFontSize(6);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(120, 120, 120);
+      const generatedDate = new Date().toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+      pdf.text(`Generated: ${generatedDate}`, centerX, currentY + 2, { align: 'center' });
     }
 
-    pdf.setFontSize(8);
-    const generatedDate = new Date().toLocaleDateString('en-GB');
-    pdf.text(generatedDate, centerX, currentY + 2, { align: 'center' });
+    // === FOOTER SECTION (FIXED AT ABSOLUTE BOTTOM) ===
+    const footerLineY = pageHeight - 18;
+    const footerTextY = pageHeight - 12;
 
-    // Add school motto at bottom left corner
+    // Add separator line above footer
+    pdf.setDrawColor(primaryRGB.r, primaryRGB.g, primaryRGB.b);
+    pdf.setLineWidth(0.8);
+    pdf.line(margin + 8, footerLineY, pageWidth - margin - 8, footerLineY);
+
+    // Add school motto at bottom left
     if (data.school.motto) {
-      pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(0, 0, 0);
-      const mottoText = `School Motto: ${data.school.motto}`;
-      pdf.text(mottoText, margin + 15, pageHeight - margin, { align: 'left' });
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'italic');
+      pdf.setTextColor(80, 80, 80);
+      const mottoText = `"${data.school.motto}"`;
+      pdf.text(mottoText, margin + 10, footerTextY, { align: 'left' });
     }
 
-    // Add school phone number at bottom right corner
+    // Add GES SBA SYSTEM copyright centered
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(primaryRGB.r, primaryRGB.g, primaryRGB.b);
+    const copyrightText = '© GES SBA SYSTEM';
+    pdf.text(copyrightText, pageWidth / 2, footerTextY, { align: 'center' });
+
+    // Add school phone number at bottom right
     if (data.school.phone) {
-      pdf.setFontSize(8);
+      pdf.setFontSize(7);
       pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(0, 0, 0);
-      const contactText = `Contact: ${data.school.phone}`;
-      pdf.text(contactText, pageWidth - margin - 15, pageHeight - margin, { align: 'right' });
+      pdf.setTextColor(80, 80, 80);
+      const contactText = `Tel: ${data.school.phone}`;
+      pdf.text(contactText, pageWidth - margin - 10, footerTextY, { align: 'right' });
     }
 
     return pdf.output('blob');
