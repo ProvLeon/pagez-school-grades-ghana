@@ -46,8 +46,9 @@ export const SubjectsTableSection = ({
 
     let weightedCaScore = 0;
     if (caTypeConfig?.ca) {
-      const caRaw = clamp(mark.ca1_score, 100);
-      weightedCaScore = Math.round((caRaw * caPercentage) / 100);
+      // Use the actual CA score provided, do not convert/scale
+      const caRaw = clamp(mark.ca1_score, caTypeConfig.ca);
+      weightedCaScore = Math.round(caRaw);
     } else {
       const parts = [
         { key: 'ca1_score' as const, max: caTypeConfig?.ca1 || 0 },
@@ -55,6 +56,7 @@ export const SubjectsTableSection = ({
         { key: 'ca3_score' as const, max: caTypeConfig?.ca3 || 0 },
         { key: 'ca4_score' as const, max: caTypeConfig?.ca4 || 0 },
       ];
+      // Use the actual CAi score provided, do not convert/scale
       const caSum = parts.reduce((sum, p) => sum + (p.max ? clamp((mark as any)[p.key], p.max) : 0), 0);
       weightedCaScore = Math.round(caSum);
     }

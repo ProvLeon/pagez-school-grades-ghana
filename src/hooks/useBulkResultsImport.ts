@@ -302,15 +302,17 @@ export const useBulkResultsImport = () => {
 
                 if (caConfiguration.ca) {
                   // Simple CA/Exam split (e.g., 50/50)
+                  // Use the actual CA score provided, do not convert/scale
                   const caScore = subjectData.ca1_score || 0;
                   const examScore = subjectData.exam_score || 0;
-                  totalScore = Math.round((caScore * ca1Weight / 100) + (examScore * examWeight / 100));
+                  totalScore = Math.round(caScore + (examScore * examWeight / 100));
                 } else {
                   // Multiple CAs
-                  const ca1 = (subjectData.ca1_score || 0) * (ca1Weight / 100);
-                  const ca2 = (subjectData.ca2_score || 0) * (ca2Weight / 100);
-                  const ca3 = (subjectData.ca3_score || 0) * (ca3Weight / 100);
-                  const ca4 = (subjectData.ca4_score || 0) * (ca4Weight / 100);
+                  // Use the actual CAi score provided, do not convert/scale
+                  const ca1 = subjectData.ca1_score || 0;
+                  const ca2 = subjectData.ca2_score || 0;
+                  const ca3 = subjectData.ca3_score || 0;
+                  const ca4 = subjectData.ca4_score || 0;
                   const exam = (subjectData.exam_score || 0) * (examWeight / 100);
                   totalScore = Math.round(ca1 + ca2 + ca3 + ca4 + exam);
                 }

@@ -157,7 +157,7 @@ export function AppSidebar() {
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [logoError, setLogoError] = useState(false);
-  const [schoolName, setSchoolName] = useState("GES SBA System");
+  const [schoolName, setSchoolName] = useState("e-Result System");
   const [schoolLogo, setSchoolLogo] = useState<string | null>(null);
   const { userProfile, isTeacher, isAdmin } = useAuth();
 
@@ -356,7 +356,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 border-t">
         <div className="text-xs text-muted-foreground text-center">
-          @2025 e-Result v 1.2.0 | PB Pagez LTD
+          @2025 e-Result System v 1.2.0 | PB Pagez LTD
         </div>
       </SidebarFooter>
     </Sidebar>

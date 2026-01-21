@@ -591,7 +591,7 @@ export default function MockExams() {
 
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...primaryColor);
-      doc.text('© GES SBA SYSTEM', pageWidth - margin, pageHeight - 8, { align: 'right' });
+      doc.text('© e-Result System', pageWidth - margin, pageHeight - 8, { align: 'right' });
 
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(120, 120, 120);
@@ -751,7 +751,7 @@ export default function MockExams() {
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...primaryColor);
-    doc.text('© GES SBA SYSTEM', pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.text('© e-Result System', pageWidth / 2, pageHeight - 10, { align: 'center' });
 
     const fileName = `${result.student_name.replace(/\s+/g, '-')}-mock-result-${currentSession.name.replace(/\s+/g, '-')}.pdf`.toLowerCase();
     doc.save(fileName);

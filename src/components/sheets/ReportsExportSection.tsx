@@ -60,7 +60,7 @@ export const ReportsExportSection = () => {
     {
       id: "individual_reports",
       name: "Individual Report Cards",
-      description: "Generate GES-compliant report cards for individual students with grades, comments, and signatures.",
+      description: "Generate e-Result System compliant report cards for individual students with grades, comments, and signatures.",
       icon: GraduationCap,
       badge: "PDF",
       badgeVariant: "default",

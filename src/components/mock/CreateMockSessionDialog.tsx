@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,8 @@ export function CreateMockSessionDialog({ trigger, onSuccess }: Props) {
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
 
+
+
   // Get academic year and term from grading settings
   const { data: gradingSettings } = useGradingSettings();
   const academicYear = gradingSettings?.academic_year || "2024/2025";
@@ -51,6 +53,25 @@ export function CreateMockSessionDialog({ trigger, onSuccess }: Props) {
 
   // Get department name for display
   const selectedDepartment = departments.find((d) => d.id === selectedDepartmentId);
+
+  // Auto-select Basic 9 class when dialog opens
+  useEffect(() => {
+    if (open && allClasses && allClasses.length > 0) {
+      // Find Basic 9/JHS 3 class
+      const basic9Class = allClasses.find(
+        (cls) =>
+          cls.name.toLowerCase().includes("basic 9") ||
+          cls.name.toLowerCase().includes("jhs 3") ||
+          cls.name.toLowerCase().includes("jhs3") ||
+          cls.name.toLowerCase().includes("b9")
+      );
+      if (basic9Class) {
+        setSelectedClassIds([basic9Class.id]);
+        // Also auto-select the Basic 9 department
+        setSelectedDepartmentId(basic9Class.department_id || "");
+      }
+    }
+  }, [open, allClasses]);
 
   // Toggle class selection
   const toggleClass = (classId: string) => {
@@ -157,11 +178,11 @@ export function CreateMockSessionDialog({ trigger, onSuccess }: Props) {
                 </div>
               </div>
 
-              {/* Department Filter - JHS/SHS only */}
+              {/* Department Filter - JHS/Basic 9 only */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <GraduationCap className="h-4 w-4" />
-                  Department (JHS / SHS)
+                  Department
                 </Label>
                 <Select
                   value={selectedDepartmentId}
@@ -172,10 +193,9 @@ export function CreateMockSessionDialog({ trigger, onSuccess }: Props) {
                   disabled={departmentsLoading}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="All JHS & SHS departments" />
+                    <SelectValue placeholder="Select JHS/Basic 9 department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All JHS & SHS</SelectItem>
                     {departments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name}
@@ -187,13 +207,13 @@ export function CreateMockSessionDialog({ trigger, onSuccess }: Props) {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Mock exams are only available for Junior High (BECE) and Senior High (WASSCE) students
+                  Mock exams are for Basic 9 (JHS 3) students only
                 </p>
                 {departments.length === 0 && !departmentsLoading && (
                   <Alert>
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                      No JHS or SHS departments found. Please ensure your school has Junior High or Senior High departments set up.
+                      No Basic 9 or JHS departments found. Please ensure your school has a Basic 9/Junior High department set up.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -292,8 +312,8 @@ export function CreateMockSessionDialog({ trigger, onSuccess }: Props) {
               <Alert className="border-blue-200 bg-blue-50">
                 <GraduationCap className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Mock Exams</strong> are for JHS (BECE) and SHS (WASSCE) students only.
-                  After creating the session, you can add scores for students from the selected classes.
+                  <strong>Mock Exams</strong> are for Basic 9 (JHS 3) students.
+                  After creating the session, you can add scores directly from the student list.
                 </AlertDescription>
               </Alert>
             </div>

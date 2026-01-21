@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,31 +11,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useBasic9Students } from "@/hooks/useBasic9Students";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  useMockExamDepartments,
-  useMockExamClasses,
   getSubjectsForExamType,
   getExamTypeName,
   MockExamType,
 } from "@/hooks/useMockExamDepartments";
-import { useMockExamStudentsByClass, useStudentsWithMockResults, MockExamStudent } from "@/hooks/useMockExamStudents";
+import { useStudentsWithMockResults, MockExamStudent } from "@/hooks/useMockExamStudents";
 import { useSaveMockScores, SubjectScoreInput } from "@/hooks/useSaveMockScores";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { Info, User, BookOpen, CheckCircle2, AlertCircle, GraduationCap } from "lucide-react";
+import { Info, User, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface AddScoresDialogProps {
   sessionId: string | null;
@@ -49,10 +40,8 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
   const [step, setStep] = useState<"select" | "scores">("select");
 
   // Selection state
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
-  const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
-  const [examType, setExamType] = useState<MockExamType>("bece");
+  const [examType] = useState<MockExamType>("bece"); // Only BECE for Basic 9
 
   // Store selected student info to persist across re-renders when on scores step
   const [selectedStudentInfo, setSelectedStudentInfo] = useState<MockExamStudent | null>(null);
@@ -60,24 +49,11 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
   // Scores state
   const [scores, setScores] = useState<SubjectScoreInput>({});
 
-  // Data hooks - only JHS and SHS departments
-  const { departments: mockDepartments, isLoading: departmentsLoading } = useMockExamDepartments();
-  const { classes: allMockClasses, getClassExamType, isLoading: classesLoading } = useMockExamClasses();
-
-  const { data: students = [], isLoading: studentsLoading } = useMockExamStudentsByClass(
-    selectedClassId && selectedClassId !== "" ? selectedClassId : null
-  );
+  // Data hooks - only Basic 9 students
+  const { data: students = [], isLoading: studentsLoading } = useBasic9Students();
   const { data: studentsWithResults = new Set() } = useStudentsWithMockResults(sessionId);
 
   const saveScores = useSaveMockScores(sessionId);
-
-  // Filter classes by selected department
-  const filteredClasses = useMemo(() => {
-    if (!selectedDepartmentId || selectedDepartmentId === "all") {
-      return allMockClasses;
-    }
-    return allMockClasses.filter((c) => c.department_id === selectedDepartmentId);
-  }, [allMockClasses, selectedDepartmentId]);
 
   // Get selected student info - use stored info if available (for step 2), otherwise find from students array
   const selectedStudent = useMemo(() => {
@@ -130,37 +106,10 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
   // Reset form
   const resetForm = () => {
     setStep("select");
-    setSelectedDepartmentId("");
-    setSelectedClassId("");
     setSelectedStudentId("");
     setSelectedStudentInfo(null);
     setScores({});
-    setExamType("bece");
   };
-
-  // Update exam type when class changes
-  // Note: getClassExamType is now memoized with useCallback, so it's safe to include
-  // Only run this on select step to avoid clearing data when on scores step
-  useEffect(() => {
-    if (step !== "select") return;
-
-    if (selectedClassId) {
-      const detectedExamType = getClassExamType(selectedClassId);
-      if (detectedExamType) {
-        setExamType(detectedExamType);
-      }
-    }
-    setSelectedStudentId("");
-    setSelectedStudentInfo(null);
-    setScores({});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClassId, step]);
-
-  // Reset class when department changes
-  useEffect(() => {
-    if (step !== "select") return;
-    setSelectedClassId("");
-  }, [selectedDepartmentId, step]);
 
   // Handle score change
   const handleScoreChange = (key: string, value: string) => {
@@ -198,7 +147,7 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
       onSuccess?.();
 
       if (addAnother) {
-        // Keep class selected, clear student and scores
+        // Keep student list visible, clear student and scores
         setSelectedStudentId("");
         setSelectedStudentInfo(null);
         setScores({});
@@ -212,168 +161,27 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
     }
   };
 
-  // Render subject input field
-  const renderSubjectInput = (subj: { key: string; name: string }, isCore: boolean) => {
-    const value = scores[subj.key];
-    const hasError = typeof value === "number" && (value < 0 || value > 100);
-
-    return (
-      <div key={subj.key} className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label
-            htmlFor={`score-${subj.key}`}
-            className={cn("text-sm", hasError && "text-destructive")}
-          >
-            {subj.name}
-          </Label>
-          {isCore && (
-            <Badge variant="secondary" className="text-xs">
-              Core
-            </Badge>
-          )}
-        </div>
-        <Input
-          id={`score-${subj.key}`}
-          type="number"
-          min={0}
-          max={100}
-          value={value ?? ""}
-          onChange={(e) => handleScoreChange(subj.key, e.target.value)}
-          placeholder="0-100"
-          className={cn(hasError && "border-destructive")}
-        />
-        {hasError && (
-          <p className="text-xs text-destructive">Score must be 0-100</p>
-        )}
-      </div>
-    );
-  };
-
-  const selectedDept = mockDepartments.find((d) => d.id === selectedDepartmentId);
-
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) resetForm();
-      }}
-    >
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {children ?? (
-          <Button disabled={!sessionId}>Add Scores</Button>
-        )}
+        {children || <Button>Add Scores</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <GraduationCap className="h-5 w-5" />
-            {step === "select" ? "Select Student" : `Enter ${getExamTypeName(examType)} Scores`}
-          </DialogTitle>
+          <DialogTitle>Add Mock Exam Scores</DialogTitle>
           <DialogDescription>
             {step === "select"
-              ? "Choose a JHS or SHS class and student to add mock exam scores"
-              : `Adding ${getExamTypeName(examType)} scores for ${selectedStudent?.full_name || "student"}`}
+              ? "Select a Basic 9 student to add mock exam scores"
+              : `Enter scores for ${selectedStudent?.full_name}`}
           </DialogDescription>
         </DialogHeader>
 
         {step === "select" ? (
-          // STEP 1: Student Selection
+          // STEP 1: Student Selection (Basic 9 only)
           <div className="flex-1 overflow-hidden flex flex-col space-y-4">
-            {/* Department Filter (JHS/SHS only) */}
-            <div className="space-y-2">
-              <Label>Department (JHS / SHS)</Label>
-              <Select
-                value={selectedDepartmentId}
-                onValueChange={setSelectedDepartmentId}
-                disabled={departmentsLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All JHS & SHS</SelectItem>
-                  {mockDepartments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      {dept.name}
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        {getExamTypeName(dept.examType)}
-                      </Badge>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {mockDepartments.length === 0 && !departmentsLoading && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    No JHS or SHS departments found. Mock exams are only for Junior High and Senior High students.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-
-            {/* Class Selection */}
-            <div className="space-y-2">
-              <Label>Select Class *</Label>
-              <Select
-                value={selectedClassId}
-                onValueChange={setSelectedClassId}
-                disabled={classesLoading || filteredClasses.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a class" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredClasses.map((cls) => {
-                    const clsExamType = getClassExamType(cls.id);
-                    return (
-                      <SelectItem key={cls.id} value={cls.id}>
-                        {cls.name}
-                        {clsExamType && (
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            {getExamTypeName(clsExamType)}
-                          </Badge>
-                        )}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              {filteredClasses.length === 0 && !classesLoading && (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    No classes found in JHS or SHS departments.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-
-            {/* Exam Type Indicator */}
-            {selectedClassId && (
-              <Alert className={examType === "wassce" ? "border-blue-200 bg-blue-50" : "border-green-200 bg-green-50"}>
-                <GraduationCap className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>{getExamTypeName(examType)}</strong> mock exam format will be used.
-                  {examType === "bece"
-                    ? " 4 core subjects + best 2 electives for aggregate calculation."
-                    : " 4 core subjects + 4 elective subjects."}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Student Selection */}
             <div className="space-y-2 flex-1 overflow-hidden flex flex-col">
               <Label>Select Student *</Label>
-              {!selectedClassId ? (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    Please select a class first to see available students.
-                  </AlertDescription>
-                </Alert>
-              ) : studentsLoading ? (
+              {studentsLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
                     <Skeleton key={i} className="h-12 w-full" />
@@ -383,7 +191,7 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    No students found in this class.
+                    No Basic 9 students found.
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -407,22 +215,9 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <User
-                              className="h-4 w-4" />
+                            <User className="h-4 w-4" />
                             <div>
                               <p className="font-medium">{student.full_name}</p>
-                              {(student.student_id || student.no_on_roll) && (
-                                <p
-                                  className={cn(
-                                    "text-xs",
-                                    isSelected
-                                      ? "text-primary-foreground/80"
-                                      : "text-muted-foreground"
-                                  )}
-                                >
-                                  {student.no_on_roll || student.student_id}
-                                </p>
-                              )}
                             </div>
                           </div>
                           {hasResults && (
@@ -487,11 +282,6 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
                         {selectedStudent?.full_name}
                       </p>
                       <div className="text-sm text-muted-foreground flex items-center gap-2">
-                        <span>
-                          {selectedStudent?.class_name}
-                          {(selectedStudent?.no_on_roll || selectedStudent?.student_id) &&
-                            ` • ${selectedStudent.no_on_roll || selectedStudent.student_id}`}
-                        </span>
                         <Badge variant="outline" className="text-xs">
                           {getExamTypeName(examType)}
                         </Badge>

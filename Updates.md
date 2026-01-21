@@ -39,7 +39,7 @@
 	- [ ] Take out these CA Types: 4-CA Split, CA only.
 	- [ ] Under the Term Information & Remarks card on the Add Results page, there should be a field (Days Present) to accept input for the student’s attendance for the term.
 	- [ ] The student’s attendance must appear on the results sheet. For each student, the system should display attendance by pulling the value from Days Present against Attendance for Term (Under Grading Settings).
-	- [ ] On the PDF of the results sheet, we want to have at the bottom of the page, © GES SBA SYSTEM
+	- [ ] On the PDF of the results sheet, we want to have at the bottom of the page, © e-Result System
 	- [ ] The drop-down lists cannot be scrolled and does not accept input most especially the student fields. The Admin should be able to search a student name and the system automatically brings up the full name of the student with student ID.
 	- [ ] The Download All button under Manage Results is not responsive.
 - [ ] MOCK EXAMS

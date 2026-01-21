@@ -34,10 +34,10 @@ export default function AddMockScores() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [studentId, setStudentId] = React.useState<string>("");
   const [scores, setScores] = React.useState<SubjectScoreInput>({});
-  
+
   const { data: sessions = [] } = useMockExamSessions();
   const { data: students = [], isLoading } = useBasic9Students();
   const { data: results = [] } = useMockExamResults(sessionId || null);
@@ -46,7 +46,7 @@ export default function AddMockScores() {
   // Get edit mode from URL params
   const searchParams = new URLSearchParams(window.location.search);
   const editStudentId = searchParams.get('edit');
-  
+
   // Load existing scores if in edit mode
   React.useEffect(() => {
     if (editStudentId && results.length > 0) {
@@ -59,7 +59,7 @@ export default function AddMockScores() {
           // Map subject names to field keys
           const subjectName = score.subject_name.toLowerCase();
           let fieldKey: string | null = null;
-          
+
           if (subjectName.includes('english')) fieldKey = 'english';
           else if (subjectName.includes('mathematics') || subjectName.includes('maths')) fieldKey = 'mathematics';
           else if (subjectName.includes('science')) fieldKey = 'science';
@@ -70,7 +70,7 @@ export default function AddMockScores() {
           else if (subjectName.includes('creative') || subjectName.includes('arts')) fieldKey = 'creative_arts';
           else if (subjectName.includes('ghanaian') || subjectName.includes('language')) fieldKey = 'gh_language';
           else if (subjectName.includes('french')) fieldKey = 'french';
-          
+
           if (fieldKey && score.exam_score !== null) {
             existingScores[fieldKey] = score.exam_score;
           }
@@ -113,11 +113,12 @@ export default function AddMockScores() {
 
     try {
       await saveScores.mutateAsync({ studentId, scores });
-      
+
       if (addAnother) {
         setScores({});
       } else {
-        navigate("/mock-exams");
+        // Navigate to grade analysis after saving
+        navigate(`/mock-exams?session=${sessionId}&tab=analysis`);
       }
     } catch (error) {
       // Error handling is done in the hook
@@ -144,11 +145,11 @@ export default function AddMockScores() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/80 to-background/60">
-      <Header 
+      <Header
         title={editStudentId ? "Edit Mock Exam Scores" : "Add Mock Exam Scores"}
         subtitle={`Session: ${currentSession.name} • ${currentSession.academic_year} • ${currentSession.term}`}
       />
-      
+
       <main className="p-4 md:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Quick navigation */}
@@ -159,7 +160,7 @@ export default function AddMockScores() {
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Mock Exams
                 </Button>
-                
+
                 <div className="flex items-center gap-6">
                   <div className="text-center">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -208,8 +209,8 @@ export default function AddMockScores() {
                     const hasError = outOfRangeKeys.includes(f.key);
                     return (
                       <div key={f.key} className="space-y-2">
-                        <Label 
-                          htmlFor={`f-${f.key}`} 
+                        <Label
+                          htmlFor={`f-${f.key}`}
                           className={cn("text-sm font-medium", hasError && "text-destructive")}
                         >
                           {f.label}
@@ -245,8 +246,8 @@ export default function AddMockScores() {
                     const hasError = outOfRangeKeys.includes(f.key);
                     return (
                       <div key={f.key} className="space-y-2">
-                        <Label 
-                          htmlFor={`f-${f.key}`} 
+                        <Label
+                          htmlFor={`f-${f.key}`}
                           className={cn("text-sm font-medium", hasError && "text-destructive")}
                         >
                           {f.label}
@@ -290,22 +291,22 @@ export default function AddMockScores() {
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-4 pb-8">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleCancel}
               disabled={saveScores.isPending}
             >
               Cancel
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => handleSave(true)} 
+            <Button
+              variant="outline"
+              onClick={() => handleSave(true)}
               disabled={!isValid || saveScores.isPending}
             >
               {saveScores.isPending ? "Saving..." : "Save & Add Another"}
             </Button>
-            <Button 
-              onClick={() => handleSave(false)} 
+            <Button
+              onClick={() => handleSave(false)}
               disabled={!isValid || saveScores.isPending}
             >
               {saveScores.isPending ? "Saving..." : editStudentId ? "Update" : "Save"}

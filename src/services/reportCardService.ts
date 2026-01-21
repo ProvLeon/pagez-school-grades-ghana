@@ -146,8 +146,9 @@ export class ReportCardService {
 
         let weightedCaScore = 0;
         if (config.ca) {
-          const caRaw = clamp(mark.ca1_score, 100);
-          weightedCaScore = Math.round((caRaw * (config.ca || 0)) / 100);
+          // Use the actual CA score provided, do not convert/scale
+          const caRaw = clamp(mark.ca1_score, config.ca);
+          weightedCaScore = Math.round(caRaw);
         } else {
           const parts = [
             { key: 'ca1_score' as const, max: config.ca1 || 0 },
@@ -155,6 +156,7 @@ export class ReportCardService {
             { key: 'ca3_score' as const, max: config.ca3 || 0 },
             { key: 'ca4_score' as const, max: config.ca4 || 0 },
           ];
+          // Use the actual CAi score provided, do not convert/scale
           const caSum = parts.reduce((sum, p) => sum + (p.max ? clamp((mark as any)[p.key], p.max) : 0), 0);
           weightedCaScore = Math.round(caSum);
         }
@@ -904,11 +906,11 @@ export class ReportCardService {
       pdf.text(mottoText, margin + 10, footerTextY, { align: 'left' });
     }
 
-    // Add GES SBA SYSTEM copyright centered
+    // Add e-Result System copyright centered
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(primaryRGB.r, primaryRGB.g, primaryRGB.b);
-    const copyrightText = '© GES SBA SYSTEM';
+    const copyrightText = '© e-Result System';
     pdf.text(copyrightText, pageWidth / 2, footerTextY, { align: 'center' });
 
     // Add school phone number at bottom right

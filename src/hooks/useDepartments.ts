@@ -16,7 +16,9 @@ export const useDepartments = () => {
         .order('name');
 
       if (error) throw error;
-      return data as Department[];
+      // Exclude SHS from all department lists
+      const filtered = (data as Department[]).filter(d => d.name.toLowerCase() !== 'shs' && d.name.toLowerCase() !== 'senior high' && d.name.toLowerCase() !== 'senior high school');
+      return filtered;
     },
   });
 };
