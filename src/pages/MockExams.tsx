@@ -57,7 +57,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCanAccessClass } from "@/hooks/useTeacherClassAccess";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { calculateMockGrade } from "@/utils/mockGradeCalculations";
+
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -238,8 +238,13 @@ export default function MockExams() {
       filtered = filtered.filter((r) => r.student_name.toLowerCase().includes(query));
     }
 
-    // Sort by position (aggregate)
-    return filtered.sort((a, b) => (a.position || 999) - (b.position || 999));
+    // Calculate actual total score from subject scores and sort by total score (descending - higher is better)
+    const withCalculatedTotals = filtered.map((r) => ({
+      ...r,
+      calculatedTotal: (r.subject_scores || []).reduce((sum, s) => sum + (s.total_score || 0), 0),
+    }));
+
+    return withCalculatedTotals.sort((a, b) => (b.calculatedTotal || 0) - (a.calculatedTotal || 0));
   }, [results, selectedClassId, searchTerm, isTeacher, isAdmin, accessibleClassIds]);
 
   // Calculate statistics
@@ -426,13 +431,12 @@ export default function MockExams() {
     // Summary Table
     autoTable(doc, {
       startY: currentY,
-      head: [['Rank', 'Student Name', 'Raw Score', 'Aggregate', 'Grade']],
+      head: [['Rank', 'Student Name', 'Total Score', 'Position']],
       body: filteredResults.map((r, index) => [
         index + 1,
         r.student_name,
-        `${r.total_score || 0}%`,
-        r.position || '-',
-        calculateMockGrade(Number(r.position) || 54),
+        (r as any).calculatedTotal || 0,
+        index + 1,
       ]),
       theme: 'grid',
       styles: {
@@ -453,7 +457,6 @@ export default function MockExams() {
         1: { cellWidth: 60 },
         2: { cellWidth: 25, halign: 'center' },
         3: { cellWidth: 25, halign: 'center' },
-        4: { cellWidth: 20, halign: 'center' },
       },
       margin: { left: margin, right: margin },
     });
@@ -477,11 +480,12 @@ export default function MockExams() {
       currentY = 28;
 
       // Create subject score table
-      const subjectHeaders = ['Rank', 'Student Name', ...subjectList.slice(0, 6), 'Total', 'Agg', 'Grade'];
+      const subjectHeaders = ['Rank', 'Student Name', ...subjectList.slice(0, 6), 'Total Score', 'Position'];
 
       const subjectTableBody = filteredResults.map((r, index) => {
+        const rank = index + 1;
         const row: (string | number)[] = [
-          index + 1,
+          rank,
           r.student_name.length > 20 ? r.student_name.substring(0, 18) + '...' : r.student_name,
         ];
 
@@ -491,15 +495,14 @@ export default function MockExams() {
           row.push(subjectScore?.total_score ?? '-');
         });
 
-        row.push(`${r.total_score || 0}%`);
-        row.push(r.position || '-');
-        row.push(calculateMockGrade(Number(r.position) || 54));
+        row.push((r as any).calculatedTotal || 0);
+        row.push(rank);
 
         return row;
       });
 
       // Calculate dynamic column widths
-      const fixedWidth = 15 + 35 + 20 + 15 + 18; // Rank + Name + Total + Agg + Grade
+      const fixedWidth = 15 + 35 + 20 + 15; // Rank + Name + Total + Position
       const availableWidth = pageWidth - margin * 2 - fixedWidth;
       const subjectColWidth = Math.min(18, availableWidth / Math.min(subjectList.length, 6));
 
@@ -515,7 +518,6 @@ export default function MockExams() {
       const lastIdx = subjectList.slice(0, 6).length + 2;
       columnStyles[lastIdx] = { cellWidth: 20, halign: 'center' };
       columnStyles[lastIdx + 1] = { cellWidth: 15, halign: 'center' };
-      columnStyles[lastIdx + 2] = { cellWidth: 18, halign: 'center' };
 
       autoTable(doc, {
         startY: currentY,
@@ -603,8 +605,11 @@ export default function MockExams() {
   };
 
   // Export individual student PDF
-  const handleExportStudentPDF = (result: EnrichedMockExamResult) => {
+  const handleExportStudentPDF = (result: EnrichedMockExamResult, rank?: number) => {
     if (!currentSession) return;
+
+    // Calculate rank if not provided (find the position in filtered results)
+    const studentRank = rank !== undefined ? rank : filteredResults.findIndex(r => r.id === result.id) + 1;
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -656,19 +661,21 @@ export default function MockExams() {
 
     // Summary stats on right side of card
     const aggregate = result.position || 54;
-    const grade = calculateMockGrade(aggregate);
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...headerColor);
-    doc.text(`Score: ${result.total_score || 0}%`, pageWidth - margin - 60, currentY + 10);
-    doc.text(`Aggregate: ${aggregate}`, pageWidth - margin - 60, currentY + 17);
+    doc.text(`Score: ${(result as any).calculatedTotal || 0}`, pageWidth - margin - 60, currentY + 10);
+    doc.text(`Position: ${studentRank}`, pageWidth - margin - 60, currentY + 17);
 
-    doc.setFillColor(aggregate <= 24 ? 34 : 239, aggregate <= 24 ? 197 : 68, aggregate <= 24 ? 94 : 68);
+    // Color badge based on rank
+    const isGood = studentRank <= 3;
+    const isAverage = studentRank <= Math.ceil(filteredResults.length / 2);
+    doc.setFillColor(isGood ? 34 : isAverage ? 59 : 239, isGood ? 197 : isAverage ? 168 : 68, isGood ? 94 : isAverage ? 68 : 68);
     doc.roundedRect(pageWidth - margin - 25, currentY + 5, 20, 15, 2, 2, 'F');
     doc.setFontSize(11);
     doc.setTextColor(255, 255, 255);
-    doc.text(String(grade), pageWidth - margin - 15, currentY + 15, { align: 'center' });
+    doc.text(String(studentRank), pageWidth - margin - 15, currentY + 15, { align: 'center' });
 
     currentY = 82;
 
@@ -738,10 +745,9 @@ export default function MockExams() {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
-    doc.text(`Total Average Score: ${result.total_score || 0}%`, margin + 5, currentY + 16);
+    doc.text(`Total Score: ${(result as any).calculatedTotal || 0}`, margin + 5, currentY + 16);
     doc.text(`Aggregate: ${aggregate}`, margin + 5, currentY + 23);
-    doc.text(`Grade: ${String(grade)}`, margin + 80, currentY + 16);
-    doc.text(`Status: ${aggregate <= 24 ? 'PASS' : 'NEEDS IMPROVEMENT'}`, margin + 80, currentY + 23);
+    doc.text(`Status: ${studentRank <= 3 ? 'EXCELLENT' : studentRank <= Math.ceil(filteredResults.length / 2) ? 'GOOD' : 'NEEDS IMPROVEMENT'}`, margin + 80, currentY + 16);
 
     // Footer
     doc.setFontSize(8);
@@ -1124,26 +1130,23 @@ export default function MockExams() {
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead className="w-16">Pos</TableHead>
+                                <TableHead className="w-16">Rank</TableHead>
                                 <TableHead>Student Name</TableHead>
                                 <TableHead>Class</TableHead>
-                                <TableHead className="text-right">Avg Score</TableHead>
-                                <TableHead className="text-right">Aggregate</TableHead>
-                                <TableHead className="text-center">Grade</TableHead>
+                                <TableHead className="text-right">Total Score</TableHead>
+                                <TableHead className="text-right">Position</TableHead>
                                 <TableHead className="text-center w-20">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {filteredResults.map((result, index) => {
-                                const aggregate = result.position || 54;
-                                const grade = calculateMockGrade(aggregate);
-                                const isPassing = aggregate <= 24;
+                                const rank = index + 1;
                                 const className =
                                   allClasses.find((c) => c.id === result.class_id)?.name || "-";
 
                                 return (
                                   <TableRow key={result.id}>
-                                    <TableCell className="font-medium">{index + 1}</TableCell>
+                                    <TableCell className="font-medium">{rank}</TableCell>
                                     <TableCell className="font-medium">
                                       {result.student_name}
                                     </TableCell>
@@ -1151,26 +1154,16 @@ export default function MockExams() {
                                       {className}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      {result.total_score || 0}%
+                                      {(result as any).calculatedTotal || 0}
                                     </TableCell>
                                     <TableCell className="text-right font-semibold">
-                                      {aggregate}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                      <Badge
-                                        variant={isPassing ? "default" : "destructive"}
-                                        className={cn(
-                                          isPassing && "bg-green-600 hover:bg-green-700"
-                                        )}
-                                      >
-                                        {grade}
-                                      </Badge>
+                                      {rank}
                                     </TableCell>
                                     <TableCell className="text-center">
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleExportStudentPDF(result)}
+                                        onClick={() => handleExportStudentPDF(result, rank)}
                                         title={`Download result for ${result.student_name}`}
                                       >
                                         <Download className="h-4 w-4" />

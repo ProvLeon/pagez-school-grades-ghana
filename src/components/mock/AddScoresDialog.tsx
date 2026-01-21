@@ -363,7 +363,7 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
 
                 {/* Grand Total Only */}
                 <div className="p-3 bg-muted rounded-lg text-center">
-                  <p className="text-sm text-muted-foreground">Total Raw Score</p>
+                  <p className="text-sm text-muted-foreground">Total Score</p>
                   <p className="text-2xl font-bold text-primary">{grandTotal}</p>
                 </div>
               </div>

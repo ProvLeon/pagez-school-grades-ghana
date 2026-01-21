@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
-import { calculateMockRawScore, calculateMockAggregate } from "@/utils/mockGradeCalculations";
+import { calculateMockTotalScore, calculateMockAggregate } from "@/utils/mockGradeCalculations";
 
 export type SubjectScoreInput = Record<string, number | undefined>;
 
@@ -63,7 +63,7 @@ async function ensureResult(sessionId: string, studentId: string) {
   return inserted.id as string;
 }
 
-async function batchUpsertSubjectMarks(resultId: string, subjectMarks: Array<{subjectId: string, score: number}>) {
+async function batchUpsertSubjectMarks(resultId: string, subjectMarks: Array<{ subjectId: string, score: number }>) {
   if (subjectMarks.length === 0) return;
 
   // Fetch existing marks for this result
@@ -121,12 +121,12 @@ export const useSaveMockScores = (sessionId: string | null) => {
       const subjectsMap = await getSubjectsMap();
 
       // Calculate scores using the new formulas
-      const rawScore = calculateMockRawScore(scores);
+      const totalScore = calculateMockTotalScore(scores);
       const aggregate = calculateMockAggregate(scores);
-      
+
       // Prepare batch operations
-      const subjectMarks: Array<{subjectId: string, score: number}> = [];
-      
+      const subjectMarks: Array<{ subjectId: string, score: number }> = [];
+
       for (const key of Object.keys(scores)) {
         const raw = scores[key];
         if (raw === undefined || raw === null || Number.isNaN(Number(raw))) continue;
@@ -154,12 +154,12 @@ export const useSaveMockScores = (sessionId: string | null) => {
       // Batch upsert all subject marks
       await batchUpsertSubjectMarks(resultId, subjectMarks);
 
-      // Update raw score and aggregate on the result row
+      // Update total score and aggregate on the result row
       const { error: upErr } = await supabase
         .from("mock_exam_results")
-        .update({ 
-          total_score: rawScore,
-          position: aggregate // Store aggregate in position field temporarily
+        .update({
+          total_score: totalScore,
+          position: aggregate
         })
         .eq("id", resultId);
       if (upErr) throw upErr;
