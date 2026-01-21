@@ -332,95 +332,97 @@ export const BulkOperationsSection = () => {
               </p>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border rounded-lg bg-muted/20">
-                <div>
-                  <Label htmlFor="targetDepartment" className="text-sm font-medium">
-                    Department <span className="text-destructive">*</span>
-                  </Label>
-                  <Select value={targetDepartment || ""} onValueChange={(v) => {
-                    setTargetDepartment(v);
-                    setTargetClass(""); // Reset class when department changes
-                  }}>
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="targetClass" className="text-sm font-medium">
-                    Class <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={targetClass || ""}
-                    onValueChange={(v) => setTargetClass(v)}
-                    disabled={!targetDepartment}
-                  >
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue placeholder={targetDepartment ? "Select class" : "Select department first"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {classes
-                        .filter(cls => cls.department_id === targetDepartment)
-                        .map((cls) => (
-                          <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {activeOperation === 'results' && (
+              <ScrollArea className="w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border rounded-lg bg-muted/20">
                   <div>
-                    <Label htmlFor="caType" className="text-sm font-medium">
-                      Assessment Type (SBA) <span className="text-destructive">*</span>
+                    <Label htmlFor="targetDepartment" className="text-sm font-medium">
+                      Department <span className="text-destructive">*</span>
                     </Label>
-                    <Select value={selectedCAType || ""} onValueChange={(v) => setSelectedCAType(v)}>
+                    <Select value={targetDepartment || ""} onValueChange={(v) => {
+                      setTargetDepartment(v);
+                      setTargetClass(""); // Reset class when department changes
+                    }}>
                       <SelectTrigger className="mt-1.5">
-                        <SelectValue placeholder="Select assessment type" />
+                        <SelectValue placeholder="Select department" />
                       </SelectTrigger>
                       <SelectContent>
-                        {caTypes.map((caType) => (
-                          <SelectItem key={caType.id} value={caType.id}>{caType.name}</SelectItem>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                )}
 
-                {activeOperation === 'results' && (
-                  <div className="sm:col-span-2 lg:col-span-3">
-                    <Label htmlFor="academicYear" className="text-sm font-medium">
-                      Academic Year <span className="text-destructive">*</span>
+                  <div>
+                    <Label htmlFor="targetClass" className="text-sm font-medium">
+                      Class <span className="text-destructive">*</span>
                     </Label>
-                    <Input
-                      id="academicYear"
-                      placeholder="e.g., 2024/2025"
-                      className="mt-1.5"
-                      value={academicYear}
-                      onChange={(e) => setAcademicYear(e.target.value)}
-                    />
+                    <Select
+                      value={targetClass || ""}
+                      onValueChange={(v) => setTargetClass(v)}
+                      disabled={!targetDepartment}
+                    >
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue placeholder={targetDepartment ? "Select class" : "Select department first"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {classes
+                          .filter(cls => cls.department_id === targetDepartment)
+                          .map((cls) => (
+                            <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
 
-                {/* Show confirmation when selections are made */}
-                {targetDepartment && targetClass && (
-                  <div className="sm:col-span-2 lg:col-span-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      <span className="text-muted-foreground">
-                        {activeOperation === 'students'
-                          ? `Ready to download template for ${classes.find(c => c.id === targetClass)?.name || 'selected class'}`
-                          : `Template will include ${getFilteredSubjects().length} subjects and ${students.length} students`}
-                      </span>
+                  {activeOperation === 'results' && (
+                    <div>
+                      <Label htmlFor="caType" className="text-sm font-medium">
+                        Assessment Type (SBA) <span className="text-destructive">*</span>
+                      </Label>
+                      <Select value={selectedCAType || ""} onValueChange={(v) => setSelectedCAType(v)}>
+                        <SelectTrigger className="mt-1.5">
+                          <SelectValue placeholder="Select assessment type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {caTypes.map((caType) => (
+                            <SelectItem key={caType.id} value={caType.id}>{caType.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+
+                  {activeOperation === 'results' && (
+                    <div className="sm:col-span-2 lg:col-span-3">
+                      <Label htmlFor="academicYear" className="text-sm font-medium">
+                        Academic Year <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="academicYear"
+                        placeholder="e.g., 2024/2025"
+                        className="mt-1.5"
+                        value={academicYear}
+                        onChange={(e) => setAcademicYear(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {/* Show confirmation when selections are made */}
+                  {targetDepartment && targetClass && (
+                    <div className="sm:col-span-2 lg:col-span-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <span className="text-muted-foreground">
+                          {activeOperation === 'students'
+                            ? `Ready to download template for ${classes.find(c => c.id === targetClass)?.name || 'selected class'}`
+                            : `Template will include ${getFilteredSubjects().length} subjects and ${students.length} students`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </CardContent>
           </Card>
 
