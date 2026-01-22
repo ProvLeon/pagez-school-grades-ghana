@@ -258,12 +258,15 @@ export default function MockExams() {
         gradeDistribution: [],
         classPerformance: [],
         subjectPerformance: [],
+        gradeBySubject: {},
+        bestAggregate: 54,
+        worstAggregate: 6,
       };
     }
 
     const totalStudents = filteredResults.length;
     const avgScore = Math.round(
-      filteredResults.reduce((sum, r) => sum + (Number(r.total_score) || 0), 0) / totalStudents
+      filteredResults.reduce((sum, r) => sum + ((r as any).calculatedTotal || 0), 0) / totalStudents
     );
     const avgAggregate = Math.round(
       filteredResults.reduce((sum, r) => sum + (Number(r.position) || 54), 0) / totalStudents
@@ -293,13 +296,38 @@ export default function MockExams() {
       color: GRADE_COLORS[index] || GRADE_COLORS[6],
     })).filter((g) => g.value > 0);
 
+    // Grade distribution by subject (Grade 1-9)
+    const gradeBySubject: Record<string, Record<number, number>> = {};
+    filteredResults.forEach((r) => {
+      r.subject_scores?.forEach((score) => {
+        const subjectName = score.subject_name;
+        const scoreValue = Number(score.total_score) || 0;
+
+        // Calculate grade from score (1-9)
+        let grade = 9;
+        if (scoreValue >= 80) grade = 1;
+        else if (scoreValue >= 70) grade = 2;
+        else if (scoreValue >= 65) grade = 3;
+        else if (scoreValue >= 60) grade = 4;
+        else if (scoreValue >= 55) grade = 5;
+        else if (scoreValue >= 50) grade = 6;
+        else if (scoreValue >= 45) grade = 7;
+        else if (scoreValue >= 35) grade = 8;
+
+        if (!gradeBySubject[subjectName]) {
+          gradeBySubject[subjectName] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
+        }
+        gradeBySubject[subjectName][grade]++;
+      });
+    });
+
     // Class performance
     const classStats = new Map<string, { total: number; count: number; name: string }>();
     filteredResults.forEach((r) => {
       if (!r.class_id) return;
       const className = allClasses.find((c) => c.id === r.class_id)?.name || "Unknown";
       const existing = classStats.get(r.class_id);
-      const score = Number(r.total_score) || 0;
+      const score = (r as any).calculatedTotal || 0;
       if (existing) {
         existing.total += score;
         existing.count += 1;
@@ -341,6 +369,11 @@ export default function MockExams() {
       }))
       .sort((a, b) => b.averageScore - a.averageScore);
 
+    // Get best and worst aggregates
+    const aggregates = filteredResults.map((r) => r.position || 54).sort((a, b) => a - b);
+    const bestAggregate = aggregates[0] || 54;
+    const worstAggregate = aggregates[aggregates.length - 1] || 6;
+
     return {
       totalStudents,
       avgScore,
@@ -349,6 +382,9 @@ export default function MockExams() {
       gradeDistribution,
       classPerformance,
       subjectPerformance,
+      gradeBySubject,
+      bestAggregate,
+      worstAggregate,
     };
   }, [filteredResults, allClasses]);
 
@@ -380,46 +416,33 @@ export default function MockExams() {
     doc.setLineWidth(0.5);
     doc.roundedRect(margin - 4, 8, pageWidth - (margin * 2) + 8, 30, 2, 2);
 
-    // Title
-    doc.setFontSize(18);
+    // School info (get from session or use default)
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...headerColor);
-    doc.text('MOCK EXAMINATION RESULTS', pageWidth / 2, currentY + 5, { align: 'center' });
+    doc.text('MOCK RESULTS', pageWidth / 2, currentY + 2, { align: 'center' });
 
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
-    doc.text(currentSession.name, pageWidth / 2, currentY + 12, { align: 'center' });
+    doc.text(currentSession.name, pageWidth / 2, currentY + 8, { align: 'center' });
 
-    doc.setFontSize(10);
-    doc.text(`Academic Year: ${currentSession.academic_year} | Term: ${currentSession.term}`, pageWidth / 2, currentY + 18, { align: 'center' });
+    doc.setFontSize(9);
+    doc.text(`Academic Year: ${currentSession.academic_year} | Term: ${currentSession.term}`, pageWidth / 2, currentY + 13, { align: 'center' });
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, pageWidth / 2, currentY + 17, { align: 'center' });
 
-    currentY = 45;
+    currentY = 40;
 
-    // Statistics Cards
-    doc.setFillColor(240, 249, 255);
-    doc.roundedRect(margin, currentY, (pageWidth - margin * 2 - 10) / 4, 20, 2, 2, 'F');
-    doc.roundedRect(margin + (pageWidth - margin * 2 - 10) / 4 + 3, currentY, (pageWidth - margin * 2 - 10) / 4, 20, 2, 2, 'F');
-    doc.roundedRect(margin + ((pageWidth - margin * 2 - 10) / 4 + 3) * 2, currentY, (pageWidth - margin * 2 - 10) / 4, 20, 2, 2, 'F');
-    doc.roundedRect(margin + ((pageWidth - margin * 2 - 10) / 4 + 3) * 3, currentY, (pageWidth - margin * 2 - 10) / 4, 20, 2, 2, 'F');
+    // Summary info line
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    const avgTotal = Math.round(
+      filteredResults.reduce((sum, r) => sum + ((r as any).calculatedTotal || 0), 0) / filteredResults.length
+    );
+    doc.text(`Total Students: ${stats.totalStudents} | Average Score: ${avgTotal}`, margin, currentY, { align: 'left' });
 
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...primaryColor);
-    const statBoxWidth = (pageWidth - margin * 2 - 10) / 4;
-    doc.text('Total Students', margin + statBoxWidth / 2, currentY + 6, { align: 'center' });
-    doc.text('Average Score', margin + statBoxWidth + 3 + statBoxWidth / 2, currentY + 6, { align: 'center' });
-    doc.text('Avg Aggregate', margin + (statBoxWidth + 3) * 2 + statBoxWidth / 2, currentY + 6, { align: 'center' });
-    doc.text('Pass Rate', margin + (statBoxWidth + 3) * 3 + statBoxWidth / 2, currentY + 6, { align: 'center' });
-
-    doc.setFontSize(14);
-    doc.setTextColor(30, 30, 30);
-    doc.text(stats.totalStudents.toString(), margin + statBoxWidth / 2, currentY + 14, { align: 'center' });
-    doc.text(`${stats.avgScore}%`, margin + statBoxWidth + 3 + statBoxWidth / 2, currentY + 14, { align: 'center' });
-    doc.text(stats.avgAggregate.toString(), margin + (statBoxWidth + 3) * 2 + statBoxWidth / 2, currentY + 14, { align: 'center' });
-    doc.text(`${stats.passRate}%`, margin + (statBoxWidth + 3) * 3 + statBoxWidth / 2, currentY + 14, { align: 'center' });
-
-    currentY = 72;
+    currentY = 50;
 
     // Summary Table Header
     doc.setFontSize(11);
@@ -428,158 +451,143 @@ export default function MockExams() {
     doc.text('RESULTS SUMMARY', margin, currentY);
     currentY += 5;
 
-    // Summary Table
+    // Main Results Table with all subject scores
+    const tableHeaders = ['Student Name', ...subjectList, 'Raw Score', 'Agg.', 'Pos.'];
+    const tableBody = filteredResults.map((r, index) => {
+      const row: (string | number)[] = [r.student_name];
+
+      // Add subject scores
+      subjectList.forEach(subject => {
+        const score = r.subject_scores?.find(s => s.subject_name === subject);
+        row.push(score?.total_score || '-');
+      });
+
+      // Add summary columns
+      row.push((r as any).calculatedTotal || 0); // Raw Score (total)
+      row.push(r.position || '-'); // Aggregate
+      row.push(index + 1); // Position (rank)
+
+      return row;
+    });
+
     autoTable(doc, {
       startY: currentY,
-      head: [['Rank', 'Student Name', 'Total Score', 'Position']],
-      body: filteredResults.map((r, index) => [
-        index + 1,
-        r.student_name,
-        (r as any).calculatedTotal || 0,
-        index + 1,
-      ]),
+      head: [tableHeaders],
+      body: tableBody,
       theme: 'grid',
       styles: {
-        fontSize: 9,
-        cellPadding: 3,
+        fontSize: 8,
+        cellPadding: 2,
       },
       headStyles: {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 9,
+        fontSize: 8,
       },
       alternateRowStyles: {
         fillColor: [248, 250, 252],
       },
-      columnStyles: {
-        0: { cellWidth: 15, halign: 'center' },
-        1: { cellWidth: 60 },
-        2: { cellWidth: 25, halign: 'center' },
-        3: { cellWidth: 25, halign: 'center' },
-      },
       margin: { left: margin, right: margin },
     });
 
-    // === PAGE 2+: Detailed Subject Scores ===
+    // === PAGE 2: Detailed Results with All Subjects ===
     if (subjectList.length > 0) {
       doc.addPage();
       currentY = 15;
 
-      // Header
-      doc.setFontSize(14);
+      // Header - School name and title
+      doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...headerColor);
-      doc.text('DETAILED SUBJECT SCORES', pageWidth / 2, currentY, { align: 'center' });
+      doc.text('KOKOMLEMLE 2 BASIC SCHOOL', pageWidth / 2, currentY, { align: 'center' });
 
-      doc.setFontSize(10);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Mock Results – ${currentSession.name}`, pageWidth / 2, currentY + 6, { align: 'center' });
+
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(80, 80, 80);
-      doc.text(`${currentSession.name} - ${currentSession.academic_year}`, pageWidth / 2, currentY + 6, { align: 'center' });
+      doc.text(`Academic Year: ${currentSession.academic_year} | Term: ${currentSession.term}`, pageWidth / 2, currentY + 11, { align: 'center' });
+      doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, pageWidth / 2, currentY + 15, { align: 'center' });
 
-      currentY = 28;
+      const avgTotal = Math.round(
+        filteredResults.reduce((sum, r) => sum + ((r as any).calculatedTotal || 0), 0) / filteredResults.length
+      );
+      doc.text(`Total Students: ${filteredResults.length} | Average Score: ${avgTotal}`, pageWidth / 2, currentY + 19, { align: 'center' });
 
-      // Create subject score table
-      const subjectHeaders = ['Rank', 'Student Name', ...subjectList.slice(0, 6), 'Total Score', 'Position'];
+      currentY = 38;
 
-      const subjectTableBody = filteredResults.map((r, index) => {
+      // Create detailed results table with ALL subjects
+      // Create detailed results table with all subjects - matching the screenshot format
+      const detailedHeaders = ['Student Name', ...subjectList, 'Raw Score', 'Agg.', 'Pos.'];
+
+      const detailedTableBody = filteredResults.map((r, index) => {
         const rank = index + 1;
-        const row: (string | number)[] = [
-          rank,
-          r.student_name.length > 20 ? r.student_name.substring(0, 18) + '...' : r.student_name,
-        ];
+        const row: (string | number)[] = [r.student_name];
 
-        // Add each subject score (limit to 6 subjects for page width)
-        subjectList.slice(0, 6).forEach(subjectName => {
+        // Add ALL subject scores
+        subjectList.forEach(subjectName => {
           const subjectScore = r.subject_scores?.find(s => s.subject_name === subjectName);
           row.push(subjectScore?.total_score ?? '-');
         });
 
-        row.push((r as any).calculatedTotal || 0);
-        row.push(rank);
+        // Add summary columns
+        row.push((r as any).calculatedTotal || 0); // Raw Score
+        row.push(r.position || '-'); // Aggregate
+        row.push(rank); // Position
 
         return row;
       });
 
-      // Calculate dynamic column widths
-      const fixedWidth = 15 + 35 + 20 + 15; // Rank + Name + Total + Position
-      const availableWidth = pageWidth - margin * 2 - fixedWidth;
-      const subjectColWidth = Math.min(18, availableWidth / Math.min(subjectList.length, 6));
+      // Calculate column widths
+      const numColumns = detailedHeaders.length;
+      const studentNameWidth = 35;
+      const rawScoreWidth = 18;
+      const aggWidth = 15;
+      const posWidth = 15;
+      const fixedColumnsWidth = studentNameWidth + rawScoreWidth + aggWidth + posWidth;
+      const availableWidth = pageWidth - margin * 2 - fixedColumnsWidth;
+      const subjectColWidth = Math.max(11, availableWidth / subjectList.length);
 
-      const columnStyles: { [key: number]: { cellWidth: number; halign?: 'center' | 'left' | 'right' } } = {
-        0: { cellWidth: 15, halign: 'center' },
-        1: { cellWidth: 35 },
+      const detailedColumnStyles: { [key: number]: { cellWidth: number; halign?: 'center' | 'left' | 'right' } } = {
+        0: { cellWidth: studentNameWidth, halign: 'left' }, // Student Name
       };
 
-      subjectList.slice(0, 6).forEach((_, idx) => {
-        columnStyles[idx + 2] = { cellWidth: subjectColWidth, halign: 'center' };
-      });
+      // Add column styles for each subject
+      for (let i = 1; i <= subjectList.length; i++) {
+        detailedColumnStyles[i] = { cellWidth: subjectColWidth, halign: 'center' };
+      }
 
-      const lastIdx = subjectList.slice(0, 6).length + 2;
-      columnStyles[lastIdx] = { cellWidth: 20, halign: 'center' };
-      columnStyles[lastIdx + 1] = { cellWidth: 15, halign: 'center' };
+      // Add column styles for summary columns
+      const rawScoreIdx = subjectList.length + 1;
+      detailedColumnStyles[rawScoreIdx] = { cellWidth: rawScoreWidth, halign: 'center' }; // Raw Score
+      detailedColumnStyles[rawScoreIdx + 1] = { cellWidth: aggWidth, halign: 'center' }; // Agg
+      detailedColumnStyles[rawScoreIdx + 2] = { cellWidth: posWidth, halign: 'center' }; // Pos
 
       autoTable(doc, {
         startY: currentY,
-        head: [subjectHeaders],
-        body: subjectTableBody,
+        head: [detailedHeaders],
+        body: detailedTableBody,
         theme: 'grid',
         styles: {
-          fontSize: 7,
+          fontSize: 8,
           cellPadding: 2,
         },
         headStyles: {
           fillColor: primaryColor,
           textColor: [255, 255, 255],
           fontStyle: 'bold',
-          fontSize: 7,
+          fontSize: 8,
         },
         alternateRowStyles: {
           fillColor: [248, 250, 252],
         },
-        columnStyles,
+        columnStyles: detailedColumnStyles,
         margin: { left: margin, right: margin },
       });
-
-      // If more than 6 subjects, add another table for remaining subjects
-      if (subjectList.length > 6) {
-        const remainingSubjects = subjectList.slice(6);
-        const finalY = (doc as any).lastAutoTable?.finalY || currentY + 100;
-
-        if (finalY > pageHeight - 80) {
-          doc.addPage();
-          currentY = 20;
-        } else {
-          currentY = finalY + 10;
-        }
-
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...headerColor);
-        doc.text('Additional Subjects', margin, currentY);
-        currentY += 5;
-
-        const additionalHeaders = ['Rank', 'Student Name', ...remainingSubjects];
-        const additionalBody = filteredResults.map((r, index) => {
-          const row: (string | number)[] = [index + 1, r.student_name];
-          remainingSubjects.forEach(subjectName => {
-            const subjectScore = r.subject_scores?.find(s => s.subject_name === subjectName);
-            row.push(subjectScore?.total_score ?? '-');
-          });
-          return row;
-        });
-
-        autoTable(doc, {
-          startY: currentY,
-          head: [additionalHeaders],
-          body: additionalBody,
-          theme: 'grid',
-          styles: { fontSize: 8, cellPadding: 2 },
-          headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
-          alternateRowStyles: { fillColor: [248, 250, 252] },
-          margin: { left: margin, right: margin },
-        });
-      }
     }
 
     // Add footer to all pages
@@ -688,7 +696,8 @@ export default function MockExams() {
 
     // Subject Scores Table
     if (result.subject_scores && result.subject_scores.length > 0) {
-      const subjectData = result.subject_scores.map((s, idx) => [
+      const subjectTableHeaders = ['No.', 'Subject', 'Exam Score', 'Total Score'];
+      const subjectTableBody = result.subject_scores.map((s, idx) => [
         idx + 1,
         s.subject_name,
         s.exam_score ?? '-',
@@ -697,27 +706,21 @@ export default function MockExams() {
 
       autoTable(doc, {
         startY: currentY,
-        head: [['#', 'Subject', 'Exam Score', 'Total Score']],
-        body: subjectData,
+        head: [subjectTableHeaders],
+        body: subjectTableBody,
         theme: 'grid',
         styles: {
-          fontSize: 10,
-          cellPadding: 4,
+          fontSize: 8,
+          cellPadding: 2,
         },
         headStyles: {
-          fillColor: primaryColor,
+          fillColor: [45, 85, 170],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
-          fontSize: 10,
+          fontSize: 8,
         },
         alternateRowStyles: {
-          fillColor: [248, 250, 252],
-        },
-        columnStyles: {
-          0: { cellWidth: 15, halign: 'center' },
-          1: { cellWidth: 80 },
-          2: { cellWidth: 35, halign: 'center' },
-          3: { cellWidth: 35, halign: 'center' },
+          fillColor: [240, 240, 240],
         },
         margin: { left: margin, right: margin },
       });
@@ -964,10 +967,10 @@ export default function MockExams() {
                   }
                 />
                 <StatCard
-                  title="Average Score"
-                  value={`${stats.avgScore}%`}
+                  title="Average Total Score"
+                  value={stats.avgScore}
                   icon={TrendingUp}
-                  description="Average percentage"
+                  description="Sum of all subject scores"
                 />
                 <StatCard
                   title="Average Aggregate"
@@ -1193,112 +1196,93 @@ export default function MockExams() {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Aggregate Distribution */}
+                    <div className="space-y-6">
+                      {/* Grade Distribution by Subject Table */}
                       <Card>
                         <CardHeader>
-                          <CardTitle>Aggregate Distribution</CardTitle>
+                          <CardTitle>Grade Distribution by Subject</CardTitle>
                           <CardDescription>
-                            Distribution of student aggregates (lower is better)
+                            Count of students by grade (1-9) for each subject
                           </CardDescription>
                         </CardHeader>
                         <CardContent>
-                          {stats.gradeDistribution.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                              <PieChart>
-                                <Pie
-                                  data={stats.gradeDistribution}
-                                  dataKey="value"
-                                  nameKey="name"
-                                  cx="50%"
-                                  cy="50%"
-                                  outerRadius={100}
-                                  label={({ name, value }) => `${name}: ${value}`}
-                                >
-                                  {stats.gradeDistribution.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm border-collapse">
+                              <thead>
+                                <tr className="bg-slate-200">
+                                  <th className="border px-3 py-2 text-left font-semibold">Grade</th>
+                                  {Object.keys(stats.gradeBySubject).map((subject) => (
+                                    <th key={subject} className="border px-3 py-2 text-center font-semibold">
+                                      {subject}
+                                    </th>
                                   ))}
-                                </Pie>
-                                <Tooltip />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          ) : (
-                            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                              No data available
-                            </div>
-                          )}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((grade) => (
+                                  <tr key={`grade-${grade}`} className={grade % 2 === 0 ? 'bg-slate-50' : ''}>
+                                    <td className="border px-3 py-2 font-semibold">Grade {String(grade)}</td>
+                                    {Object.keys(stats.gradeBySubject).map((subject) => (
+                                      <td key={`${subject}-${grade}`} className="border px-3 py-2 text-center">
+                                        {stats.gradeBySubject[subject][grade as keyof typeof stats.gradeBySubject] || 0}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                                <tr className="bg-blue-100 font-semibold">
+                                  <td className="border px-3 py-2">Total No. of Students</td>
+                                  {Object.keys(stats.gradeBySubject).map((subject) => {
+                                    const total = Object.values(stats.gradeBySubject[subject]).reduce((a, b) => a + b, 0);
+                                    return (
+                                      <td key={`total-${subject}`} className="border px-3 py-2 text-center">
+                                        {total}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                                <tr className="bg-blue-100 font-semibold">
+                                  <td className="border px-3 py-2">Best Grade</td>
+                                  {Object.keys(stats.gradeBySubject).map((subject) => {
+                                    for (let g = 1; g <= 9; g++) {
+                                      if ((stats.gradeBySubject[subject][g as keyof typeof stats.gradeBySubject] || 0) > 0) {
+                                        return (
+                                          <td key={`best-${subject}`} className="border px-3 py-2 text-center">
+                                            {String(g)}
+                                          </td>
+                                        );
+                                      }
+                                    }
+                                    return (
+                                      <td key={`best-${subject}`} className="border px-3 py-2 text-center">
+                                        -
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                                <tr className="bg-blue-100 font-semibold">
+                                  <td className="border px-3 py-2">Worst Grade</td>
+                                  {Object.keys(stats.gradeBySubject).map((subject) => {
+                                    for (let g = 9; g >= 1; g--) {
+                                      if ((stats.gradeBySubject[subject][g as keyof typeof stats.gradeBySubject] || 0) > 0) {
+                                        return (
+                                          <td key={`worst-${subject}`} className="border px-3 py-2 text-center">
+                                            {String(g)}
+                                          </td>
+                                        );
+                                      }
+                                    }
+                                    return (
+                                      <td key={`worst-${subject}`} className="border px-3 py-2 text-center">
+                                        -
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
                         </CardContent>
                       </Card>
-
-                      {/* Subject Performance */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Subject Performance</CardTitle>
-                          <CardDescription>Average scores by subject</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          {stats.subjectPerformance.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                              <BarChart
-                                data={stats.subjectPerformance}
-                                layout="vertical"
-                                margin={{ left: 20 }}
-                              >
-                                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                                <XAxis type="number" domain={[0, 100]} />
-                                <YAxis
-                                  type="category"
-                                  dataKey="name"
-                                  width={120}
-                                  fontSize={12}
-                                />
-                                <Tooltip />
-                                <Bar
-                                  dataKey="averageScore"
-                                  fill="hsl(var(--primary))"
-                                  radius={[0, 4, 4, 0]}
-                                />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          ) : (
-                            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                              No subject data available
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-
-                      {/* Class Comparison (Admin only or if viewing all classes) */}
-                      {stats.classPerformance.length > 1 && (
-                        <Card className="lg:col-span-2">
-                          <CardHeader>
-                            <CardTitle>Class Comparison</CardTitle>
-                            <CardDescription>
-                              Average raw scores by class
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <BarChart data={stats.classPerformance}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="name" fontSize={12} />
-                                <YAxis domain={[0, 100]} />
-                                <Tooltip
-                                  formatter={(value: number, name: string) => [
-                                    `${value}%`,
-                                    name === "averageScore" ? "Average Score" : name,
-                                  ]}
-                                />
-                                <Bar
-                                  dataKey="averageScore"
-                                  fill="hsl(var(--primary))"
-                                  radius={[4, 4, 0, 0]}
-                                />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </CardContent>
-                        </Card>
-                      )}
                     </div>
                   )}
                 </TabsContent>
