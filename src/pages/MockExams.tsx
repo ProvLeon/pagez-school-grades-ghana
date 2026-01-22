@@ -56,6 +56,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useCanAccessClass } from "@/hooks/useTeacherClassAccess";
 import { useToast } from "@/hooks/use-toast";
+import { useGradingSettings, useGradingScales } from "@/hooks/useGradingSettings";
+import { useSchoolSettings } from "@/hooks/useSchoolSettings";
 import { cn } from "@/lib/utils";
 
 import jsPDF from "jspdf";
@@ -159,10 +161,24 @@ export default function MockExams() {
   const { departments: mockDepartments, isLoading: departmentsLoading } = useMockExamDepartments();
   const { classes: allClasses, isLoading: classesLoading } = useMockExamClasses();
 
+  // Get grading settings
+  const { data: gradingSettings } = useGradingSettings();
+
+  // Get school settings for school name
+  const { settings: schoolSettings } = useSchoolSettings();
+
   // State
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("all");
-  const [selectedClassId, setSelectedClassId] = useState<string>("all");
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+
+  // Fetch grading scales - will be used in PDF export
+  const selectedDept = mockDepartments.find(d => d.id === selectedDepartmentId);
+  const { data: gradingScalesData = [] } = useGradingScales(
+    selectedDept?.name,
+    gradingSettings?.academic_year,
+    gradingSettings?.term
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"results" | "analytics">("results");
@@ -408,7 +424,84 @@ export default function MockExams() {
     });
     const subjectList = Array.from(allSubjects).sort();
 
-    // === PAGE 1: Summary Report ===
+    // Function to get grade based on score using grading scales from settings
+    const getGrade = (score: number | null | undefined): string => {
+      if (score === null || score === undefined) return '9';
+
+      // Use grading scales from database if available
+      if (gradingScalesData && gradingScalesData.length > 0) {
+        // Sort by from_percentage descending to check from highest to lowest
+        const sorted = [...gradingScalesData].sort((a, b) => b.from_percentage - a.from_percentage);
+        for (const scale of sorted) {
+          if (score >= scale.from_percentage && score <= scale.to_percentage) {
+            return scale.grade || '9';
+          }
+        }
+        return '9';
+      }
+
+      // Fallback to default grading if no scales found
+      if (score >= 80) return '1';
+      if (score >= 70) return '2';
+      if (score >= 60) return '3';
+      if (score >= 50) return '4';
+      if (score >= 40) return '5';
+      if (score >= 30) return '6';
+      if (score >= 20) return '7';
+      if (score >= 10) return '8';
+      return '9';
+    };
+
+    // Calculate grade distribution for each subject
+    const gradeDistribution: { [key: string]: { [key: string]: number } } = {};
+    subjectList.forEach(subject => {
+      gradeDistribution[subject] = {};
+
+      // Initialize all possible grades
+      if (gradingScalesData && gradingScalesData.length > 0) {
+        gradingScalesData.forEach(scale => {
+          gradeDistribution[subject][scale.grade] = 0;
+        });
+      } else {
+        ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach(g => {
+          gradeDistribution[subject][g] = 0;
+        });
+      }
+
+      filteredResults.forEach(student => {
+        const subjectScore = student.subject_scores?.find(s => s.subject_name === subject);
+        const grade = getGrade(subjectScore?.total_score);
+        gradeDistribution[subject][grade] = (gradeDistribution[subject][grade] || 0) + 1;
+      });
+    });
+
+    // Calculate best and worst grades per subject
+    const bestGradePerSubject: { [key: string]: string } = {};
+    const worstGradePerSubject: { [key: string]: string } = {};
+
+    subjectList.forEach(subject => {
+      const gradesInOrder = Object.keys(gradeDistribution[subject]).sort();
+
+      for (const grade of gradesInOrder) {
+        if (gradeDistribution[subject][grade] > 0) {
+          bestGradePerSubject[subject] = grade;
+          break;
+        }
+      }
+
+      for (let i = gradesInOrder.length - 1; i >= 0; i--) {
+        const grade = gradesInOrder[i];
+        if (gradeDistribution[subject][grade] > 0) {
+          worstGradePerSubject[subject] = grade;
+          break;
+        }
+      }
+    });
+
+    // Get school name from settings or use default
+    const schoolName = schoolSettings?.school_name || 'SCHOOL NAME';
+
+    // === PAGE 1: Summary Statistics ===
     let currentY = 15;
 
     // Header with border
@@ -416,71 +509,251 @@ export default function MockExams() {
     doc.setLineWidth(0.5);
     doc.roundedRect(margin - 4, 8, pageWidth - (margin * 2) + 8, 30, 2, 2);
 
-    // School info (get from session or use default)
+    // School info
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...headerColor);
-    doc.text('MOCK RESULTS', pageWidth / 2, currentY + 2, { align: 'center' });
+    doc.text(schoolName, pageWidth / 2, currentY + 2, { align: 'center' });
 
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
-    doc.text(currentSession.name, pageWidth / 2, currentY + 8, { align: 'center' });
+    doc.text('MOCK EXAMINATION SUMMARY', pageWidth / 2, currentY + 8, { align: 'center' });
 
-    doc.setFontSize(9);
-    doc.text(`Academic Year: ${currentSession.academic_year} | Term: ${currentSession.term}`, pageWidth / 2, currentY + 13, { align: 'center' });
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, pageWidth / 2, currentY + 17, { align: 'center' });
-
-    currentY = 40;
-
-    // Summary info line
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 80);
-    const avgTotal = Math.round(
-      filteredResults.reduce((sum, r) => sum + ((r as any).calculatedTotal || 0), 0) / filteredResults.length
-    );
-    doc.text(`Total Students: ${stats.totalStudents} | Average Score: ${avgTotal}`, margin, currentY, { align: 'left' });
+    doc.setTextColor(60, 60, 60);
+    doc.text(currentSession.name, pageWidth / 2, currentY + 13, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.text(`Academic Year: ${currentSession.academic_year} | Term: ${currentSession.term}`, pageWidth / 2, currentY + 18, { align: 'center' });
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, pageWidth / 2, currentY + 22, { align: 'center' });
 
     currentY = 50;
 
-    // Summary Table Header
-    doc.setFontSize(11);
+    // Summary statistics boxes
+    const avgTotal = Math.round(
+      filteredResults.reduce((sum, r) => sum + ((r as any).calculatedTotal || 0), 0) / filteredResults.length
+    );
+    const passCount = filteredResults.filter(r => ((r as any).calculatedTotal || 0) >= 50).length;
+    const passRate = Math.round((passCount / filteredResults.length) * 100);
+
+    // Box 1: Total Students
+    doc.setFillColor(240, 249, 255);
+    doc.roundedRect(margin, currentY, (pageWidth - margin * 2) / 3 - 3, 20, 2, 2, 'F');
+    doc.setDrawColor(...primaryColor);
+    doc.roundedRect(margin, currentY, (pageWidth - margin * 2) / 3 - 3, 20, 2, 2);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...headerColor);
-    doc.text('RESULTS SUMMARY', margin, currentY);
-    currentY += 5;
+    doc.text('Total Students', margin + 5, currentY + 7);
+    doc.setFontSize(16);
+    doc.text(String(filteredResults.length), margin + 5, currentY + 16);
 
-    // Main Results Table with all subject scores
-    const tableHeaders = ['Student Name', ...subjectList, 'Raw Score', 'Agg.', 'Pos.'];
-    const tableBody = filteredResults.map((r, index) => {
+    // Box 2: Average Score
+    const boxX = margin + (pageWidth - margin * 2) / 3;
+    doc.setFillColor(240, 249, 255);
+    doc.roundedRect(boxX, currentY, (pageWidth - margin * 2) / 3 - 3, 20, 2, 2, 'F');
+    doc.setDrawColor(...primaryColor);
+    doc.roundedRect(boxX, currentY, (pageWidth - margin * 2) / 3 - 3, 20, 2, 2);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...headerColor);
+    doc.text('Average Score', boxX + 5, currentY + 7);
+    doc.setFontSize(16);
+    doc.text(String(avgTotal), boxX + 5, currentY + 16);
+
+    // Box 3: Pass Rate
+    const boxX3 = boxX + (pageWidth - margin * 2) / 3;
+    doc.setFillColor(240, 249, 255);
+    doc.roundedRect(boxX3, currentY, (pageWidth - margin * 2) / 3 - 3, 20, 2, 2, 'F');
+    doc.setDrawColor(...primaryColor);
+    doc.roundedRect(boxX3, currentY, (pageWidth - margin * 2) / 3 - 3, 20, 2, 2);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...headerColor);
+    doc.text('Pass Rate', boxX3 + 5, currentY + 7);
+    doc.setFontSize(16);
+    doc.text(`${passRate}%`, boxX3 + 5, currentY + 16);
+
+    currentY += 28;
+
+    // Key Statistics Table
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...headerColor);
+    doc.text('Performance Overview', margin, currentY);
+    currentY += 6;
+
+    const statsTableHeaders = ['Metric', 'Value'];
+    const highestScore = Math.max(...filteredResults.map(r => (r as any).calculatedTotal || 0));
+    const lowestScore = Math.min(...filteredResults.map(r => (r as any).calculatedTotal || 0));
+    const sorted = [...filteredResults].sort((a, b) => ((b as any).calculatedTotal || 0) - ((a as any).calculatedTotal || 0));
+    const mid = Math.floor(sorted.length / 2);
+    const medianScore = sorted.length % 2
+      ? sorted[mid].calculatedTotal || 0
+      : (((sorted[mid - 1] as any).calculatedTotal || 0) + ((sorted[mid] as any).calculatedTotal || 0)) / 2;
+
+    const statsTableBody = [
+      ['Highest Score', String(highestScore)],
+      ['Lowest Score', String(lowestScore)],
+      ['Median Score', String(Math.round(medianScore as number))],
+      ['Students Passed (≥50)', `${passCount} / ${filteredResults.length}`],
+    ];
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [statsTableHeaders],
+      body: statsTableBody,
+      theme: 'grid',
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 80, halign: 'left' },
+        1: { cellWidth: 50, halign: 'center' },
+      },
+      margin: { left: margin, right: margin },
+    });
+
+    currentY = (doc as any).lastAutoTable?.finalY + 15 || currentY + 50;
+
+    // Top Performers
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...headerColor);
+    doc.text('Top 5 Performers', margin, currentY);
+    currentY += 6;
+
+    const topPerformers = [...filteredResults]
+      .sort((a, b) => ((b as any).calculatedTotal || 0) - ((a as any).calculatedTotal || 0))
+      .slice(0, 5);
+
+    const topPerformersHeaders = ['Rank', 'Student Name', 'Score'];
+    const topPerformersBody = topPerformers.map((student, idx) => [
+      String(idx + 1),
+      student.student_name,
+      String((student as any).calculatedTotal || 0),
+    ]);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [topPerformersHeaders],
+      body: topPerformersBody,
+      theme: 'grid',
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 20, halign: 'center' },
+        1: { cellWidth: 110, halign: 'left' },
+        2: { cellWidth: 40, halign: 'center' },
+      },
+      margin: { left: margin, right: margin },
+    });
+
+    // === PAGE 2: Detailed Results ===
+    doc.addPage();
+    currentY = 15;
+
+    // Header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(schoolName, pageWidth / 2, currentY, { align: 'center' });
+
+    currentY += 8;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(60, 60, 60);
+    doc.text(`Mock Results – ${currentSession.name}`, pageWidth / 2, currentY, { align: 'center' });
+
+    currentY += 6;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Academic Year: ${currentSession.academic_year} | Term: ${currentSession.term}`, pageWidth / 2, currentY, { align: 'center' });
+
+    currentY += 4;
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, pageWidth / 2, currentY, { align: 'center' });
+
+    currentY += 4;
+    doc.text(`Total Students: ${filteredResults.length} | Average Score: ${avgTotal}%`, pageWidth / 2, currentY, { align: 'center' });
+
+    currentY += 10;
+
+    // Detailed results table
+    const detailedHeaders = ['Student Name', ...subjectList, 'Raw Score', 'Agg.', 'Pos.'];
+
+    const detailedTableBody = filteredResults.map((r, index) => {
+      const rank = index + 1;
       const row: (string | number)[] = [r.student_name];
 
-      // Add subject scores
-      subjectList.forEach(subject => {
-        const score = r.subject_scores?.find(s => s.subject_name === subject);
-        row.push(score?.total_score || '-');
+      subjectList.forEach(subjectName => {
+        const subjectScore = r.subject_scores?.find(s => s.subject_name === subjectName);
+        row.push(subjectScore?.total_score ?? '-');
       });
 
-      // Add summary columns
-      row.push((r as any).calculatedTotal || 0); // Raw Score (total)
-      row.push(r.position || '-'); // Aggregate
-      row.push(index + 1); // Position (rank)
+      row.push((r as any).calculatedTotal || 0);
+      row.push(r.position || '-');
+      row.push(rank);
 
       return row;
     });
 
+    // Calculate column widths
+    const studentNameWidth = 35;
+    const rawScoreWidth = 18;
+    const aggWidth = 15;
+    const posWidth = 15;
+    const fixedColumnsWidth = studentNameWidth + rawScoreWidth + aggWidth + posWidth;
+    const availableWidth = pageWidth - margin * 2 - fixedColumnsWidth;
+    const subjectColWidth = Math.max(11, availableWidth / subjectList.length);
+
+    const detailedColumnStyles: { [key: number]: { cellWidth: number; halign?: 'center' | 'left' | 'right' } } = {
+      0: { cellWidth: studentNameWidth, halign: 'left' },
+    };
+
+    for (let i = 1; i <= subjectList.length; i++) {
+      detailedColumnStyles[i] = { cellWidth: subjectColWidth, halign: 'center' };
+    }
+
+    const rawScoreIdx = subjectList.length + 1;
+    detailedColumnStyles[rawScoreIdx] = { cellWidth: rawScoreWidth, halign: 'center' };
+    detailedColumnStyles[rawScoreIdx + 1] = { cellWidth: aggWidth, halign: 'center' };
+    detailedColumnStyles[rawScoreIdx + 2] = { cellWidth: posWidth, halign: 'center' };
+
     autoTable(doc, {
       startY: currentY,
-      head: [tableHeaders],
-      body: tableBody,
+      head: [detailedHeaders],
+      body: detailedTableBody,
       theme: 'grid',
       styles: {
         fontSize: 8,
         cellPadding: 2,
       },
       headStyles: {
-        fillColor: primaryColor,
+        fillColor: [80, 80, 80],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
         fontSize: 8,
@@ -488,107 +761,112 @@ export default function MockExams() {
       alternateRowStyles: {
         fillColor: [248, 250, 252],
       },
+      columnStyles: detailedColumnStyles,
       margin: { left: margin, right: margin },
     });
 
-    // === PAGE 2: Detailed Results with All Subjects ===
-    if (subjectList.length > 0) {
-      doc.addPage();
-      currentY = 15;
+    // === PAGE 3: Grade Distribution Analysis ===
+    doc.addPage();
+    currentY = 15;
 
-      // Header - School name and title
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...headerColor);
-      doc.text('KOKOMLEMLE 2 BASIC SCHOOL', pageWidth / 2, currentY, { align: 'center' });
+    // Header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(schoolName, pageWidth / 2, currentY, { align: 'center' });
 
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(60, 60, 60);
-      doc.text(`Mock Results – ${currentSession.name}`, pageWidth / 2, currentY + 6, { align: 'center' });
+    currentY += 8;
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${currentSession.name} - Mock Examination`, pageWidth / 2, currentY, { align: 'center' });
 
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(80, 80, 80);
-      doc.text(`Academic Year: ${currentSession.academic_year} | Term: ${currentSession.term}`, pageWidth / 2, currentY + 11, { align: 'center' });
-      doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, pageWidth / 2, currentY + 15, { align: 'center' });
+    currentY += 10;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...headerColor);
+    doc.text('ANALYSIS', pageWidth / 2, currentY, { align: 'center' });
 
-      const avgTotal = Math.round(
-        filteredResults.reduce((sum, r) => sum + ((r as any).calculatedTotal || 0), 0) / filteredResults.length
-      );
-      doc.text(`Total Students: ${filteredResults.length} | Average Score: ${avgTotal}`, pageWidth / 2, currentY + 19, { align: 'center' });
+    currentY += 10;
 
-      currentY = 38;
+    // Create grade analysis table
+    const analysisHeaders = ['GRADE', ...subjectList];
+    const analysisBody: (string | number)[][] = [];
 
-      // Create detailed results table with ALL subjects
-      // Create detailed results table with all subjects - matching the screenshot format
-      const detailedHeaders = ['Student Name', ...subjectList, 'Raw Score', 'Agg.', 'Pos.'];
-
-      const detailedTableBody = filteredResults.map((r, index) => {
-        const rank = index + 1;
-        const row: (string | number)[] = [r.student_name];
-
-        // Add ALL subject scores
-        subjectList.forEach(subjectName => {
-          const subjectScore = r.subject_scores?.find(s => s.subject_name === subjectName);
-          row.push(subjectScore?.total_score ?? '-');
-        });
-
-        // Add summary columns
-        row.push((r as any).calculatedTotal || 0); // Raw Score
-        row.push(r.position || '-'); // Aggregate
-        row.push(rank); // Position
-
-        return row;
-      });
-
-      // Calculate column widths
-      const numColumns = detailedHeaders.length;
-      const studentNameWidth = 35;
-      const rawScoreWidth = 18;
-      const aggWidth = 15;
-      const posWidth = 15;
-      const fixedColumnsWidth = studentNameWidth + rawScoreWidth + aggWidth + posWidth;
-      const availableWidth = pageWidth - margin * 2 - fixedColumnsWidth;
-      const subjectColWidth = Math.max(11, availableWidth / subjectList.length);
-
-      const detailedColumnStyles: { [key: number]: { cellWidth: number; halign?: 'center' | 'left' | 'right' } } = {
-        0: { cellWidth: studentNameWidth, halign: 'left' }, // Student Name
-      };
-
-      // Add column styles for each subject
-      for (let i = 1; i <= subjectList.length; i++) {
-        detailedColumnStyles[i] = { cellWidth: subjectColWidth, halign: 'center' };
-      }
-
-      // Add column styles for summary columns
-      const rawScoreIdx = subjectList.length + 1;
-      detailedColumnStyles[rawScoreIdx] = { cellWidth: rawScoreWidth, halign: 'center' }; // Raw Score
-      detailedColumnStyles[rawScoreIdx + 1] = { cellWidth: aggWidth, halign: 'center' }; // Agg
-      detailedColumnStyles[rawScoreIdx + 2] = { cellWidth: posWidth, halign: 'center' }; // Pos
-
-      autoTable(doc, {
-        startY: currentY,
-        head: [detailedHeaders],
-        body: detailedTableBody,
-        theme: 'grid',
-        styles: {
-          fontSize: 8,
-          cellPadding: 2,
-        },
-        headStyles: {
-          fillColor: primaryColor,
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-          fontSize: 8,
-        },
-        alternateRowStyles: {
-          fillColor: [248, 250, 252],
-        },
-        columnStyles: detailedColumnStyles,
-        margin: { left: margin, right: margin },
-      });
+    // Get all unique grades from grading scales or use defaults
+    let allGrades: string[] = [];
+    if (gradingScalesData && gradingScalesData.length > 0) {
+      // Use grades from database (sorted by from_percentage descending)
+      const gradeSet = new Set<string>();
+      [...gradingScalesData]
+        .sort((a, b) => b.from_percentage - a.from_percentage)
+        .forEach(scale => gradeSet.add(scale.grade));
+      allGrades = Array.from(gradeSet);
+    } else {
+      // Use default grades
+      allGrades = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
     }
+
+    // Add rows for each grade
+    allGrades.forEach(grade => {
+      const row: (string | number)[] = [`GRADE ${grade}`];
+      subjectList.forEach(subject => {
+        row.push(gradeDistribution[subject][grade] || 0);
+      });
+      analysisBody.push(row);
+    });
+
+    // Add total row
+    const totalRow: (string | number)[] = ['TOTAL NO. OF STUDENTS'];
+    subjectList.forEach(subject => {
+      totalRow.push(filteredResults.length);
+    });
+    analysisBody.push(totalRow);
+
+    // Add best grade row
+    const bestGradeRow: (string | number)[] = ['BEST GRADE'];
+    subjectList.forEach(subject => {
+      bestGradeRow.push(bestGradePerSubject[subject] || '-');
+    });
+    analysisBody.push(bestGradeRow);
+
+    // Add worst grade row
+    const worstGradeRow: (string | number)[] = ['WORST GRADE'];
+    subjectList.forEach(subject => {
+      worstGradeRow.push(worstGradePerSubject[subject] || '-');
+    });
+    analysisBody.push(worstGradeRow);
+
+    // Add best and worst aggregate
+    const bestAggregate = Math.min(...filteredResults.map(r => r.position || 999));
+    const worstAggregate = Math.max(...filteredResults.map(r => r.position || 0));
+
+    analysisBody.push(['BEST AGGREGATE', bestAggregate, '', '', '', '', '', '', '', '']);
+    analysisBody.push(['WORST AGGREGATE', worstAggregate, '', '', '', '', '', '', '', '']);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [analysisHeaders],
+      body: analysisBody,
+      theme: 'grid',
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+        halign: 'center',
+      },
+      headStyles: {
+        fillColor: [200, 200, 200],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fillColor: [255, 255, 255],
+      },
+      alternateRowStyles: {
+        fillColor: [240, 240, 240],
+      },
+      margin: { left: margin, right: margin },
+    });
 
     // Add footer to all pages
     const totalPages = doc.getNumberOfPages();
@@ -609,7 +887,7 @@ export default function MockExams() {
     }
 
     doc.save(`mock-results-${currentSession.name.replace(/\s+/g, "-").toLowerCase()}.pdf`);
-    toast({ title: "PDF Exported", description: "Detailed results have been exported successfully." });
+    toast({ title: "PDF Exported", description: "Mock exam report (3 pages) has been exported successfully." });
   };
 
   // Export individual student PDF
