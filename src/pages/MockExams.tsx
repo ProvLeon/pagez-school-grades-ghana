@@ -312,28 +312,72 @@ export default function MockExams() {
       color: GRADE_COLORS[index] || GRADE_COLORS[6],
     })).filter((g) => g.value > 0);
 
-    // Grade distribution by subject (Grade 1-9)
-    const gradeBySubject: Record<string, Record<number, number>> = {};
+    // Grade distribution by subject - using grading scales from database
+    // Helper function to calculate grade from score using grading scales
+    const getGradeFromScore = (score: number | null | undefined): string => {
+      if (score === null || score === undefined) return '9';
+
+      // Use grading scales from database if available
+      if (gradingScalesData && gradingScalesData.length > 0) {
+        // Sort by from_percentage descending to check from highest to lowest
+        const sorted = [...gradingScalesData].sort((a, b) => b.from_percentage - a.from_percentage);
+        for (const scale of sorted) {
+          if (score >= scale.from_percentage && score <= scale.to_percentage) {
+            return scale.grade || '9';
+          }
+        }
+        return '9';
+      }
+
+      // Fallback to default grading if no scales found
+      if (score >= 80) return '1';
+      if (score >= 70) return '2';
+      if (score >= 60) return '3';
+      if (score >= 50) return '4';
+      if (score >= 40) return '5';
+      if (score >= 30) return '6';
+      if (score >= 20) return '7';
+      if (score >= 10) return '8';
+      return '9';
+    };
+
+    // Get all unique subjects from filtered results
+    const allSubjectsSet = new Set<string>();
+    filteredResults.forEach(r => {
+      r.subject_scores?.forEach(s => allSubjectsSet.add(s.subject_name));
+    });
+    const allSubjectsInResults = Array.from(allSubjectsSet).sort();
+
+    // Initialize grade tracking with all possible grades from grading scales
+    const allPossibleGrades = new Set<string>();
+    if (gradingScalesData && gradingScalesData.length > 0) {
+      gradingScalesData.forEach(scale => allPossibleGrades.add(scale.grade));
+    } else {
+      ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach(g => allPossibleGrades.add(g));
+    }
+
+    const gradeBySubject: Record<string, Record<string, number>> = {};
+
+    // Pre-initialize all subjects with all possible grades (matching PDF export)
+    allSubjectsInResults.forEach(subject => {
+      gradeBySubject[subject] = {};
+      allPossibleGrades.forEach(g => {
+        gradeBySubject[subject][g] = 0;
+      });
+    });
+
+    // Now populate the grades from actual results
     filteredResults.forEach((r) => {
       r.subject_scores?.forEach((score) => {
         const subjectName = score.subject_name;
         const scoreValue = Number(score.total_score) || 0;
 
-        // Calculate grade from score (1-9)
-        let grade = 9;
-        if (scoreValue >= 80) grade = 1;
-        else if (scoreValue >= 70) grade = 2;
-        else if (scoreValue >= 65) grade = 3;
-        else if (scoreValue >= 60) grade = 4;
-        else if (scoreValue >= 55) grade = 5;
-        else if (scoreValue >= 50) grade = 6;
-        else if (scoreValue >= 45) grade = 7;
-        else if (scoreValue >= 35) grade = 8;
+        // Calculate grade from score using grading scales
+        const grade = getGradeFromScore(scoreValue);
 
-        if (!gradeBySubject[subjectName]) {
-          gradeBySubject[subjectName] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
+        if (gradeBySubject[subjectName]) {
+          gradeBySubject[subjectName][grade] = (gradeBySubject[subjectName][grade] || 0) + 1;
         }
-        gradeBySubject[subjectName][grade]++;
       });
     });
 
@@ -402,7 +446,7 @@ export default function MockExams() {
       bestAggregate,
       worstAggregate,
     };
-  }, [filteredResults, allClasses]);
+  }, [filteredResults, allClasses, gradingScalesData]);
 
   const currentSession = sessions.find((s) => s.id === selectedSessionId);
 
@@ -753,7 +797,7 @@ export default function MockExams() {
         cellPadding: 2,
       },
       headStyles: {
-        fillColor: [80, 80, 80],
+        fillColor: primaryColor,
         textColor: [255, 255, 255],
         fontStyle: 'bold',
         fontSize: 8,
@@ -854,8 +898,8 @@ export default function MockExams() {
         halign: 'center',
       },
       headStyles: {
-        fillColor: [200, 200, 200],
-        textColor: [0, 0, 0],
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
         fontStyle: 'bold',
         fontSize: 8,
       },
@@ -974,12 +1018,41 @@ export default function MockExams() {
 
     // Subject Scores Table
     if (result.subject_scores && result.subject_scores.length > 0) {
-      const subjectTableHeaders = ['No.', 'Subject', 'Exam Score', 'Total Score'];
+      // Helper function to get grade from score (using grading scales)
+      const getGradeForScore = (score: number | null | undefined): string => {
+        if (score === null || score === undefined) return '-';
+
+        // Use grading scales from database if available
+        if (gradingScalesData && gradingScalesData.length > 0) {
+          // Sort by from_percentage descending to check from highest to lowest
+          const sorted = [...gradingScalesData].sort((a, b) => b.from_percentage - a.from_percentage);
+          for (const scale of sorted) {
+            if (score >= scale.from_percentage && score <= scale.to_percentage) {
+              return scale.grade || '-';
+            }
+          }
+          return '-';
+        }
+
+        // Fallback to default grading
+        if (score >= 80) return '1';
+        if (score >= 70) return '2';
+        if (score >= 60) return '3';
+        if (score >= 50) return '4';
+        if (score >= 40) return '5';
+        if (score >= 30) return '6';
+        if (score >= 20) return '7';
+        if (score >= 10) return '8';
+        return '9';
+      };
+
+      const subjectTableHeaders = ['No.', 'Subject', 'Exam Score', 'Total Score', 'Grade'];
       const subjectTableBody = result.subject_scores.map((s, idx) => [
         idx + 1,
         s.subject_name,
         s.exam_score ?? '-',
         s.total_score ?? '-',
+        getGradeForScore(Number(s.total_score)),
       ]);
 
       autoTable(doc, {
@@ -1480,7 +1553,7 @@ export default function MockExams() {
                         <CardHeader>
                           <CardTitle>Grade Distribution by Subject</CardTitle>
                           <CardDescription>
-                            Count of students by grade (1-9) for each subject
+                            Count of students by grade for each subject
                           </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -1497,61 +1570,76 @@ export default function MockExams() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((grade) => (
-                                  <tr key={`grade-${grade}`} className={grade % 2 === 0 ? 'bg-slate-50' : ''}>
-                                    <td className="border px-3 py-2 font-semibold">Grade {String(grade)}</td>
-                                    {Object.keys(stats.gradeBySubject).map((subject) => (
-                                      <td key={`${subject}-${grade}`} className="border px-3 py-2 text-center">
-                                        {stats.gradeBySubject[subject][grade as keyof typeof stats.gradeBySubject] || 0}
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
+                                {(() => {
+                                  // Always show all possible grades (from grading scales or 1-9)
+                                  let allPossibleGrades: string[] = [];
+                                  if (gradingScalesData && gradingScalesData.length > 0) {
+                                    const gradeSet = new Set<string>();
+                                    [...gradingScalesData]
+                                      .sort((a, b) => b.from_percentage - a.from_percentage)
+                                      .forEach(scale => gradeSet.add(scale.grade));
+                                    allPossibleGrades = Array.from(gradeSet);
+                                  } else {
+                                    allPossibleGrades = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+                                  }
+
+                                  // Make allPossibleGrades available for summary rows
+                                  window.__allPossibleGrades = allPossibleGrades;
+
+                                  return allPossibleGrades.map((grade, index) => (
+                                    <tr key={`grade-${grade}`} className={index % 2 === 0 ? 'bg-slate-50' : ''}>
+                                      <td className="border px-3 py-2 font-semibold">Grade {String(grade)}</td>
+                                      {Object.keys(stats.gradeBySubject).map((subject) => (
+                                        <td key={`${subject}-${grade}`} className="border px-3 py-2 text-center">
+                                          {stats.gradeBySubject[subject][grade] || 0}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ));
+                                })()}
+                                {/* Total No. of Students row */}
                                 <tr className="bg-blue-100 font-semibold">
                                   <td className="border px-3 py-2">Total No. of Students</td>
-                                  {Object.keys(stats.gradeBySubject).map((subject) => {
-                                    const total = Object.values(stats.gradeBySubject[subject]).reduce((a, b) => a + b, 0);
-                                    return (
-                                      <td key={`total-${subject}`} className="border px-3 py-2 text-center">
-                                        {total}
-                                      </td>
-                                    );
-                                  })}
+                                  {Object.keys(stats.gradeBySubject).map((subject) => (
+                                    <td key={`total-${subject}`} className="border px-3 py-2 text-center">
+                                      {stats.totalStudents}
+                                    </td>
+                                  ))}
                                 </tr>
+                                {/* Best Grade row (lowest grade number with count > 0) */}
                                 <tr className="bg-blue-100 font-semibold">
                                   <td className="border px-3 py-2">Best Grade</td>
                                   {Object.keys(stats.gradeBySubject).map((subject) => {
-                                    for (let g = 1; g <= 9; g++) {
-                                      if ((stats.gradeBySubject[subject][g as keyof typeof stats.gradeBySubject] || 0) > 0) {
-                                        return (
-                                          <td key={`best-${subject}`} className="border px-3 py-2 text-center">
-                                            {String(g)}
-                                          </td>
-                                        );
-                                      }
-                                    }
+                                    // Find best grade (first one with count > 0 in sorted order)
+                                    const allGradesForSubject = Object.keys(stats.gradeBySubject[subject]).sort((a, b) => {
+                                      const aNum = parseInt(a);
+                                      const bNum = parseInt(b);
+                                      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+                                      return a.localeCompare(b);
+                                    });
+                                    const bestGrade = allGradesForSubject.find(g => (stats.gradeBySubject[subject][g] || 0) > 0);
                                     return (
                                       <td key={`best-${subject}`} className="border px-3 py-2 text-center">
-                                        -
+                                        {bestGrade || '-'}
                                       </td>
                                     );
                                   })}
                                 </tr>
+                                {/* Worst Grade row (highest grade number with count > 0) */}
                                 <tr className="bg-blue-100 font-semibold">
                                   <td className="border px-3 py-2">Worst Grade</td>
                                   {Object.keys(stats.gradeBySubject).map((subject) => {
-                                    for (let g = 9; g >= 1; g--) {
-                                      if ((stats.gradeBySubject[subject][g as keyof typeof stats.gradeBySubject] || 0) > 0) {
-                                        return (
-                                          <td key={`worst-${subject}`} className="border px-3 py-2 text-center">
-                                            {String(g)}
-                                          </td>
-                                        );
-                                      }
-                                    }
+                                    // Find worst grade (last one with count > 0 in sorted order)
+                                    const allGradesForSubject = Object.keys(stats.gradeBySubject[subject]).sort((a, b) => {
+                                      const aNum = parseInt(a);
+                                      const bNum = parseInt(b);
+                                      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+                                      return a.localeCompare(b);
+                                    }).reverse();
+                                    const worstGrade = allGradesForSubject.find(g => (stats.gradeBySubject[subject][g] || 0) > 0);
                                     return (
                                       <td key={`worst-${subject}`} className="border px-3 py-2 text-center">
-                                        -
+                                        {worstGrade || '-'}
                                       </td>
                                     );
                                   })}
@@ -1581,6 +1669,6 @@ export default function MockExams() {
         confirmText="Delete All"
         isLoading={deleteAll.isPending}
       />
-    </div>
+    </div >
   );
 }

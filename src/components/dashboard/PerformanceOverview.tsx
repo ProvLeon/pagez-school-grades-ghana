@@ -26,17 +26,29 @@ export const PerformanceOverview = () => {
     const classStats = new Map<string, { total: number; count: number; name: string }>();
 
     results.forEach(result => {
-      if (!result.class_id || result.total_score === null || result.total_score === undefined) return;
+      if (!result.class_id) return;
+
+      // Calculate total score from subject_marks if available
+      let totalScore = 0;
+      if (result.subject_marks && result.subject_marks.length > 0) {
+        totalScore = result.subject_marks.reduce((sum, mark) => sum + (mark.total_score || 0), 0);
+      } else if (result.total_score !== null && result.total_score !== undefined) {
+        // Fallback to total_score if subject_marks not available
+        totalScore = result.total_score;
+      } else {
+        // Skip if no score data available
+        return;
+      }
 
       const className = result.class?.name || 'Unknown';
       const existing = classStats.get(result.class_id);
 
       if (existing) {
-        existing.total += result.total_score;
+        existing.total += totalScore;
         existing.count += 1;
       } else {
         classStats.set(result.class_id, {
-          total: result.total_score,
+          total: totalScore,
           count: 1,
           name: className
         });
