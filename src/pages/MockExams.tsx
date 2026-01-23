@@ -366,13 +366,13 @@ export default function MockExams() {
       });
     });
 
-    // Now populate the grades from actual results
+    // Now populate the grades from actual results (ensuring every student is counted for every subject)
     filteredResults.forEach((r) => {
-      r.subject_scores?.forEach((score) => {
-        const subjectName = score.subject_name;
-        const scoreValue = Number(score.total_score) || 0;
+      allSubjectsInResults.forEach(subjectName => {
+        const score = r.subject_scores?.find(s => s.subject_name === subjectName);
+        const scoreValue = score ? (Number(score.total_score) || 0) : 0;
 
-        // Calculate grade from score using grading scales
+        // Calculate grade from score using grading scales (0 or missing = Grade 9)
         const grade = getGradeFromScore(scoreValue);
 
         if (gradeBySubject[subjectName]) {
@@ -514,7 +514,9 @@ export default function MockExams() {
 
       filteredResults.forEach(student => {
         const subjectScore = student.subject_scores?.find(s => s.subject_name === subject);
-        const grade = getGrade(subjectScore?.total_score);
+        // Count every student for every subject (missing scores = Grade 9)
+        const scoreValue = subjectScore ? (Number(subjectScore.total_score) || 0) : 0;
+        const grade = getGrade(scoreValue);
         gradeDistribution[subject][grade] = (gradeDistribution[subject][grade] || 0) + 1;
       });
     });
@@ -859,7 +861,7 @@ export default function MockExams() {
       analysisBody.push(row);
     });
 
-    // Add total row
+    // Add total row (total count of students in the filtered set)
     const totalRow: (string | number)[] = ['TOTAL NO. OF STUDENTS'];
     subjectList.forEach(subject => {
       totalRow.push(filteredResults.length);
@@ -884,8 +886,18 @@ export default function MockExams() {
     const bestAggregate = Math.min(...filteredResults.map(r => r.position || 999));
     const worstAggregate = Math.max(...filteredResults.map(r => r.position || 0));
 
-    analysisBody.push(['BEST AGGREGATE', bestAggregate, '', '', '', '', '', '', '', '']);
-    analysisBody.push(['WORST AGGREGATE', worstAggregate, '', '', '', '', '', '', '', '']);
+    // Create rows with correct number of columns matching the subjects
+    const bestAggRow = ['BEST AGGREGATE', bestAggregate];
+    const worstAggRow = ['WORST AGGREGATE', worstAggregate];
+
+    // Fill remaining columns with empty strings to maintain table structure
+    for (let i = 0; i < subjectList.length - 1; i++) {
+      bestAggRow.push('');
+      worstAggRow.push('');
+    }
+
+    analysisBody.push(bestAggRow);
+    analysisBody.push(worstAggRow);
 
     autoTable(doc, {
       startY: currentY,

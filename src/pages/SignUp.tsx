@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface SignUpFormData {
   fullName: string;
   schoolName: string;
+  email: string;
   phoneNumber: string;
   password: string;
   confirmPassword: string;
@@ -23,6 +24,7 @@ const SignUp = () => {
   const [formData, setFormData] = useState<SignUpFormData>({
     fullName: "",
     schoolName: "",
+    email: "",
     phoneNumber: "",
     password: "",
     confirmPassword: "",
@@ -44,6 +46,10 @@ const SignUp = () => {
 
     if (!formData.schoolName.trim()) {
       newErrors.schoolName = "School name is required";
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
     }
 
     if (!formData.phoneNumber.trim()) {
@@ -91,8 +97,8 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
-      // Generate email from phone number for Supabase auth
-      const email = formatPhoneAsEmail(formData.phoneNumber);
+      // Use provided email or generate one from phone number for Supabase auth
+      const email = formData.email.trim() || formatPhoneAsEmail(formData.phoneNumber);
 
       // Sign up with Supabase
       const { data, error } = await supabase.auth.signUp({
@@ -103,6 +109,7 @@ const SignUp = () => {
             full_name: formData.fullName.trim(),
             school_name: formData.schoolName.trim(),
             phone_number: formData.phoneNumber.replace(/\s/g, ""),
+            email: formData.email.trim() || null,
           },
         },
       });
@@ -186,10 +193,12 @@ const SignUp = () => {
               <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <p className="text-sm font-medium">Your login credentials:</p>
                 <p className="text-sm text-muted-foreground">
-                  Phone: <strong>{formData.phoneNumber}</strong>
+                  ID: <strong>{formData.email || formData.phoneNumber}</strong>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Use your phone number and password to sign in.
+                  {formData.email
+                    ? "Use your email or phone number and password to sign in."
+                    : "Use your phone number and password to sign in."}
                 </p>
               </div>
 
@@ -271,6 +280,28 @@ const SignUp = () => {
                 <p className="text-sm text-destructive flex items-center">
                   <AlertCircle className="w-4 h-4 mr-1" />
                   {errors.schoolName}
+                </p>
+              )}
+            </div>
+
+            {/* Email (Optional) */}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address (Optional)</Label>
+              <div className="relative">
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@school.com"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  disabled={isLoading}
+                  className={`h-12 ${errors.email ? "border-destructive" : ""}`}
+                />
+              </div>
+              {errors.email && (
+                <p className="text-sm text-destructive flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.email}
                 </p>
               )}
             </div>
