@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useSchoolSettings } from '@/hooks/useSchoolSettings';
 import { hexToHsl, hslToHex } from '@/utils/colorUtils';
+import { createOrganizationForUser, getUserOrganizationId } from '@/utils/organizationHelper';
 
 export const useSettingsForm = () => {
   const {
@@ -168,6 +169,15 @@ export const useSettingsForm = () => {
       };
 
       console.log('Update data being sent:', updateData);
+
+      // Check if user has an organization
+      const orgId = await getUserOrganizationId();
+      if (!orgId) {
+        console.log('User has no organization, creating one...');
+        await createOrganizationForUser(formData.school_name || "My School");
+        // We don't need to do anything else, the settings update below will work now
+        // that the user is linked to an organization (and likely set as admin)
+      }
 
       const result = await updateSettings(updateData);
 

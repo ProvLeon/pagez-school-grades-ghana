@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -12,8 +12,12 @@ import { WalkthroughOverlay, FloatingHelpButton } from "@/components/walkthrough
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
 // TeacherProtectedRoute no longer needed - using unified role-based routes
+import { getUserOrganizationId } from "@/utils/organizationHelper";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 
 // Pages
+import NoOrganization from "./pages/NoOrganization";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Classes from "./pages/Classes";
@@ -56,7 +60,6 @@ import ResultsAnalytics from "./pages/results/ResultsAnalytics";
 
 // Mock pages
 import AddMockScores from "./pages/mock/AddMockScores";
-import { useEffect, useState } from "react";
 
 // Create QueryClient with enhanced configuration
 const queryClient = new QueryClient({
@@ -95,20 +98,76 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
   </SidebarProvider>
 );
 
-// Protected route wrapper with layout
+// Protected route wrapper with layout and organization check
 const ProtectedAppRoute = ({
   children,
   requireAdmin = false
 }: {
   children: React.ReactNode;
   requireAdmin?: boolean;
-}) => (
-  <ProtectedRoute requireAdmin={requireAdmin}>
-    <AppLayout>
-      {children}
-    </AppLayout>
-  </ProtectedRoute>
-);
+}) => {
+  const [checking, setChecking] = useState(true);
+  const location = useLocation();
+
+  useEffect(() => {
+    const checkOrg = async () => {
+      // Skip check for settings page to avoid infinite loop for admins creating org
+      if (location.pathname === '/settings') {
+        setChecking(false);
+        return;
+      }
+
+      try {
+        const orgId = await getUserOrganizationId();
+
+        if (!orgId) {
+          // No organization found. Check user type.
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('user_type')
+              .eq('user_id', user.id)
+              .single();
+
+            if (profile?.user_type === 'admin') {
+              // Admin needs to create organization - redirect to settings
+              // Use window.location to ensure fresh state
+              window.location.href = '/settings?setup=required';
+              return;
+            } else {
+              // Other users cannot fix this themselves - redirect to no-org page
+              window.location.href = '/no-organization';
+              return;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error checking organization:', error);
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    checkOrg();
+  }, [location.pathname]);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <ProtectedRoute requireAdmin={requireAdmin}>
+      <AppLayout>
+        {children}
+      </AppLayout>
+    </ProtectedRoute>
+  );
+};
 
 const ForceRedirect = ({ to }: { to: string }) => {
   useEffect(() => {
@@ -185,6 +244,16 @@ const App = () => {
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/student-reports" element={<PublicReports />} />
                     <Route path="/mock-results/:sessionId" element={<PublicMockResults />} />
+
+                    {/* No Organization Route - Protected but no sidebar layout */}
+                    <Route
+                      path="/no-organization"
+                      element={
+                        <ProtectedRoute>
+                          <NoOrganization />
+                        </ProtectedRoute>
+                      }
+                    />
 
                     {/* Protected Routes */}
                     <Route
