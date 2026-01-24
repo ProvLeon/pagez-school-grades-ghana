@@ -64,7 +64,6 @@ export const EditStudentDialog = ({
   const [formData, setFormData] = useState({
     student_id: "",
     full_name: "",
-    email: "",
     gender: "",
     date_of_birth: "",
     class_id: "",
@@ -90,7 +89,6 @@ export const EditStudentDialog = ({
       setFormData({
         student_id: student.student_id || "",
         full_name: student.full_name || "",
-        email: student.email || "",
         gender: student.gender || "",
         date_of_birth: student.date_of_birth || "",
         class_id: student.class_id || "",

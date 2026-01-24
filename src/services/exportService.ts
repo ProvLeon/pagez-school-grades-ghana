@@ -120,7 +120,7 @@ export class ExportService {
         exam_score: mark.exam_score,
         total: mark.total_score || 0,
         grade: mark.grade || '',
-        remark: mark.remark || ''
+        remark: mark.subject_teacher_remarks || mark.remark || ''
       }));
 
       const totalScore = subjects.reduce((sum, s) => sum + s.total, 0);
