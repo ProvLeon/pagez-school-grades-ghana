@@ -76,11 +76,29 @@ serve(async (req) => {
       },
     });
 
-    // Get the teacher record to find the user_id
+    // Get the caller's organization_id
+    const { data: callerOrgProfile, error: callerOrgError } = await userClient
+      .from("user_organization_profiles")
+      .select("organization_id")
+      .eq("user_id", callerUser.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (callerOrgError || !callerOrgProfile) {
+      return new Response(
+        JSON.stringify({ error: "Caller not associated with any organization" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const callerOrgId = callerOrgProfile.organization_id;
+
+    // Get the teacher record to find the user_id, and verify they belong to the same organization
     const { data: teacher, error: teacherFetchError } = await adminClient
       .from("teachers")
-      .select("id, full_name, email, user_id")
+      .select("id, full_name, email, user_id, organization_id")
       .eq("id", teacher_id)
+      .eq("organization_id", callerOrgId)
       .single();
 
     if (teacherFetchError) {

@@ -23,13 +23,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchPrimaryColor = async () => {
       try {
+        // Get current user first
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          console.error('Error getting current user:', userError);
+          // Use default color if user not authenticated
+          setPrimaryColor('#e11d48');
+          primaryColorRef.current = '#e11d48';
+          setIsLoadingTheme(false);
+          return;
+        }
+
+        // Fetch school_settings for current user
         const { data, error } = await supabase
           .from('school_settings')
           .select('primary_color')
-          .limit(1)
-          .single();
+          .eq('admin_id', user.id)
+          .maybeSingle();
 
-        if (error) {
+        if (error && error.code !== 'PGRST116') {
           console.error('Error fetching theme color:', error);
           // Use default color for report sheets if fetch fails
           setPrimaryColor('#e11d48');

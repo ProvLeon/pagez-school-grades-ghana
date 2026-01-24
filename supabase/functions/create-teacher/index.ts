@@ -143,6 +143,23 @@ serve(async (req) => {
       // Don't fail - profile might be created by a trigger
     }
 
+    // Get the caller's organization_id from user_organization_profiles
+    const { data: userOrgProfile, error: orgError } = await userClient
+      .from("user_organization_profiles")
+      .select("organization_id")
+      .eq("user_id", callerUser.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (orgError || !userOrgProfile) {
+      return new Response(
+        JSON.stringify({ error: "Caller not associated with any organization" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const organizationId = userOrgProfile.organization_id;
+
     // Create teacher record
     const teacherInsertData: Record<string, unknown> = {
       full_name: full_name,
@@ -150,6 +167,7 @@ serve(async (req) => {
       phone: phone || null,
       department_id: department_id || null,
       user_id: userId,
+      organization_id: organizationId,
     };
 
     const { data: teacherRecord, error: teacherError } = await adminClient

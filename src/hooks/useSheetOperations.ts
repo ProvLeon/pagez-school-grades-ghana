@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getUserOrganizationId } from "@/utils/organizationHelper";
 
 export interface SheetOperation {
   id: string;
@@ -38,9 +39,16 @@ export const useSheetOperations = () => {
   return useQuery({
     queryKey: ['sheet-operations'],
     queryFn: async () => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('sheet_operations')
         .select('*')
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -55,9 +63,14 @@ export const useCreateSheetOperation = () => {
 
   return useMutation({
     mutationFn: async (operation: CreateSheetOperationInput) => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User is not associated with any organization');
+      }
+
       const { data, error } = await supabase
         .from('sheet_operations')
-        .insert(operation)
+        .insert({ ...operation, organization_id: organizationId })
         .select()
         .single();
       

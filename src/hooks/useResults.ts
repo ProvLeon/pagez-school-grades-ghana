@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 export interface Result {
   id: string;
@@ -52,6 +53,12 @@ export const useResults = () => {
   return useQuery({
     queryKey: ['results'],
     queryFn: async () => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
       // First try with all relations
       let { data, error } = await supabase
         .from('results')
@@ -63,6 +70,7 @@ export const useResults = () => {
           ca_type:ca_types(*),
           subject_marks(*, subject:subjects(id, name))
         `)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
 
       // If 406 error (relation doesn't exist), try without optional relations
@@ -76,6 +84,7 @@ export const useResults = () => {
             class:classes(*, department:departments(*)),
             subject_marks(*, subject:subjects(id, name))
           `)
+          .eq('organization_id', organizationId)
           .order('created_at', { ascending: false });
 
         data = fallbackResult.data;

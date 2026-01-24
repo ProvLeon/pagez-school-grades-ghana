@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, Subject } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 export interface SubjectWithDepartment extends Omit<Subject, 'department'> {
   department?: {
@@ -14,12 +15,20 @@ export const useSubjects = () => {
   return useQuery({
     queryKey: ['subjects'],
     queryFn: async () => {
+      // Get user's organization for data isolation
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [] as SubjectWithDepartment[];
+      }
+
       const { data, error } = await supabase
         .from('subjects')
         .select(`
           *,
           department:departments(id, name)
         `)
+        .eq('organization_id', organizationId)
         .order('name');
       
       if (error) throw error;
@@ -34,9 +43,14 @@ export const useCreateSubject = () => {
 
   return useMutation({
     mutationFn: async (subject: { name: string; code?: string; department_id: string }) => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User is not associated with any organization');
+      }
+
       const { data, error } = await supabase
         .from('subjects')
-        .insert([subject])
+        .insert([{ ...subject, organization_id: organizationId }])
         .select()
         .single();
 

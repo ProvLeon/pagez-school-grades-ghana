@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { ParsedResultData } from '@/hooks/useResultsExcelParser';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 interface GradingScale {
   id: string;
@@ -46,6 +47,12 @@ export const useBulkResultsImport = () => {
       caTypeId?: string;
       onProgress?: (progress: BulkResultsImportProgress) => void;
     }): Promise<BulkResultsImportResult> => {
+      // Get organization context
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User is not associated with any organization');
+      }
+
       const result: BulkResultsImportResult = {
         success: false,
         totalProcessed: results.length,
@@ -82,6 +89,7 @@ export const useBulkResultsImport = () => {
         const { data: students, error: studentsError } = await supabase
           .from('students')
           .select('id, student_id, class_id')
+          .eq('organization_id', organizationId)
           .in('student_id', studentIds);
 
         if (studentsError) {
@@ -100,7 +108,8 @@ export const useBulkResultsImport = () => {
 
         const { data: subjects, error: subjectsError } = await supabase
           .from('subjects')
-          .select('id, name, code');
+          .select('id, name, code')
+          .eq('organization_id', organizationId);
 
         if (subjectsError) {
           throw new Error(`Failed to fetch subjects: ${subjectsError.message}`);
@@ -114,6 +123,7 @@ export const useBulkResultsImport = () => {
         const { data: gradingScales, error: gradingScalesError } = await supabase
           .from('grading_scales')
           .select('id, grade, from_percentage, to_percentage, remark')
+          .eq('organization_id', organizationId)
           .order('from_percentage', { ascending: false });
 
         if (gradingScalesError) {
@@ -126,6 +136,7 @@ export const useBulkResultsImport = () => {
           const { data: caType } = await supabase
             .from('ca_types')
             .select('configuration')
+            .eq('organization_id', organizationId)
             .eq('id', caTypeId)
             .single();
           caConfiguration = caType?.configuration as Record<string, number> | null;
@@ -195,6 +206,7 @@ export const useBulkResultsImport = () => {
             const { data: existingResult } = await supabase
               .from('results')
               .select('id')
+              .eq('organization_id', organizationId)
               .eq('student_id', studentInfo.id)
               .eq('term', resultData.term)
               .eq('academic_year', resultData.academic_year)
@@ -236,6 +248,7 @@ export const useBulkResultsImport = () => {
                 .insert({
                   student_id: studentInfo.id,
                   class_id: effectiveClassId,
+                  organization_id: organizationId,
                   term: resultData.term,
                   academic_year: resultData.academic_year,
                   ca_type_id: caTypeId || null,

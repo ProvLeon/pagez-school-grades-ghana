@@ -300,6 +300,7 @@ function findSubjectColumns(headers: string[]): SubjectColumn[] {
     { pattern: /- ca3$/i, type: 'ca3' as const },
     { pattern: /- ca4$/i, type: 'ca4' as const },
     { pattern: /- exam$/i, type: 'exam' as const },
+    { pattern: /- score$/i, type: 'ca1' as const }, // Template generates "Subject - Score" for CA types
   ];
 
   headers.forEach((header, index) => {

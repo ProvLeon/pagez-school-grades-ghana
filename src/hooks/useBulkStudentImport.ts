@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { ParsedStudentData } from '@/hooks/useExcelParser';
 import { isValidDate } from '@/utils/dateUtils';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 // Helper function to generate student ID
 const generateStudentId = (schoolName: string = "School", index: number): string => {
@@ -47,6 +48,12 @@ export const useBulkStudentImport = () => {
       departmentId?: string;
       onProgress?: (progress: BulkImportProgress) => void;
     }): Promise<BulkImportResult> => {
+      // Get user's organization for data isolation
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization. Cannot import students.');
+      }
+
       const result: BulkImportResult = {
         success: false,
         totalProcessed: students.length,
@@ -79,14 +86,16 @@ export const useBulkStudentImport = () => {
 
         const schoolName = schoolSettings?.school_name || "School";
 
-        // Get existing classes and departments for name-to-ID mapping
+        // Get existing classes and departments for name-to-ID mapping (filtered by org)
         const { data: classes } = await supabase
           .from('classes')
-          .select('id, name');
+          .select('id, name')
+          .eq('organization_id', organizationId);
 
         const { data: departments } = await supabase
           .from('departments')
-          .select('id, name');
+          .select('id, name')
+          .eq('organization_id', organizationId);
 
         const classMap = new Map(classes?.map(c => [c.name.toLowerCase(), c.id]) || []);
         const departmentMap = new Map(departments?.map(d => [d.name.toLowerCase(), d.id]) || []);
@@ -99,10 +108,11 @@ export const useBulkStudentImport = () => {
           message: 'Checking for existing students and generating IDs...'
         });
 
-        // Get all existing student IDs to check for duplicates
+        // Get all existing student IDs to check for duplicates (filtered by org)
         const { data: allExistingStudents } = await supabase
           .from('students')
-          .select('student_id');
+          .select('student_id')
+          .eq('organization_id', organizationId);
 
         const existingStudentIds = new Set(allExistingStudents?.map(s => s.student_id) || []);
 
@@ -191,7 +201,8 @@ export const useBulkStudentImport = () => {
               full_name: student.full_name.trim(),
               gender: normalizeGender(student.gender) || 'male',
               academic_year: student.academic_year?.trim() || '2024/2025',
-              has_left: false
+              has_left: false,
+              organization_id: organizationId  // Add organization_id for data isolation
             };
 
             // Only add optional fields if they have values and are valid

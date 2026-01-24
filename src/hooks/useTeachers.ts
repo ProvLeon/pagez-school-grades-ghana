@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, Teacher } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 export interface ExtendedTeacher extends Teacher {
   username?: string;
@@ -24,12 +25,19 @@ export const useTeachers = (departmentId?: string) => {
   return useQuery({
     queryKey: ['teachers', departmentId],
     queryFn: async () => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
       let query = supabase
         .from('teachers')
         .select(`
           *,
           department:departments(*)
         `)
+        .eq('organization_id', organizationId)
         .order('full_name');
 
       if (departmentId) {

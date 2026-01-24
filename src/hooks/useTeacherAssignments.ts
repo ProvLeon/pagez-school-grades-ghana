@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getUserOrganizationId } from "@/utils/organizationHelper";
 
 export interface TeacherAssignment {
   id: string;
@@ -43,6 +44,12 @@ export const useTeacherAssignments = (teacherId?: string, classId?: string) => {
   return useQuery({
     queryKey: ['teacher_assignments', teacherId, classId],
     queryFn: async () => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
       let query = supabase
         .from('teacher_assignments')
         .select(`
@@ -51,6 +58,7 @@ export const useTeacherAssignments = (teacherId?: string, classId?: string) => {
           class:classes(id, name, department:departments(name)),
           subject:subjects(id, name, code)
         `)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
 
       if (teacherId) {
@@ -79,10 +87,16 @@ export const useCreateTeacherAssignment = () => {
 
   return useMutation({
     mutationFn: async (assignmentData: CreateTeacherAssignmentData) => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User is not associated with any organization');
+      }
+
       const { data, error } = await supabase
         .from('teacher_assignments')
         .insert({
           ...assignmentData,
+          organization_id: organizationId,
           academic_year: assignmentData.academic_year || '2024/2025'
         })
         .select()

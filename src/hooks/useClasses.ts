@@ -1,10 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, Class } from '@/lib/supabase';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 export const useClasses = (departmentId?: string) => {
   return useQuery({
     queryKey: ['classes', departmentId],
     queryFn: async () => {
+      // Get user's organization for data isolation
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [] as Class[];
+      }
+
       // First, fetch all classes with their relations
       let query = supabase
         .from('classes')
@@ -13,6 +21,7 @@ export const useClasses = (departmentId?: string) => {
           department:departments(*),
           teacher:teachers(*)
         `)
+        .eq('organization_id', organizationId)
         .order('name');
 
       if (departmentId) {
@@ -27,10 +36,11 @@ export const useClasses = (departmentId?: string) => {
         return [] as Class[];
       }
 
-      // Get student counts for all classes in a single query
+      // Get student counts for all classes in a single query (with org isolation)
       const { data: studentCounts, error: countError } = await supabase
         .from('students')
         .select('class_id')
+        .eq('organization_id', organizationId)
         .not('class_id', 'is', null);
 
       if (countError) {
@@ -70,9 +80,14 @@ export const useCreateClass = () => {
       academic_year: string;
       teacher_id?: string;
     }) => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User is not associated with any organization');
+      }
+
       const { data, error } = await supabase
         .from('classes')
-        .insert([classData])
+        .insert([{ ...classData, organization_id: organizationId }])
         .select()
         .single();
 

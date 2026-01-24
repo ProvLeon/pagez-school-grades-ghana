@@ -4,6 +4,7 @@ import { useDepartments, Department } from "@/hooks/useDepartments";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { useGradingSettings } from "@/hooks/useGradingSettings";
+import { getUserOrganizationId } from "@/utils/organizationHelper";
 
 // Type for grading scales indexed by department ID
 type GradingScalesMap = Record<string, GradingScale[]>;
@@ -38,10 +39,17 @@ const fetchAllGradingScales = async (
     return {};
   }
 
+  const organizationId = await getUserOrganizationId();
+  if (!organizationId) {
+    console.warn('User not associated with any organization');
+    return {};
+  }
+
   // Build query - filter by academic year and term if available
   let query = supabase
     .from("grading_scales")
     .select("*")
+    .eq('organization_id', organizationId)
     .order("from_percentage", { ascending: false });
 
   // Only filter by year/term if we have values

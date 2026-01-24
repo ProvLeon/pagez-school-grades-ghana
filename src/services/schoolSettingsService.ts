@@ -16,10 +16,11 @@ export const schoolSettingsService = {
       .from('school_settings')
       .select('*')
       .eq('admin_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
-      throw error;
+    if (error) {
+      console.error('Error fetching school settings:', error);
+      return null;
     }
 
     return data;
@@ -35,6 +36,56 @@ export const schoolSettingsService = {
     
     if (userError || !user) {
       throw new Error('User not authenticated');
+    }
+
+    // Check if user has an organization
+    const { data: userOrg } = await supabase
+      .from('user_organization_profiles')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    let organizationId = userOrg?.organization_id;
+
+    // If user doesn't have an organization, create one
+    if (!organizationId) {
+      const orgName = updates.school_name || 'My School';
+      
+      // Create a new organization
+      const { data: newOrg, error: orgError } = await supabase
+        .from('organizations')
+        .insert({
+          name: orgName,
+          description: `Organization for ${orgName}`,
+          is_active: true
+        })
+        .select('id')
+        .single();
+
+      if (orgError) {
+        console.error('Error creating organization:', orgError);
+        throw new Error('Failed to create organization for school');
+      }
+
+      organizationId = newOrg.id;
+
+      // Create user_organization_profile entry
+      const { error: profileError } = await supabase
+        .from('user_organization_profiles')
+        .insert({
+          user_id: user.id,
+          organization_id: organizationId,
+          role: 'admin',
+          is_active: true
+        });
+
+      if (profileError) {
+        console.error('Error creating user organization profile:', profileError);
+        throw new Error('Failed to link user to organization');
+      }
+
+      console.log(`Created new organization ${organizationId} for user ${user.id}`);
     }
 
     // First, try to get existing settings for the current user
@@ -64,7 +115,7 @@ export const schoolSettingsService = {
       }
       return data;
     } else {
-      // Create new record
+      // Create new record with organization_id
       const { data, error } = await (supabase as any)
         .from('school_settings')
         .insert({
@@ -78,6 +129,7 @@ export const schoolSettingsService = {
           primary_color: updates.primary_color || '#e11d48',
           logo_url: updates.logo_url || null,
           headteacher_signature_url: updates.headteacher_signature_url || null,
+          organization_id: organizationId,
           ...updates
         })
         .select()
@@ -162,7 +214,7 @@ export const schoolSettingsService = {
       .select('*')
       .eq('session_id', sessionId)
       .eq('term_name', 'First Term')
-      .single();
+      .maybeSingle();
 
     if (firstTerm) {
       await (supabase as any)

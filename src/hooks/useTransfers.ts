@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getUserOrganizationId } from "@/utils/organizationHelper";
 
 export interface Transfer {
   id: string;
@@ -55,6 +56,12 @@ export const useTransfers = () => {
   return useQuery({
     queryKey: ['transfers'],
     queryFn: async () => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('transfers')
         .select(`
@@ -65,6 +72,7 @@ export const useTransfers = () => {
           requested_by_teacher:teachers!requested_by_teacher_id(id, full_name),
           approved_by_teacher:teachers!approved_by_teacher_id(id, full_name)
         `)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
 
       if (error) {

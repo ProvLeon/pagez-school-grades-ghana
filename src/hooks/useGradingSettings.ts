@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 export interface GradingSettings {
   id: string;
@@ -158,7 +159,13 @@ export const useGradingScales = (department?: string, academicYear?: string, ter
   return useQuery({
     queryKey: ['grading-scales', department, academicYear, term],
     queryFn: async () => {
-      let query = supabase.from('grading_scales').select('*');
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
+      let query = supabase.from('grading_scales').select('*').eq('organization_id', organizationId);
 
       if (department) {
         const normalizedDept = normalizeDepartmentName(department);

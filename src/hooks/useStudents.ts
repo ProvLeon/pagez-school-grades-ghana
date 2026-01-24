@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 export interface Student {
   id: string;
@@ -41,6 +42,13 @@ export const useStudents = (filters?: {
   return useQuery({
     queryKey: ['students', filters],
     queryFn: async () => {
+      // Get user's organization for data isolation
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
       let query = supabase
         .from('students')
         .select(`
@@ -48,6 +56,7 @@ export const useStudents = (filters?: {
           class:classes(id, name),
           department:departments(id, name)
         `)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
 
       // Single class filter takes precedence
@@ -95,9 +104,15 @@ export const useCreateStudent = () => {
     mutationFn: async (studentData: Omit<Student, 'id' | 'created_at' | 'updated_at' | 'class' | 'department'>) => {
       console.log('Creating student with data:', studentData);
 
+      // Get user's organization
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
       const { data, error } = await supabase
         .from('students')
-        .insert([studentData])
+        .insert([{ ...studentData, organization_id: organizationId }])
         .select()
         .single();
 

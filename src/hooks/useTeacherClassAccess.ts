@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { getUserOrganizationId } from "@/utils/organizationHelper";
 
 interface TeacherRecord {
   id: string;
@@ -17,28 +18,33 @@ export const useTeacherByUserId = (userId?: string) => {
       if (!userId) return null;
 
       try {
+        const organizationId = await getUserOrganizationId();
+        if (!organizationId) {
+          console.warn('User not associated with any organization');
+          return null;
+        }
+
         const { data, error } = await supabase
           .from('teachers')
           .select('*')
           .eq('user_id', userId)
-          .maybeSingle(); // Use maybeSingle instead of single to handle no records gracefully
+          .eq('organization_id', organizationId)
+          .maybeSingle();
 
         if (error) {
-          // Log error but don't throw - user might not be a teacher
           console.warn('Error fetching teacher (user may not be a teacher):', error.message);
           return null;
         }
 
         return data as TeacherRecord | null;
       } catch (err) {
-        // Catch any unexpected errors and return null gracefully
         console.warn('Unexpected error fetching teacher:', err);
         return null;
       }
     },
     enabled: !!userId,
-    retry: false, // Don't retry on failure - user might not be a teacher
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: false,
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -51,6 +57,12 @@ export const useTeacherClassAccess = () => {
     queryFn: async () => {
       if (!teacher?.id) return [];
 
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('teacher_assignments')
         .select(`
@@ -62,6 +74,7 @@ export const useTeacherClassAccess = () => {
           ),
           subject:subjects(id, name, code)
         `)
+        .eq('organization_id', organizationId)
         .eq('teacher_id', teacher.id);
 
       if (error) {
