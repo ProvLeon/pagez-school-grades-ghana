@@ -47,8 +47,10 @@ const SignUp = () => {
     if (!formData.schoolName.trim()) {
       newErrors.schoolName = "School name is required";
     }
-
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    }
+    else if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
     }
 
@@ -143,6 +145,15 @@ const SignUp = () => {
         if (settingsError) {
           console.error("Error creating school settings:", settingsError);
           // Don't fail the signup for this, we can set it up later
+        }
+
+        // Sign out the user immediately after signup
+        // Supabase auto-authenticates during signup, but we want users to explicitly login
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.warn("Error signing out after signup:", signOutError);
+          // Continue anyway, the signup was successful
         }
 
         setIsSubmitted(true);

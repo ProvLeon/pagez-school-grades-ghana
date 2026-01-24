@@ -3,9 +3,19 @@ import { SchoolSettings, AcademicSession, AcademicTerm } from '@/types/schoolSet
 
 export const schoolSettingsService = {
   async fetchSettings(): Promise<SchoolSettings | null> {
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error('Error getting current user:', userError);
+      return null;
+    }
+
+    // Fetch school settings for the current user (admin_id = user.id)
     const { data, error } = await (supabase as any)
       .from('school_settings')
       .select('*')
+      .eq('admin_id', user.id)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -20,7 +30,14 @@ export const schoolSettingsService = {
     console.log('Updates received:', updates);
     console.log('logo_url in updates:', updates.logo_url);
 
-    // First, try to get existing settings
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // First, try to get existing settings for the current user
     const existingSettings = await this.fetchSettings();
     console.log('Existing settings:', existingSettings);
 
@@ -34,6 +51,7 @@ export const schoolSettingsService = {
         .from('school_settings')
         .update(updatePayload)
         .eq('id', existingSettings.id)
+        .eq('admin_id', user.id) // Ensure user can only update their own school
         .select()
         .single();
 
@@ -50,6 +68,7 @@ export const schoolSettingsService = {
       const { data, error } = await (supabase as any)
         .from('school_settings')
         .insert({
+          admin_id: user.id, // Link to current admin user
           school_name: updates.school_name || 'My School',
           location: updates.location || null,
           address_1: updates.address_1 || null,

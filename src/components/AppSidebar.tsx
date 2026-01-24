@@ -185,9 +185,19 @@ export function AppSidebar() {
   useEffect(() => {
     const fetchSchoolSettings = async () => {
       try {
+        // Get current user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          console.error('Error getting user:', userError);
+          return;
+        }
+
+        // Fetch school settings for current user (admin_id = user.id)
         const { data, error } = await supabase
           .from('school_settings')
           .select('school_name, logo_url')
+          .eq('admin_id', user.id)
           .single();
 
         if (error && error.code !== 'PGRST116') {
