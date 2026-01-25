@@ -25,9 +25,46 @@ const Login = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-primary/10">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
+        <div className="text-center space-y-6">
+          {/* Logo with circular pulse animation */}
+          <div className="relative flex justify-center">
+            {/* Outer pulse rings */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-28 h-28 rounded-full border-2 border-blue-400/30 animate-ping" style={{ animationDuration: '2s' }} />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-32 h-32 rounded-full border border-blue-300/20 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
+            </div>
+
+            {/* Rotating ring around logo */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div
+                className="w-24 h-24 rounded-full border-2 border-transparent border-t-blue-500 border-r-blue-400 animate-spin"
+                style={{ animationDuration: '1.5s' }}
+              />
+            </div>
+
+            {/* Logo container */}
+            <div className="relative w-20 h-20 rounded-full overflow-hidden shadow-xl ring-4 ring-white dark:ring-gray-800 z-10">
+              <img
+                src="/ERESULTS_LOGO.png"
+                alt="PB Pagez"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Text content */}
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Loading
+              <span className="inline-flex ml-1">
+                <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
+                <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
+                <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+              </span>
+            </h3>
+          </div>
         </div>
       </div>
     );
@@ -211,7 +248,7 @@ const Login = () => {
               </Link>
             </p>
             <p className="text-xs text-muted-foreground mt-4">
-              e-Results GH v 1.2.0 | PB Pagez LTD
+              e-Results GH v {import.meta.env.VITE_APP_VERSION} | PB Pagez LTD
             </p>
           </div>
         </CardContent>

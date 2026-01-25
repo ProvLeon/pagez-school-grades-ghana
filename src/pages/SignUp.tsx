@@ -444,7 +444,7 @@ const SignUp = () => {
               </Link>
             </p>
             <p className="text-xs text-muted-foreground mt-4">
-              e-Results GH v 1.2.0 | PB Pagez LTD
+              e-Results GH v {import.meta.env.VITE_APP_VERSION} | PB Pagez LTD
             </p>
           </div>
         </CardContent>

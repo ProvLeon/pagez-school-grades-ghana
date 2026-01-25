@@ -187,14 +187,14 @@ export function AppSidebar() {
       try {
         // Get current user
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
+
         if (userError || !user) {
           console.error('Error getting user:', userError);
           return;
         }
 
         // Fetch school settings for current user (admin_id = user.id)
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('school_settings')
           .select('school_name, logo_url')
           .eq('admin_id', user.id)
@@ -366,7 +366,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 border-t">
         <div className="text-xs text-muted-foreground text-center">
-          @2025 e-Result System v 1.2.0 | PB Pagez LTD
+          @2025 e-Result System v {import.meta.env.VITE_APP_VERSION} | PB Pagez LTD
         </div>
       </SidebarFooter>
     </Sidebar>

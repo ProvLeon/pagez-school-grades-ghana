@@ -48,32 +48,55 @@ const ProtectedRoute = ({
   if (loading || (isAuthenticated && profileLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <Card className="w-full max-w-md shadow-xl border-0 bg-white/95 backdrop-blur-sm">
-          <CardContent className="p-8">
-            <div className="text-center space-y-6">
-              <div className="flex justify-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Shield className="w-8 h-8 text-white animate-pulse" />
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Authenticating...
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Verifying your credentials and permissions
-                </p>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: "60%" }}></div>
-              </div>
-              <div className="text-xs text-gray-500">
-                PB Pagez v{import.meta.env.VITE_APP_VERSION || "1.0.0"}
-              </div>
+        <div className="text-center space-y-6">
+          {/* Logo with circular pulse animation */}
+          <div className="relative flex justify-center">
+            {/* Outer pulse rings */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-28 h-28 rounded-full border-2 border-blue-400/30 animate-ping" style={{ animationDuration: '2s' }} />
             </div>
-          </CardContent>
-        </Card>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-32 h-32 rounded-full border border-blue-300/20 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
+            </div>
+
+            {/* Rotating ring around logo */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div
+                className="w-24 h-24 rounded-full border-2 border-transparent border-t-blue-500 border-r-blue-400 animate-spin"
+                style={{ animationDuration: '1.5s' }}
+              />
+            </div>
+
+            {/* Logo container */}
+            <div className="relative w-20 h-20 rounded-full overflow-hidden shadow-xl ring-4 ring-white dark:ring-gray-800 z-10">
+              <img
+                src="/ERESULTS_LOGO.png"
+                alt="PB Pagez"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Text content */}
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Authenticating
+              <span className="inline-flex ml-1">
+                <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
+                <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
+                <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+              </span>
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Verifying your credentials
+            </p>
+          </div>
+
+          {/* Version badge */}
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+            PB Pagez v{import.meta.env.VITE_APP_VERSION || "1.0.0"}
+          </div>
+        </div>
       </div>
     );
   }

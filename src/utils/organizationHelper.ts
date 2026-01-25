@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 export async function getUserOrganizationId(): Promise<string | null> {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       console.error('Error getting current user:', userError);
       return null;
@@ -48,7 +48,7 @@ export async function getUserOrganizationId(): Promise<string | null> {
 export async function getUserOrganization() {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       return null;
     }
@@ -97,7 +97,7 @@ export async function getUserOrganization() {
 export async function isUserOrgAdmin(): Promise<boolean> {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       return false;
     }
@@ -219,7 +219,7 @@ export async function addUserToOrganization(
 export async function createOrganizationForUser(organizationName: string = 'My School'): Promise<string> {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       throw new Error('User not authenticated');
     }
@@ -241,9 +241,9 @@ export async function createOrganizationForUser(organizationName: string = 'My S
     const { data: newOrg, error: orgError } = await supabase
       .from('organizations')
       .insert({
+        admin_id: user.id,
         name: organizationName,
-        description: `Organization for ${organizationName}`,
-        is_active: true
+        school_name: organizationName
       })
       .select('id')
       .single();

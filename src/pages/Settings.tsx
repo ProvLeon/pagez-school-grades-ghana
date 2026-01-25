@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -38,9 +38,18 @@ const SignatureUpload = React.lazy(() => import('@/components/SignatureUpload'))
 type SettingsTab = 'school' | 'branding';
 
 const Settings = () => {
-  const [searchParams] = useSearchParams();
-  const setupRequired = searchParams.get('setup') === 'required';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [setupRequired, setSetupRequired] = useState(searchParams.get('setup') === 'required');
   const [activeTab, setActiveTab] = useState<SettingsTab>('school');
+
+  // Function to clear setup required state and URL param after successful save
+  const clearSetupRequired = useCallback(() => {
+    setSetupRequired(false);
+    if (searchParams.get('setup') === 'required') {
+      searchParams.delete('setup');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const {
     loading,
@@ -56,6 +65,14 @@ const Settings = () => {
     handleHueChange,
     handleSaveSettings
   } = useSettingsForm();
+
+  // Auto-clear setup required if organization/settings are already complete
+  React.useEffect(() => {
+    if (!loading && formData.school_name && formData.location) {
+      // Settings are already complete, clear any setup required state
+      clearSetupRequired();
+    }
+  }, [loading, formData.school_name, formData.location, clearSetupRequired]);
 
   // Check completion status for each section
   const schoolInfoComplete = Boolean(
@@ -436,7 +453,10 @@ const Settings = () => {
                     </span>
                   </div>
                   <Button
-                    onClick={handleSaveSettings}
+                    onClick={async () => {
+                      await handleSaveSettings();
+                      clearSetupRequired();
+                    }}
                     disabled={saving || !formData.school_name}
                     size="lg"
                     className="gap-2 min-w-[140px]"

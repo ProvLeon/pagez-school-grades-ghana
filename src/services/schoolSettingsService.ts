@@ -5,7 +5,7 @@ export const schoolSettingsService = {
   async fetchSettings(): Promise<SchoolSettings | null> {
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       console.error('Error getting current user:', userError);
       return null;
@@ -33,7 +33,7 @@ export const schoolSettingsService = {
 
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       throw new Error('User not authenticated');
     }
@@ -51,14 +51,14 @@ export const schoolSettingsService = {
     // If user doesn't have an organization, create one
     if (!organizationId) {
       const orgName = updates.school_name || 'My School';
-      
+
       // Create a new organization
       const { data: newOrg, error: orgError } = await supabase
         .from('organizations')
         .insert({
+          admin_id: user.id,
           name: orgName,
-          description: `Organization for ${orgName}`,
-          is_active: true
+          school_name: orgName
         })
         .select('id')
         .single();
@@ -128,9 +128,7 @@ export const schoolSettingsService = {
           headteacher_name: updates.headteacher_name || null,
           primary_color: updates.primary_color || '#e11d48',
           logo_url: updates.logo_url || null,
-          headteacher_signature_url: updates.headteacher_signature_url || null,
-          organization_id: organizationId,
-          ...updates
+          headteacher_signature_url: updates.headteacher_signature_url || null
         })
         .select()
         .single();
