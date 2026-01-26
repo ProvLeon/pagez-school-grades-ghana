@@ -25,7 +25,7 @@ export const useCATypes = () => {
       const { data, error } = await supabase
         .from('ca_types')
         .select('*')
-        .eq('organization_id', organizationId)
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`);
       if (error) throw error;
       return data as CAType[];
     },

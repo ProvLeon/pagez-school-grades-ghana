@@ -30,20 +30,17 @@ export const useAddResultsFormDerivedData = (formData: FormData, gradingSettings
 
   // Filter CA types to only show SBA types (50/50, 30/70, 40/60)
   // Remove 4-CA Split and CA only as per requirements
+  // Filter CA types
   const caTypes = useMemo(() => {
-    const allowedTypes = ['SBA 50/50', 'SBA 30/70', 'SBA 40/60', '50/50', '30/70', '40/60'];
     return allCATypes.filter(type => {
       const typeName = type.name?.toLowerCase() || '';
-      // Include types that match the allowed SBA patterns
-      return allowedTypes.some(allowed =>
-        typeName.includes(allowed.toLowerCase()) ||
-        typeName === allowed.toLowerCase()
-      ) &&
-        // Exclude 4-CA Split and CA only types
-        !typeName.includes('4-ca') &&
-        !typeName.includes('4 ca') &&
-        !typeName.includes('ca only') &&
-        !typeName.includes('ca-only');
+
+      // Exclude explicitly unsupported legacy types
+      const isExcluded =
+        typeName.includes('4-ca') ||
+        typeName.includes('4 ca');
+
+      return !isExcluded;
     });
   }, [allCATypes]);
   const { data: teachers = [] } = useTeachers();
@@ -107,15 +104,36 @@ export const useAddResultsFormDerivedData = (formData: FormData, gradingSettings
       return [];
     }
 
-    const filteredSubjects = subjects.filter(subject => subject.department_id === selectedClass.department_id);
-    console.log('Admin filtered subjects (by department_id):', filteredSubjects);
-    console.log('Matching department_id:', selectedClass.department_id);
+    // Filter using department NAME if possible (more robust against duplicate departments)
+    const targetDeptName = selectedClass.department?.name?.toLowerCase().trim();
+    const targetDeptId = String(selectedClass.department_id).toLowerCase();
+
+    console.log(`Filtering subjects for class department: Name="${targetDeptName}", ID="${targetDeptId}"`);
+
+    const filteredSubjects = subjects.filter(subject => {
+      // If we have names, prioritize name matching (normalized)
+      if (targetDeptName && subject.department?.name) {
+        const subjectDeptName = subject.department.name.toLowerCase().trim();
+        // Handle variations like "jhs" vs "junior high" using the key mapper
+        const mappedSubjectDept = getDepartmentKey(subjectDeptName);
+        const mappedTargetDept = getDepartmentKey(targetDeptName);
+
+        if (mappedSubjectDept === mappedTargetDept) return true;
+      }
+
+      // Fallback to strict ID matching
+      if (!subject.department_id) return false;
+      return String(subject.department_id).toLowerCase() === targetDeptId;
+    });
+
+    console.log(`Admin filtered ${filteredSubjects.length} subjects. Match strategy: ${targetDeptName ? 'Name+ID' : 'ID only'}`);
 
     return filteredSubjects;
-  }, [formData.class_id, isTeacher, assignments, selectedClass?.department_id, subjects]);
+  }, [formData.class_id, isTeacher, assignments, selectedClass?.department_id, selectedClass?.department?.name, subjects]);
 
   // Standardized department mapping to match database constraints
   const getDepartmentKey = (departmentName: string) => {
+    if (!departmentName) return '';
     const lowerCaseDeptName = departmentName.toLowerCase().trim();
     const mapping: Record<string, string> = {
       'kg': 'KG',
