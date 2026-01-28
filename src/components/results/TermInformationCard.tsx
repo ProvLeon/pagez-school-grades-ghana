@@ -129,7 +129,19 @@ const TermInformationCard = ({
       }
 
       if (data?.error) {
-        throw new Error(data.error);
+        // Handle specific error codes for better user feedback
+        const errorCode = data?.code;
+        let userMessage = data?.error || "Failed to generate AI remark.";
+
+        if (errorCode === "missing_api_key" || errorCode === "auth_error") {
+          userMessage = "The AI service is not properly configured. Please contact your administrator.";
+        } else if (errorCode === "all_models_failed") {
+          userMessage = "All AI models are currently unavailable. Please try again later or enter the remark manually.";
+        } else if (data?.details) {
+          userMessage = data.details;
+        }
+
+        throw new Error(userMessage);
       }
 
       if (data?.remark) {
@@ -139,13 +151,26 @@ const TermInformationCard = ({
           description: "AI has generated a head teacher's remark based on the student's performance.",
         });
       } else {
-        throw new Error("No remark was generated");
+        throw new Error("No remark was generated. Please try again.");
       }
     } catch (error: any) {
       console.error("Error generating head remark:", error);
+
+      // Provide helpful error messages based on error type
+      let errorTitle = "Generation Failed";
+      let errorDescription = error.message || "Failed to generate AI remark. Please try again or enter manually.";
+
+      if (error.message?.includes("503") || error.message?.includes("unavailable")) {
+        errorTitle = "Service Unavailable";
+        errorDescription = "The AI service is temporarily unavailable. You can still enter the remark manually.";
+      } else if (error.message?.includes("401") || error.message?.includes("403")) {
+        errorTitle = "Configuration Error";
+        errorDescription = "The AI service is not properly configured. Please contact your administrator.";
+      }
+
       toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate AI remark. Please try again or enter manually.",
+        title: errorTitle,
+        description: errorDescription,
         variant: "destructive",
       });
     } finally {

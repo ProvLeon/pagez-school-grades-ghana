@@ -225,6 +225,7 @@ CREATE TABLE IF NOT EXISTS public.academic_sessions (
     id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
     session_name VARCHAR(20) NOT NULL UNIQUE,
     is_current BOOLEAN DEFAULT false,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -237,6 +238,7 @@ CREATE TABLE IF NOT EXISTS public.academic_terms (
     is_current BOOLEAN DEFAULT false,
     start_date DATE,
     end_date DATE,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(session_id, term_name)
@@ -252,6 +254,7 @@ CREATE TABLE IF NOT EXISTS public.grading_settings (
     term_ends DATE,
     next_term_begin DATE,
     is_active BOOLEAN DEFAULT false,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(academic_year, term)
@@ -267,6 +270,7 @@ CREATE TABLE IF NOT EXISTS public.grading_scales (
     from_percentage NUMERIC(5,2) NOT NULL,
     to_percentage NUMERIC(5,2) NOT NULL,
     remark TEXT,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     FOREIGN KEY (academic_year, term) REFERENCES public.grading_settings(academic_year, term) ON DELETE CASCADE
@@ -280,6 +284,7 @@ CREATE TABLE IF NOT EXISTS public.assessment_configurations (
     ca_type_name VARCHAR(100) NOT NULL,
     department VARCHAR(100) NOT NULL,
     configuration JSONB DEFAULT '{}'::jsonb,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     FOREIGN KEY (academic_year, term) REFERENCES public.grading_settings(academic_year, term) ON DELETE CASCADE
@@ -292,6 +297,7 @@ CREATE TABLE IF NOT EXISTS public.comment_options (
     option_value TEXT NOT NULL,
     sort_order INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(option_type, option_value)
@@ -305,6 +311,7 @@ CREATE TABLE IF NOT EXISTS public.subject_combinations (
     subject_ids UUID[] NOT NULL DEFAULT '{}',
     description TEXT,
     is_active BOOLEAN DEFAULT true,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -322,6 +329,7 @@ CREATE TABLE IF NOT EXISTS public.mock_exam_sessions (
     exam_date DATE,
     status VARCHAR(20) DEFAULT 'active',
     is_published BOOLEAN DEFAULT false,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -334,6 +342,7 @@ CREATE TABLE IF NOT EXISTS public.mock_exam_results (
     class_id UUID REFERENCES public.classes(id) ON DELETE SET NULL,
     total_score NUMERIC(10,2),
     position INTEGER,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(session_id, student_id)
@@ -352,6 +361,7 @@ CREATE TABLE IF NOT EXISTS public.mock_exam_subject_marks (
     total_score NUMERIC(5,2),
     grade VARCHAR(5),
     position INTEGER,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(mock_result_id, subject_id)
@@ -386,8 +396,9 @@ CREATE TABLE IF NOT EXISTS public.transfers (
     request_date DATE DEFAULT CURRENT_DATE,
     requested_by_teacher_id UUID REFERENCES public.teachers(id),
     approved_by_teacher_id UUID REFERENCES public.teachers(id),
-    approved_date DATE,
+    request_approval_date DATE,
     completed_date DATE,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -401,6 +412,7 @@ CREATE TABLE IF NOT EXISTS public.teacher_assignments (
     academic_year VARCHAR(20),
     is_primary_teacher BOOLEAN DEFAULT false,
     is_class_teacher BOOLEAN DEFAULT false,
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -416,6 +428,7 @@ CREATE TABLE IF NOT EXISTS public.sheet_templates (
   department_id UUID REFERENCES public.departments(id) ON DELETE SET NULL,
   class_id UUID REFERENCES public.classes(id) ON DELETE SET NULL,
   is_active BOOLEAN DEFAULT TRUE,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -432,8 +445,8 @@ CREATE TABLE IF NOT EXISTS public.sheet_operations (
   processed_records INTEGER DEFAULT 0,
   failed_records INTEGER DEFAULT 0,
   error_log JSONB DEFAULT '[]',
-  metadata JSONB DEFAULT '{}',
-  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_by UUID REFERENCES public.teachers(id) ON DELETE SET NULL,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -499,6 +512,22 @@ CREATE INDEX IF NOT EXISTS idx_platform_events_date ON public.platform_events(ev
 CREATE INDEX IF NOT EXISTS idx_platform_events_active ON public.platform_events(is_active);
 CREATE INDEX IF NOT EXISTS idx_platform_events_type ON public.platform_events(event_type);
 
+-- Organization ID Indexes (Multi-tenant support)
+CREATE INDEX IF NOT EXISTS idx_academic_sessions_organization_id ON public.academic_sessions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_academic_terms_organization_id ON public.academic_terms(organization_id);
+CREATE INDEX IF NOT EXISTS idx_grading_settings_organization_id ON public.grading_settings(organization_id);
+CREATE INDEX IF NOT EXISTS idx_grading_scales_organization_id ON public.grading_scales(organization_id);
+CREATE INDEX IF NOT EXISTS idx_assessment_configurations_organization_id ON public.assessment_configurations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_comment_options_organization_id ON public.comment_options(organization_id);
+CREATE INDEX IF NOT EXISTS idx_subject_combinations_organization_id ON public.subject_combinations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_mock_exam_sessions_organization_id ON public.mock_exam_sessions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_mock_exam_results_organization_id ON public.mock_exam_results(organization_id);
+CREATE INDEX IF NOT EXISTS idx_mock_exam_subject_marks_organization_id ON public.mock_exam_subject_marks(organization_id);
+CREATE INDEX IF NOT EXISTS idx_transfers_organization_id ON public.transfers(organization_id);
+CREATE INDEX IF NOT EXISTS idx_teacher_assignments_organization_id ON public.teacher_assignments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_sheet_templates_organization_id ON public.sheet_templates(organization_id);
+CREATE INDEX IF NOT EXISTS idx_sheet_operations_organization_id ON public.sheet_operations(organization_id);
+
 -- ============================================
 -- SECTION 7: ENABLE RLS FOR ALL TABLES
 -- ============================================
@@ -531,6 +560,10 @@ ALTER TABLE public.teacher_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sheet_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sheet_operations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_events ENABLE ROW LEVEL SECURITY;
+
+-- Enable RLS for newly added tables if needed
+ALTER TABLE public.academic_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.academic_terms ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- SECTION 8: RLS POLICIES - ORGANIZATION-BASED
@@ -765,84 +798,286 @@ CREATE POLICY "Users can insert ca_types in own org" ON public.ca_types
 CREATE POLICY "Allow read access to academic sessions" ON public.academic_sessions
   FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "Allow full access to academic sessions" ON public.academic_sessions
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- Academic Sessions
+CREATE POLICY "Users can view organization academic sessions" ON public.academic_sessions
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY "Users can manage organization academic sessions" ON public.academic_sessions
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
 -- Academic Terms
-CREATE POLICY "Allow read access to academic terms" ON public.academic_terms
-  FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Users can view organization academic terms" ON public.academic_terms
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
-CREATE POLICY "Allow full access to academic terms" ON public.academic_terms
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Users can manage organization academic terms" ON public.academic_terms
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
--- Subject Marks
-CREATE POLICY "Allow full access to subject_marks" ON public.subject_marks
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- Subject Marks (inherits from results which has organization_id)
+CREATE POLICY "Users can view organization subject marks" ON public.subject_marks
+  FOR SELECT USING (
+    result_id IN (
+      SELECT id FROM public.results
+      WHERE organization_id IN (
+        SELECT organization_id FROM public.user_organization_profiles
+        WHERE user_id = auth.uid() AND is_active = true
+      )
+    )
+  );
+
+CREATE POLICY "Users can manage organization subject marks" ON public.subject_marks
+  FOR ALL USING (
+    result_id IN (
+      SELECT id FROM public.results
+      WHERE organization_id IN (
+        SELECT organization_id FROM public.user_organization_profiles
+        WHERE user_id = auth.uid() AND is_active = true
+      )
+    )
+  );
 
 -- Grading Settings
-CREATE POLICY "Allow full access to grading_settings" ON public.grading_settings
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Users can view organization grading settings" ON public.grading_settings
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY "Users can manage organization grading settings" ON public.grading_settings
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
 -- Grading Scales
-CREATE POLICY "Allow full access to grading_scales" ON public.grading_scales
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Users can view organization grading scales" ON public.grading_scales
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY "Users can manage organization grading scales" ON public.grading_scales
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
 -- Assessment Configurations
-CREATE POLICY "Allow full access to assessment_configurations" ON public.assessment_configurations
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Users can view organization assessment configurations" ON public.assessment_configurations
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY "Users can manage organization assessment configurations" ON public.assessment_configurations
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
 -- Comment Options
-CREATE POLICY "Allow full access to comment_options" ON public.comment_options
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Users can view organization comment options" ON public.comment_options
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY "Users can manage organization comment options" ON public.comment_options
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
 -- Subject Combinations
-CREATE POLICY "Allow read access to subject_combinations" ON public.subject_combinations
-  FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Users can view organization subject combinations" ON public.subject_combinations
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
-CREATE POLICY "Allow full access to subject_combinations" ON public.subject_combinations
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Users can manage organization subject combinations" ON public.subject_combinations
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
--- Mock Exam Tables
-CREATE POLICY "Allow full access to mock_exam_sessions" ON public.mock_exam_sessions
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- Mock Exam Sessions
+CREATE POLICY "Users can view organization mock exam sessions" ON public.mock_exam_sessions
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
-CREATE POLICY "Allow full access to mock_exam_results" ON public.mock_exam_results
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Users can manage organization mock exam sessions" ON public.mock_exam_sessions
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
-CREATE POLICY "Allow full access to mock_exam_subject_marks" ON public.mock_exam_subject_marks
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- Mock Exam Results
+CREATE POLICY "Users can view organization mock exam results" ON public.mock_exam_results
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY "Users can manage organization mock exam results" ON public.mock_exam_results
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+-- Mock Exam Subject Marks
+CREATE POLICY "Users can view organization mock exam subject marks" ON public.mock_exam_subject_marks
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY "Users can manage organization mock exam subject marks" ON public.mock_exam_subject_marks
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
 -- Notifications
 CREATE POLICY "Allow full access to notifications" ON public.notifications
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- Transfers
-CREATE POLICY "Allow full access to transfers" ON public.transfers
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Users can view organization transfers" ON public.transfers
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY "Users can manage organization transfers" ON public.transfers
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
 -- Teacher Assignments
-CREATE POLICY "Allow full access to teacher_assignments" ON public.teacher_assignments
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Users can view organization teacher assignments" ON public.teacher_assignments
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
--- Sheet Templates (public templates)
-CREATE POLICY "Anyone can view sheet templates" ON public.sheet_templates
-  FOR SELECT USING (is_active = TRUE);
+CREATE POLICY "Users can manage organization teacher assignments" ON public.teacher_assignments
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
-CREATE POLICY "Authenticated users can create sheet templates" ON public.sheet_templates
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+-- Sheet Templates
+CREATE POLICY "Users can view organization sheet templates" ON public.sheet_templates
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
-CREATE POLICY "Users can update sheet templates" ON public.sheet_templates
-  FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can create organization sheet templates" ON public.sheet_templates
+  FOR INSERT WITH CHECK (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY "Users can update organization sheet templates" ON public.sheet_templates
+  FOR UPDATE USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
 -- Sheet Operations
-CREATE POLICY "Users can view their own sheet operations" ON public.sheet_operations
-  FOR SELECT USING (auth.uid() = created_by);
+CREATE POLICY "Users can view organization sheet operations" ON public.sheet_operations
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
-CREATE POLICY "Users can create sheet operations" ON public.sheet_operations
-  FOR INSERT WITH CHECK (auth.uid() = created_by);
+CREATE POLICY "Users can create organization sheet operations" ON public.sheet_operations
+  FOR INSERT WITH CHECK (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
-CREATE POLICY "Users can update their own sheet operations" ON public.sheet_operations
-  FOR UPDATE USING (auth.uid() = created_by);
+CREATE POLICY "Users can update organization sheet operations" ON public.sheet_operations
+  FOR UPDATE USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_organization_profiles
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
 -- Platform Events (read-only for users, managed by superadmins)
 CREATE POLICY "Anyone can view active events" ON public.platform_events

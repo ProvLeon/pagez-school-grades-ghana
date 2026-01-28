@@ -4,6 +4,7 @@ import { useCreateResult, useUpdateResult } from "@/hooks/useResults";
 import { useBulkCreateSubjectMarks, useBulkUpdateSubjectMarks } from "@/hooks/useSubjectMarks";
 import { useAddResultsForm } from "@/contexts/AddResultsFormContext";
 import { Save, Loader2 } from "lucide-react";
+import { getUserOrganizationId } from "@/utils/organizationHelper";
 
 interface AddResultsActionsProps {
   isEditMode?: boolean;
@@ -42,8 +43,16 @@ const AddResultsActions = ({ isEditMode = false, resultId }: AddResultsActionsPr
     };
 
     try {
+      // Get organization ID
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.error('User not associated with any organization');
+        return;
+      }
+
       // Map form data to result data for database
       const resultData = {
+        organization_id: organizationId,
         student_id: formData.student_id,
         class_id: formData.class_id,
         term: formData.term,

@@ -18,6 +18,32 @@ import {
 
 import { GradingSettings } from "@/hooks/useGradingSettings";
 
+// Standardized department mapping to match database constraints
+const getDepartmentKey = (departmentName: string) => {
+  if (!departmentName) return '';
+  const lowerCaseDeptName = departmentName.toLowerCase().trim();
+  const mapping: Record<string, string> = {
+    'kg': 'KG',
+    'kindergarten': 'KG',
+    'primary': 'PRIMARY',
+    'p': 'PRIMARY',
+    'pri': 'PRIMARY',
+    'jhs': 'JUNIOR HIGH',
+    'junior high school': 'JUNIOR HIGH',
+    'junior high': 'JUNIOR HIGH',
+    'j.h.s': 'JUNIOR HIGH',
+    'shs': 'SENIOR HIGH',
+    'senior high school': 'SENIOR HIGH',
+    'senior high': 'SENIOR HIGH',
+    's.h.s': 'SENIOR HIGH',
+  };
+  // Check for legacy JHS/SHS uppercase values
+  const upperDept = departmentName.toUpperCase().trim();
+  if (upperDept === 'JHS') return 'JUNIOR HIGH';
+  if (upperDept === 'SHS') return 'SENIOR HIGH';
+  return mapping[lowerCaseDeptName] || upperDept;
+};
+
 export const useAddResultsFormDerivedData = (formData: FormData, gradingSettings: GradingSettings | null | undefined) => {
   const { isTeacher } = useAuth();
   const { getAccessibleClassIds, assignments } = useCanAccessClass();
@@ -30,7 +56,6 @@ export const useAddResultsFormDerivedData = (formData: FormData, gradingSettings
 
   // Filter CA types to only show SBA types (50/50, 30/70, 40/60)
   // Remove 4-CA Split and CA only as per requirements
-  // Filter CA types
   const caTypes = useMemo(() => {
     return allCATypes.filter(type => {
       const typeName = type.name?.toLowerCase() || '';
@@ -131,31 +156,7 @@ export const useAddResultsFormDerivedData = (formData: FormData, gradingSettings
     return filteredSubjects;
   }, [formData.class_id, isTeacher, assignments, selectedClass?.department_id, selectedClass?.department?.name, subjects]);
 
-  // Standardized department mapping to match database constraints
-  const getDepartmentKey = (departmentName: string) => {
-    if (!departmentName) return '';
-    const lowerCaseDeptName = departmentName.toLowerCase().trim();
-    const mapping: Record<string, string> = {
-      'kg': 'KG',
-      'kindergarten': 'KG',
-      'primary': 'PRIMARY',
-      'p': 'PRIMARY',
-      'pri': 'PRIMARY',
-      'jhs': 'JUNIOR HIGH',
-      'junior high school': 'JUNIOR HIGH',
-      'junior high': 'JUNIOR HIGH',
-      'j.h.s': 'JUNIOR HIGH',
-      'shs': 'SENIOR HIGH',
-      'senior high school': 'SENIOR HIGH',
-      'senior high': 'SENIOR HIGH',
-      's.h.s': 'SENIOR HIGH',
-    };
-    // Check for legacy JHS/SHS uppercase values
-    const upperDept = departmentName.toUpperCase().trim();
-    if (upperDept === 'JHS') return 'JUNIOR HIGH';
-    if (upperDept === 'SHS') return 'SENIOR HIGH';
-    return mapping[lowerCaseDeptName] || upperDept;
-  };
+
 
   const departmentKey = useMemo(() => {
     if (!selectedClass?.department?.name) return null;

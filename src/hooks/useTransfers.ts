@@ -91,7 +91,7 @@ export const useUpdateTransferStatus = () => {
 
   return useMutation({
     mutationFn: async ({ id, status, notes }: { id: string; status: string; notes?: string }) => {
-      const updateData: any = { 
+      const updateData: any = {
         status,
         updated_at: new Date().toISOString()
       };
@@ -123,10 +123,10 @@ export const useUpdateTransferStatus = () => {
       // If status is completed, actually move the student to the new class
       if (status === 'completed' && transferData.to_class_id && transferData.student_id) {
         console.log(`Moving student ${transferData.student_id} to class ${transferData.to_class_id}`);
-        
+
         const { error: studentUpdateError } = await supabase
           .from('students')
-          .update({ 
+          .update({
             class_id: transferData.to_class_id,
             updated_at: new Date().toISOString()
           })
@@ -144,7 +144,7 @@ export const useUpdateTransferStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classes'] });
-      
+
       if (data.status === 'completed') {
         toast({
           title: "Transfer Completed",
@@ -174,9 +174,14 @@ export const useCreateTransfer = () => {
 
   return useMutation({
     mutationFn: async (transferData: CreateTransferData) => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
       const { data, error } = await supabase
         .from('transfers')
-        .insert(transferData)
+        .insert({ ...transferData, organization_id: organizationId })
         .select()
         .single();
 
@@ -192,7 +197,7 @@ export const useCreateTransfer = () => {
     },
     onError: (error) => {
       toast({
-        title: "Error", 
+        title: "Error",
         description: "Failed to create transfer request",
         variant: "destructive",
       });

@@ -10,8 +10,12 @@ import { getUserOrganizationId } from '@/utils/organizationHelper';
 const generateStudentId = (schoolName: string = "School", index: number): string => {
   const prefix = schoolName.substring(0, 2).toUpperCase() || "SC";
   const year = new Date().getFullYear().toString().slice(-2);
-  const uniqueId = String(Date.now()).slice(-6) + String(index).padStart(3, '0');
-  return `${prefix}${year}${uniqueId}`;
+  // Use a mix of timestamp and random to ensure uniqueness better than just trailing timestamp
+  // Base 36 timestamp (last 4 chars) + random 3 digits + index suffix
+  const timestamp = Date.now().toString(36).toUpperCase().slice(-4);
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  const indexStr = String(index).padStart(2, '0');
+  return `${prefix}${year}${timestamp}${random}${indexStr}`;
 };
 
 export interface BulkImportResult {
@@ -109,23 +113,34 @@ export const useBulkStudentImport = () => {
         });
 
         // Get all existing student IDs to check for duplicates (filtered by org)
+        // Fetched with higher limit to minimize false negatives on collision checks
         const { data: allExistingStudents } = await supabase
           .from('students')
           .select('student_id')
-          .eq('organization_id', organizationId);
+          .eq('organization_id', organizationId)
+          .limit(5000);
 
-        const existingStudentIds = new Set(allExistingStudents?.map(s => s.student_id) || []);
+        const dbStudentIds = new Set(allExistingStudents?.map(s => s.student_id) || []);
+        const takenIds = new Set(dbStudentIds); // Will include new executions
 
         // Auto-generate student IDs for records that don't have one
         students.forEach((student, index) => {
-          if (!student.student_id || !student.student_id.trim()) {
+          // If ID provided by user, check if it exists in DB
+          if (student.student_id && student.student_id.trim()) {
+            // We'll check for duplicates during batch processing against dbStudentIds
+            // But valid to add to takenIds to avoid generating collisions with user-provided IDs
+            takenIds.add(student.student_id.trim());
+          } else {
+            // Generate ID
             let newId = generateStudentId(schoolName, index);
-            // Ensure uniqueness
-            while (existingStudentIds.has(newId)) {
-              newId = generateStudentId(schoolName, index + Math.floor(Math.random() * 1000));
+            let attempts = 0;
+            // Ensure uniqueness against DB and other new students
+            while (takenIds.has(newId) && attempts < 20) {
+              newId = generateStudentId(schoolName, index + Math.floor(Math.random() * 10000));
+              attempts++;
             }
             student.student_id = newId;
-            existingStudentIds.add(newId); // Add to set to prevent duplicates within the same batch
+            takenIds.add(newId);
           }
         });
 
@@ -152,13 +167,14 @@ export const useBulkStudentImport = () => {
           for (const student of batch) {
             processedCount++;
 
-            // Skip duplicates (shouldn't happen due to ID generation, but check anyway)
-            if (student.student_id && existingStudentIds.has(student.student_id)) {
+            // Strict Duplicate Check: Only flag if it exists in the DATABASE.
+            // (Use dbStudentIds, not takenIds which contains our just-generated IDs)
+            if (student.student_id && dbStudentIds.has(student.student_id)) {
               result.duplicateCount++;
               result.errors.push({
                 row: processedCount,
                 studentId: student.student_id,
-                error: `Student ID "${student.student_id}" already exists`
+                error: `Student ID "${student.student_id}" already exists in the database`
               });
               continue;
             }
@@ -195,46 +211,31 @@ export const useBulkStudentImport = () => {
               continue;
             }
 
-            // Prepare student data for insertion - matching seed.js format
+            // Prepare student data for insertion
             const studentRecord: Record<string, any> = {
               student_id: student.student_id.trim(),
               full_name: student.full_name.trim(),
               gender: normalizeGender(student.gender) || 'male',
-              academic_year: student.academic_year?.trim() || '2024/2025',
+              academic_year: student.academic_year?.trim() || '2025/2026', // Default to current academic year
               has_left: false,
-              organization_id: organizationId  // Add organization_id for data isolation
+              organization_id: organizationId
             };
 
             // Only add optional fields if they have values and are valid
             if (student.date_of_birth && student.date_of_birth.trim()) {
-              // Validate date format (YYYY-MM-DD) and is reasonable using shared utility
               if (isValidDate(student.date_of_birth)) {
                 studentRecord.date_of_birth = student.date_of_birth;
               } else {
                 console.warn(`Invalid date for student ${student.student_id}: ${student.date_of_birth}`);
               }
             }
-            if (resolvedClassId) {
-              studentRecord.class_id = resolvedClassId;
-            }
-            if (resolvedDepartmentId) {
-              studentRecord.department_id = resolvedDepartmentId;
-            }
-            if (student.email?.trim()) {
-              studentRecord.email = student.email.trim();
-            }
-            if (student.guardian_name?.trim()) {
-              studentRecord.guardian_name = student.guardian_name.trim();
-            }
-            if (student.guardian_phone?.trim()) {
-              studentRecord.guardian_phone = student.guardian_phone.trim();
-            }
-            if (student.guardian_email?.trim()) {
-              studentRecord.guardian_email = student.guardian_email.trim();
-            }
-            if (student.address?.trim()) {
-              studentRecord.address = student.address.trim();
-            }
+            if (resolvedClassId) { studentRecord.class_id = resolvedClassId; }
+            if (resolvedDepartmentId) { studentRecord.department_id = resolvedDepartmentId; }
+            if (student.email?.trim()) { studentRecord.email = student.email.trim(); }
+            if (student.guardian_name?.trim()) { studentRecord.guardian_name = student.guardian_name.trim(); }
+            if (student.guardian_phone?.trim()) { studentRecord.guardian_phone = student.guardian_phone.trim(); }
+            if (student.guardian_email?.trim()) { studentRecord.guardian_email = student.guardian_email.trim(); }
+            if (student.address?.trim()) { studentRecord.address = student.address.trim(); }
 
             studentsToInsert.push(studentRecord);
           }
@@ -249,13 +250,8 @@ export const useBulkStudentImport = () => {
               .select('id, student_id');
 
             if (insertError) {
-              console.error('Supabase insert error:', {
-                message: insertError.message,
-                details: insertError.details,
-                hint: insertError.hint,
-                code: insertError.code,
-                fullError: JSON.stringify(insertError, null, 2)
-              });
+              console.error('Supabase insert error details:', insertError);
+
               // Handle batch error - mark all as failed
               studentsToInsert.forEach(s => {
                 result.failedCount++;
@@ -288,10 +284,10 @@ export const useBulkStudentImport = () => {
         });
 
         result.success = result.failedCount === 0 && result.successCount > 0;
-
         return result;
 
       } catch (error) {
+        console.error('Import execution error:', error);
         result.success = false;
         result.errors.push({
           row: 0,
@@ -316,9 +312,11 @@ export const useBulkStudentImport = () => {
           variant: 'default'
         });
       } else {
+        // Display the first specific error message to help the user debugging
+        const firstError = result.errors[0]?.error || 'Unknown error';
         toast({
           title: 'Import Failed',
-          description: `Failed to import students. ${result.errors.length} errors occurred.`,
+          description: `Failed to import students. ${result.errors.length} errors occurred. First error: ${firstError}`,
           variant: 'destructive'
         });
       }

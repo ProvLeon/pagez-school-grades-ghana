@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import { calculateMockTotalScore, calculateMockAggregate } from "@/utils/mockGradeCalculations";
+import { getUserOrganizationId } from "@/utils/organizationHelper";
 
 export type SubjectScoreInput = Record<string, number | undefined>;
 
@@ -34,13 +35,14 @@ async function getSubjectsMap() {
   return map;
 }
 
-async function ensureResult(sessionId: string, studentId: string) {
+async function ensureResult(sessionId: string, studentId: string, organizationId: string) {
   // Try to find existing
   const { data: existing, error: selErr } = await supabase
     .from("mock_exam_results")
     .select("id")
     .eq("session_id", sessionId)
     .eq("student_id", studentId)
+    .eq("organization_id", organizationId)
     .limit(1)
     .maybeSingle();
   if (selErr) throw selErr;
@@ -56,14 +58,14 @@ async function ensureResult(sessionId: string, studentId: string) {
 
   const { data: inserted, error: insErr } = await supabase
     .from("mock_exam_results")
-    .insert({ session_id: sessionId, student_id: studentId, class_id: student?.class_id ?? null, total_score: 0 })
+    .insert({ session_id: sessionId, student_id: studentId, class_id: student?.class_id ?? null, total_score: 0, organization_id: organizationId })
     .select("id")
     .single();
   if (insErr) throw insErr;
   return inserted.id as string;
 }
 
-async function batchUpsertSubjectMarks(resultId: string, subjectMarks: Array<{ subjectId: string, score: number }>) {
+async function batchUpsertSubjectMarks(resultId: string, subjectMarks: Array<{ subjectId: string, score: number }>, organizationId: string) {
   if (subjectMarks.length === 0) return;
 
   // Fetch existing marks for this result
@@ -83,6 +85,7 @@ async function batchUpsertSubjectMarks(resultId: string, subjectMarks: Array<{ s
       subject_id: subjectId,
       exam_score: score,
       total_score: score,
+      organization_id: organizationId,
     };
 
     if (existingMap.has(subjectId)) {
@@ -114,8 +117,14 @@ export const useSaveMockScores = (sessionId: string | null) => {
     mutationFn: async ({ studentId, scores }: { studentId: string; scores: SubjectScoreInput }) => {
       if (!sessionId) throw new Error("No session selected");
 
+      // Get organization ID
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
       // Ensure a result row exists
-      const resultId = await ensureResult(sessionId, studentId);
+      const resultId = await ensureResult(sessionId, studentId, organizationId);
 
       // Load subjects once
       const subjectsMap = await getSubjectsMap();
@@ -152,7 +161,7 @@ export const useSaveMockScores = (sessionId: string | null) => {
       }
 
       // Batch upsert all subject marks
-      await batchUpsertSubjectMarks(resultId, subjectMarks);
+      await batchUpsertSubjectMarks(resultId, subjectMarks, organizationId);
 
       // Update total score and aggregate on the result row
       const { error: upErr } = await supabase

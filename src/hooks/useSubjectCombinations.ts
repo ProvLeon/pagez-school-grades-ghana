@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 export interface SubjectCombination {
   id: string;
@@ -22,12 +23,16 @@ export const useSubjectCombinations = () => {
   return useQuery({
     queryKey: ['subject-combinations'],
     queryFn: async () => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) return [];
+
       const { data, error } = await supabase
         .from('subject_combinations')
         .select(`
           *,
           department:departments(id, name)
         `)
+        .eq('organization_id', organizationId)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -48,9 +53,14 @@ export const useCreateSubjectCombination = () => {
       subject_ids: string[];
       description?: string;
     }) => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
       const { data: result, error } = await supabase
         .from('subject_combinations')
-        .insert([data])
+        .insert([{ ...data, organization_id: organizationId }])
         .select()
         .single();
 

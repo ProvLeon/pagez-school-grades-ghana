@@ -22,8 +22,13 @@ serve(async (req) => {
 
   try {
     if (!openRouterApiKey) {
+      console.error("CRITICAL: OPENROUTER_API_KEY environment variable is not set");
       return new Response(
-        JSON.stringify({ error: "Missing OPENROUTER_API_KEY. Please set it in Supabase Edge Function secrets." }),
+        JSON.stringify({
+          error: "Missing OPENROUTER_API_KEY. Please set it in Supabase Edge Function secrets.",
+          code: "missing_api_key",
+          details: "The API key must be configured in your Supabase project settings."
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -40,6 +45,9 @@ serve(async (req) => {
       average_score,
       grade_counts = {},
     } = body || {};
+
+    console.log("Request received for student:", student_name);
+    console.log("Models to try:", modelsToTry);
 
     // Build a concise, informative summary for the model
     const subjectsSummary = Array.isArray(subjects)
@@ -81,11 +89,12 @@ serve(async (req) => {
 
     let lastError: any = null;
     let remark: string | null = null;
+    const modelAttempts: Array<{ model: string; status: number; error: string }> = [];
 
     // Try each model in sequence until one succeeds
     for (const model of modelsToTry) {
       try {
-        console.log(`Attempting with model: ${model}`);
+        console.log(`[Attempt] Calling OpenRouter with model: ${model}`);
 
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
@@ -109,7 +118,15 @@ serve(async (req) => {
         const data = await response.json();
 
         if (!response.ok) {
-          console.error(`OpenRouter API error with model ${model}:`, data);
+          const errorMessage = data?.error?.message || JSON.stringify(data?.error) || "Unknown error";
+          console.error(`[Error] Model ${model} failed with status ${response.status}:`, errorMessage);
+
+          modelAttempts.push({
+            model,
+            status: response.status,
+            error: errorMessage
+          });
+
           lastError = data?.error || { message: "OpenRouter request failed" };
 
           // If it's a model-specific error, try the next model
@@ -120,28 +137,48 @@ serve(async (req) => {
             errorCode === "model_not_available" ||
             errorCode === "context_length_exceeded"
           ) {
+            console.log(`[Retry] Trying next model due to: ${errorCode || `HTTP ${response.status}`}`);
             continue; // Try next model
           }
 
           // For auth errors or other critical errors, don't retry
           if (response.status === 401 || response.status === 403) {
+            console.error("[Auth Error] Invalid OpenRouter API credentials");
             return new Response(
-              JSON.stringify({ error: "Invalid or missing OpenRouter API key", code: "auth_error", status: 401 }),
+              JSON.stringify({
+                error: "Invalid or missing OpenRouter API key",
+                code: "auth_error",
+                status: 401,
+                details: "The OPENROUTER_API_KEY is invalid or has expired. Please check your Supabase secrets."
+              }),
               { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
 
-          continue; // Try next model for other errors
+          console.log(`[Retry] Trying next model due to HTTP ${response.status}`);
+          continue; // Try next model
         }
 
         remark = data?.choices?.[0]?.message?.content?.trim() || "";
 
         if (remark) {
-          console.log(`Successfully generated remark with model: ${model}`);
+          console.log(`[Success] Generated remark with model: ${model}`);
           break; // Success, exit the loop
+        } else {
+          console.warn(`[Warning] Model ${model} returned empty response`);
+          modelAttempts.push({
+            model,
+            status: 200,
+            error: "Empty response from model"
+          });
         }
       } catch (modelError: any) {
-        console.error(`Error with model ${model}:`, modelError);
+        console.error(`[Error] Exception with model ${model}:`, modelError?.message || modelError);
+        modelAttempts.push({
+          model,
+          status: 0,
+          error: modelError?.message || "Network or parsing error"
+        });
         lastError = modelError;
         continue; // Try next model
       }
@@ -154,23 +191,34 @@ serve(async (req) => {
       });
     }
 
-    // All models failed
+    // All models failed - return detailed error information
     const errorMessage = lastError?.message || "All AI models failed to generate a remark";
-    console.error("All models failed:", lastError);
+    console.error("[Critical] All models exhausted. Attempts:", modelAttempts);
 
     return new Response(
       JSON.stringify({
         error: errorMessage,
         code: lastError?.code || "all_models_failed",
-        status: 503
+        status: 503,
+        details: "All configured AI models are currently unavailable. Please try again later.",
+        modelAttempts: modelAttempts,
+        debugInfo: {
+          totalModelsAttempted: modelsToTry.length,
+          failedAttempts: modelAttempts.length,
+          apiKeyConfigured: !!openRouterApiKey
+        }
       }),
       { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error: any) {
-    console.error("Error in generate-head-remark function:", error);
+    console.error("[Error] Unexpected error in generate-head-remark function:", error?.message || error);
     return new Response(
-      JSON.stringify({ error: error?.message || "Unexpected error" }),
+      JSON.stringify({
+        error: error?.message || "Unexpected error",
+        code: "internal_error",
+        details: "An unexpected error occurred while processing your request."
+      }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

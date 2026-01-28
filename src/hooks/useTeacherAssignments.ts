@@ -134,9 +134,15 @@ export const useBulkCreateTeacherAssignments = () => {
         throw new Error('No assignments to create');
       }
 
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User is not associated with any organization');
+      }
+
       const assignmentsWithDefaults = assignments.map(a => ({
         ...a,
         academic_year: a.academic_year || '2024/2025',
+        organization_id: organizationId,
       }));
 
       const { data, error } = await supabase
