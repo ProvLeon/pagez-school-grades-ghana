@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 export interface ParsedResultData {
   student_id: string;
   student_name?: string;
+  ca_type_name?: string;
   term: 'first' | 'second' | 'third';
   academic_year: string;
   days_school_opened?: number;
@@ -42,7 +43,7 @@ export const useResultsExcelParser = () => {
 
         reader.onload = (event) => {
           try {
-            const data = event.target?.result;
+            const data = event.target?.result as string | ArrayBuffer;
             const workbook = XLSX.read(data, { type: 'binary' });
 
             // Find the data sheet (skip Instructions sheet)
@@ -62,7 +63,7 @@ export const useResultsExcelParser = () => {
             const jsonData = XLSX.utils.sheet_to_json(worksheet, {
               header: 1,
               defval: ''
-            }) as any[][];
+            }) as Array<Array<string | number | boolean | null>>;
 
             if (jsonData.length < 2) {
               resolve({
@@ -78,12 +79,13 @@ export const useResultsExcelParser = () => {
             }
 
             // Get header row
-            const headers = jsonData[0].map((h: any) => String(h).toLowerCase().trim());
+            const headers = jsonData[0].map((h: string | number | boolean) => String(h).toLowerCase().trim());
             const dataRows = jsonData.slice(1);
 
             // Find base column indices
             const studentIdIndex = findColumnIndex(headers, ['student id*', 'student_id*', 'student id', 'student_id', 'id']);
             const studentNameIndex = findColumnIndex(headers, ['student name', 'student_name', 'name', 'full name', 'full_name']);
+            const assessmentTypeIndex = findColumnIndex(headers, ['assessment type*', 'assessment_type*', 'assessment type', 'assessment_type', 'ca type', 'ca_type']);
             const termIndex = findColumnIndex(headers, ['term*', 'term']);
             const academicYearIndex = findColumnIndex(headers, ['academic year*', 'academic_year*', 'academic year', 'academic_year', 'year']);
             const daysOpenedIndex = findColumnIndex(headers, ['days school opened', 'days_school_opened', 'school days']);
@@ -104,8 +106,8 @@ export const useResultsExcelParser = () => {
               return;
             }
 
-            // Find subject columns (columns with - CA1, - CA2, etc.)
-            const subjectColumns = findSubjectColumns(headers);
+            // Find subject columns (columns with subject score patterns)
+            const subjectColumns = findSubjectColumns(headers as string[]);
             const subjectsFound = [...new Set(subjectColumns.map(sc => sc.subjectName))];
 
             if (subjectColumns.length === 0) {
@@ -125,7 +127,7 @@ export const useResultsExcelParser = () => {
             const errors: string[] = [];
             const warnings: string[] = [];
 
-            dataRows.forEach((row: any[], index: number) => {
+            dataRows.forEach((row: Array<string | number | boolean | null | undefined>, index: number) => {
               const rowNumber = index + 2; // +2 because of header and 0-based index
 
               // Skip empty rows
@@ -136,6 +138,7 @@ export const useResultsExcelParser = () => {
               try {
                 const studentId = getCellValue(row, studentIdIndex);
                 const studentName = getCellValue(row, studentNameIndex);
+                const caTypeName = getCellValue(row, assessmentTypeIndex);
                 const termRaw = getCellValue(row, termIndex).toLowerCase();
                 const academicYear = getCellValue(row, academicYearIndex);
 
@@ -185,6 +188,7 @@ export const useResultsExcelParser = () => {
                 parsedData.push({
                   student_id: studentId,
                   student_name: studentName || undefined,
+                  ca_type_name: caTypeName || undefined,
                   term,
                   academic_year: academicYear || '2024/2025',
                   days_school_opened: daysSchoolOpened,
@@ -281,7 +285,7 @@ function findColumnIndex(headers: string[], possibleNames: string[]): number {
   return -1;
 }
 
-function getCellValue(row: any[], columnIndex: number): string {
+function getCellValue(row: Array<string | number | boolean | null | undefined>, columnIndex: number): string {
   if (columnIndex === -1 || row[columnIndex] === undefined || row[columnIndex] === null) return '';
   return String(row[columnIndex]).trim();
 }
@@ -294,20 +298,25 @@ function parseNumber(value: string): number | undefined {
 
 function findSubjectColumns(headers: string[]): SubjectColumn[] {
   const subjectColumns: SubjectColumn[] = [];
+
+  // Define patterns that match CA/Exam assessment types
+  // This handles both the old format (- Score) and new format (- CA1, - CA2, etc.)
   const scoreTypePatterns = [
     { pattern: /- ca1$/i, type: 'ca1' as const },
     { pattern: /- ca2$/i, type: 'ca2' as const },
     { pattern: /- ca3$/i, type: 'ca3' as const },
     { pattern: /- ca4$/i, type: 'ca4' as const },
     { pattern: /- exam$/i, type: 'exam' as const },
-    { pattern: /- score$/i, type: 'ca1' as const }, // Template generates "Subject - Score" for CA types
+    { pattern: /- sba$/i, type: 'ca1' as const }, // SBA maps to CA1
+    { pattern: /- score$/i, type: 'ca1' as const }, // Fallback: old format "Subject - Score" for CA types
   ];
 
   headers.forEach((header, index) => {
     for (const { pattern, type } of scoreTypePatterns) {
       if (pattern.test(header)) {
-        // Extract subject name (everything before the pattern)
-        const subjectName = header.replace(pattern, '').trim();
+        // Extract subject name (everything before the dash and assessment type)
+        const subjectName = header.substring(0, header.lastIndexOf('-')).trim();
+
         // Generate a simple code from the name
         const subjectCode = subjectName
           .replace(/[^a-zA-Z0-9\s]/g, '')
@@ -330,7 +339,7 @@ function findSubjectColumns(headers: string[]): SubjectColumn[] {
 }
 
 function parseSubjectScores(
-  row: any[],
+  row: Array<string | number | boolean | null | undefined>,
   subjectColumns: SubjectColumn[],
   rowNumber: number,
   warnings: string[]
@@ -357,7 +366,7 @@ function parseSubjectScores(
     }
 
     const subject = subjectMap.get(key)!;
-    const rawValue = getCellValue(row, col.columnIndex);
+    const rawValue = getCellValue(row as Array<string | number | boolean | null | undefined>, col.columnIndex);
 
     if (rawValue) {
       const score = parseFloat(rawValue);

@@ -6,6 +6,24 @@ import { ParsedStudentData } from '@/hooks/useExcelParser';
 import { isValidDate } from '@/utils/dateUtils';
 import { getUserOrganizationId } from '@/utils/organizationHelper';
 
+// Type for student record to be inserted
+interface StudentRecord {
+  student_id: string;
+  full_name: string;
+  gender: 'male' | 'female';
+  academic_year: string;
+  has_left: boolean;
+  organization_id: string;
+  date_of_birth?: string;
+  class_id?: string;
+  department_id?: string;
+  email?: string;
+  guardian_name?: string;
+  guardian_phone?: string;
+  guardian_email?: string;
+  address?: string;
+}
+
 // Helper function to generate student ID
 const generateStudentId = (schoolName: string = "School", index: number): string => {
   const prefix = schoolName.substring(0, 2).toUpperCase() || "SC";
@@ -212,7 +230,7 @@ export const useBulkStudentImport = () => {
             }
 
             // Prepare student data for insertion
-            const studentRecord: Record<string, any> = {
+            const studentRecord: StudentRecord = {
               student_id: student.student_id.trim(),
               full_name: student.full_name.trim(),
               gender: normalizeGender(student.gender) || 'male',

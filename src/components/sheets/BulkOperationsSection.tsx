@@ -228,11 +228,15 @@ export const BulkOperationsSection = () => {
         }
 
         const caTypeName = caTypes.find(ca => ca.id === selectedCAType)?.name;
+        const transformedSubjects = filteredSubjects.map(s => ({
+          name: s.name,
+          code: s.code || s.name.substring(0, 3).toUpperCase()
+        }));
         TemplateService.generateResultsEntryTemplate(
           className,
           deptName,
           students,
-          filteredSubjects,
+          transformedSubjects,
           caTypeName,
           academicYear
         );

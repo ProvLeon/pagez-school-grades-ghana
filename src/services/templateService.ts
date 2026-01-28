@@ -1,8 +1,5 @@
 
 import * as XLSX from 'xlsx';
-import { useClasses } from '@/hooks/useClasses';
-import { useDepartments } from '@/hooks/useDepartments';
-import { useSubjects } from '@/hooks/useSubjects';
 
 export interface TemplateColumn {
   header: string;
@@ -103,7 +100,7 @@ export class TemplateService {
 
     // Set column widths
     const colWidths = columns.map(col => ({ width: col.width || 20 }));
-    dataSheet['!cols'] = colWidths;
+    Object.assign(dataSheet, { '!cols': colWidths });
 
     XLSX.utils.book_append_sheet(workbook, dataSheet, 'Student Data');
 
@@ -117,34 +114,27 @@ export class TemplateService {
   static generateResultsEntryTemplate(
     className?: string,
     departmentName?: string,
-    students: any[] = [],
-    subjects: any[] = [],
-    assessmentType?: string,
+    students: Array<{ student_id: string; full_name: string }> = [],
+    subjects: Array<{ name: string; code?: string }> = [],
+    caTypeName?: string,
     academicYear?: string
   ): void {
     const baseColumns: TemplateColumn[] = [
       { header: 'Student ID*', key: 'student_id', width: 15, required: true },
       { header: 'Student Name', key: 'student_name', width: 25 },
-      { header: 'Assessment Type*', key: 'assessment_type', width: 18, required: true, example: assessmentType || 'CA1' },
+      { header: 'CA Type*', key: 'ca_type', width: 20, required: true, example: caTypeName || 'SBA 30/70', validation: { type: 'text' } },
       { header: 'Term*', key: 'term', width: 10, required: true, validation: { type: 'list', options: ['first', 'second', 'third'] } },
       { header: 'Academic Year*', key: 'academic_year', width: 15, required: true, example: academicYear || '2024/2025' }
     ];
 
-    // Add subject columns based on assessment type
+    // Add subject columns - always use the same format regardless of CA type
+    // The CA type name in the data column identifies which assessment it is
     const subjectColumns: TemplateColumn[] = [];
-    const isExam = assessmentType?.toLowerCase().includes('exam');
 
     subjects.forEach(subject => {
-      if (isExam) {
-        subjectColumns.push(
-          { header: `${subject.name} - Exam`, key: `${subject.code}_exam`, width: 15, validation: { type: 'number' } }
-        );
-      } else {
-        // For SBA/CA types
-        subjectColumns.push(
-          { header: `${subject.name} - Score`, key: `${subject.code}_score`, width: 15, validation: { type: 'number' } }
-        );
-      }
+      subjectColumns.push(
+        { header: `${subject.name} - Score`, key: `${subject.code}_score`, width: 15, validation: { type: 'number' } }
+      );
     });
 
     const attendanceColumns: TemplateColumn[] = [
@@ -165,7 +155,7 @@ export class TemplateService {
       [''],
       ['1. REQUIRED FIELDS (marked with *):'],
       ['   - Student ID: Must match existing student records'],
-      ['   - Assessment Type: Type of assessment (e.g., CA1, CA2, Exam)'],
+      ['   - CA Type: Select from your configured assessment types (e.g., SBA 30/70, SBA 40/60, SBA 50/50)'],
       ['   - Term: Select "first", "second", or "third"'],
       ['   - Academic Year: Current academic year (e.g., 2024/2025)'],
       [''],
@@ -180,11 +170,11 @@ export class TemplateService {
       ['   - Days Present: Days student was present'],
       ['   - Days Absent: Days student was absent'],
       [''],
-      ['4. e-Result System COMPLIANCE:'],
-      ['   - Follow e-Result System assessment guidelines'],
-      ['   - Ensure all SBA components are included'],
+      ['4. CA TYPE CONFIGURATION:'],
+      ['   - Different CA types have different weightings (e.g., SBA 30/70 means 30% CA, 70% Exam)'],
+      ['   - Always use the exact CA type name as configured in Grading Settings'],
+      ['   - The system will apply the correct score calculations based on the CA type selected'],
       ['   - Marks must be numerical (0-100)'],
-      ['   - Total score will be calculated automatically'],
       [''],
       ['5. VALIDATION RULES:'],
       ['   - Student IDs must exist in the system'],
@@ -193,7 +183,7 @@ export class TemplateService {
       [''],
       className ? [`6. TARGET CLASS: ${className}`] : [],
       departmentName ? [`7. TARGET DEPARTMENT: ${departmentName}`] : [],
-      assessmentType ? [`8. ASSESSMENT TYPE: ${assessmentType}`] : [],
+      caTypeName ? [`8. CA TYPE: ${caTypeName}`] : [],
       academicYear ? [`9. ACADEMIC YEAR: ${academicYear}`] : [],
       [''],
       ['After filling this template, save as Excel (.xlsx) and upload through the Bulk Operations section.']
@@ -212,7 +202,7 @@ export class TemplateService {
         const row = [
           student.student_id,
           student.full_name,
-          assessmentType || '', // assessment type
+          caTypeName || '', // CA type name - to be filled
           '', // term - to be filled
           academicYear || '2024/2025', // academic year
           ...new Array(subjectColumns.length).fill(''), // subject scores
@@ -225,7 +215,7 @@ export class TemplateService {
       const sampleRow = [
         'STD001',
         'Sample Student Name',
-        assessmentType || 'CA1',
+        caTypeName || 'SBA 30/70',
         'first',
         academicYear || '2024/2025',
         ...new Array(subjectColumns.length).fill(''),
@@ -243,21 +233,21 @@ export class TemplateService {
 
     // Set column widths
     const colWidths = allColumns.map(col => ({ width: col.width || 15 }));
-    dataSheet['!cols'] = colWidths;
+    Object.assign(dataSheet, { '!cols': colWidths });
 
     XLSX.utils.book_append_sheet(workbook, dataSheet, 'Results Data');
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().slice(0, 10);
-    const assessmentSuffix = assessmentType ? `_${assessmentType.replace(/\s+/g, '_')}` : '';
-    const filename = `Results_Entry_Template_${className || 'All_Classes'}${assessmentSuffix}_${timestamp}.xlsx`;
+    const caTypeSuffix = caTypeName ? `_${caTypeName.replace(/\s+/g, '_')}` : '';
+    const filename = `Results_Entry_Template_${className || 'All_Classes'}${caTypeSuffix}_${timestamp}.xlsx`;
 
     XLSX.writeFile(workbook, filename);
   }
 
   static generateAttendanceTemplate(
     className?: string,
-    students: any[] = []
+    students: Array<{ student_id: string; full_name: string }> = []
   ): void {
     const columns: TemplateColumn[] = [
       { header: 'Date (DD/MM/YYYY)*', key: 'date', width: 18, required: true, validation: { type: 'date', format: 'DD/MM/YYYY' } },
@@ -289,7 +279,7 @@ export class TemplateService {
 
     const dataSheet = XLSX.utils.aoa_to_sheet(dataRows);
     const colWidths = columns.map(col => ({ width: col.width || 20 }));
-    dataSheet['!cols'] = colWidths;
+    Object.assign(dataSheet, { '!cols': colWidths });
 
     XLSX.utils.book_append_sheet(workbook, dataSheet, 'Attendance Data');
 

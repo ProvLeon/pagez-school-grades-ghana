@@ -130,14 +130,32 @@ export const useBulkResultsImport = () => {
           console.warn('Failed to fetch grading scales:', gradingScalesError.message);
         }
 
+        // Fetch all CA types for this organization to support name-to-ID mapping
+        const { data: allCATypes, error: caTypesError } = await supabase
+          .from('ca_types')
+          .select('id, name, configuration')
+          .eq('organization_id', organizationId);
+
+        if (caTypesError) {
+          console.warn('Failed to fetch CA types:', caTypesError.message);
+        }
+
+        // Create a mapping from CA type name to ID for flexible lookup
+        const caTypeByName = new Map((allCATypes || []).map(ca => [ca.name.toLowerCase().trim(), ca.id]));
+
         // Get CA type configuration if provided
         let caConfiguration: Record<string, number> | null = null;
-        if (caTypeId) {
+        const resolvedCATypeId = caTypeId;
+
+        // If caTypeId not provided, results may have ca_type_name from template parser
+        // We'll handle name-to-ID resolution per row below
+
+        if (resolvedCATypeId) {
           const { data: caType } = await supabase
             .from('ca_types')
             .select('configuration')
             .eq('organization_id', organizationId)
-            .eq('id', caTypeId)
+            .eq('id', resolvedCATypeId)
             .single();
           caConfiguration = caType?.configuration as Record<string, number> | null;
         }
@@ -189,6 +207,24 @@ export const useBulkResultsImport = () => {
               continue;
             }
 
+            // Resolve CA type ID - first from explicit caTypeId, then from ca_type_name in data
+            let rowCATypeId = resolvedCATypeId;
+            if (!rowCATypeId && resultData.ca_type_name) {
+              // Look up CA type ID by name from the template data
+              const lookedUpCATypeId = caTypeByName.get(resultData.ca_type_name.toLowerCase().trim());
+              if (lookedUpCATypeId) {
+                rowCATypeId = lookedUpCATypeId;
+              } else {
+                result.failedCount++;
+                result.errors.push({
+                  row: processedCount,
+                  studentId: resultData.student_id,
+                  error: `CA Type "${resultData.ca_type_name}" not found. Please use a configured assessment type.`
+                });
+                continue;
+              }
+            }
+
             // Use student's class_id or provided classId
             const effectiveClassId = classId || studentInfo.class_id;
 
@@ -220,7 +256,7 @@ export const useBulkResultsImport = () => {
                 .from('results')
                 .update({
                   class_id: effectiveClassId,
-                  ca_type_id: caTypeId || null,
+                  ca_type_id: rowCATypeId || null,
                   days_school_opened: resultData.days_school_opened || null,
                   days_present: resultData.days_present || null,
                   days_absent: resultData.days_absent || null,
@@ -251,7 +287,7 @@ export const useBulkResultsImport = () => {
                   organization_id: organizationId,
                   term: resultData.term,
                   academic_year: resultData.academic_year,
-                  ca_type_id: caTypeId || null,
+                  ca_type_id: rowCATypeId || null,
                   days_school_opened: resultData.days_school_opened || null,
                   days_present: resultData.days_present || null,
                   days_absent: resultData.days_absent || null,
