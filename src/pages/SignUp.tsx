@@ -121,7 +121,25 @@ const SignUp = () => {
       }
 
       if (data.user) {
-        // Create profile with admin role for new school owner
+        // Step 1: Create the organization for this school
+        const { data: newOrg, error: orgError } = await supabase
+          .from("organizations")
+          .insert({
+            name: formData.schoolName.trim(),
+            school_name: formData.schoolName.trim(),
+            admin_id: data.user.id,
+          })
+          .select("id")
+          .single();
+
+        if (orgError) {
+          console.error("Error creating organization:", orgError);
+          // Continue anyway - organization can be created later
+        }
+
+        const organizationId = newOrg?.id;
+
+        // Step 2: Create profile with admin role
         const { error: profileError } = await supabase
           .from("profiles")
           .insert({
@@ -131,20 +149,35 @@ const SignUp = () => {
 
         if (profileError) {
           console.error("Error creating profile:", profileError);
-          // Don't fail the signup for this, but log it
         }
 
-        // Create school_settings entry for the new school
-        const { error: settingsError } = await supabase
+        // Step 3: Link user to organization
+        if (organizationId) {
+          const { error: orgProfileError } = await (supabase as any)
+            .from("user_organization_profiles")
+            .insert({
+              user_id: data.user.id,
+              organization_id: organizationId,
+              role: "admin",
+              is_active: true,
+            });
+
+          if (orgProfileError) {
+            console.error("Error linking user to organization:", orgProfileError);
+          }
+        }
+
+        // Step 4: Create school_settings with organization_id
+        const { error: settingsError } = await (supabase as any)
           .from("school_settings")
           .insert({
             school_name: formData.schoolName.trim(),
             admin_id: data.user.id,
+            organization_id: organizationId, // Link to organization for multi-tenancy
           });
 
         if (settingsError) {
           console.error("Error creating school settings:", settingsError);
-          // Don't fail the signup for this, we can set it up later
         }
 
         // Sign out the user immediately after signup

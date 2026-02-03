@@ -105,11 +105,12 @@ export const useBulkStudentImport = () => {
           message: 'Validating student data...'
         });
 
-        // Get school settings for student ID generation
+        // Get school settings for student ID generation (by organization_id)
         const { data: schoolSettings } = await supabase
           .from('school_settings')
           .select('school_name')
-          .single();
+          .eq('organization_id', organizationId)
+          .maybeSingle();
 
         const schoolName = schoolSettings?.school_name || "School";
 

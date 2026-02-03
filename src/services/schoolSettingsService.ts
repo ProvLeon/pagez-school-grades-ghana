@@ -11,12 +11,26 @@ export const schoolSettingsService = {
       return null;
     }
 
-    // Fetch school settings for the current user (admin_id = user.id)
-    const { data, error } = await (supabase as any)
-      .from('school_settings')
-      .select('*')
-      .eq('admin_id', user.id)
+    // Get user's organization
+    const { data: userOrg } = await (supabase as any)
+      .from('user_organization_profiles')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
       .maybeSingle();
+
+    const organizationId = userOrg?.organization_id;
+
+    // Fetch school settings by organization_id (preferred) or fall back to admin_id
+    let query = (supabase as any).from('school_settings').select('*');
+
+    if (organizationId) {
+      query = query.eq('organization_id', organizationId);
+    } else {
+      query = query.eq('admin_id', user.id);
+    }
+
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
       console.error('Error fetching school settings:', error);
@@ -39,7 +53,7 @@ export const schoolSettingsService = {
     }
 
     // Check if user has an organization
-    const { data: userOrg } = await supabase
+    const { data: userOrg } = await (supabase as any)
       .from('user_organization_profiles')
       .select('organization_id')
       .eq('user_id', user.id)
@@ -71,7 +85,7 @@ export const schoolSettingsService = {
       organizationId = newOrg.id;
 
       // Create user_organization_profile entry
-      const { error: profileError } = await supabase
+      const { error: profileError } = await (supabase as any)
         .from('user_organization_profiles')
         .insert({
           user_id: user.id,
@@ -119,7 +133,8 @@ export const schoolSettingsService = {
       const { data, error } = await (supabase as any)
         .from('school_settings')
         .insert({
-          admin_id: user.id, // Link to current admin user
+          admin_id: user.id,
+          organization_id: organizationId, // Link to organization for multi-tenancy
           school_name: updates.school_name || 'My School',
           location: updates.location || null,
           address_1: updates.address_1 || null,
