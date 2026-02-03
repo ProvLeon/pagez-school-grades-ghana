@@ -24,16 +24,21 @@ interface StudentRecord {
   address?: string;
 }
 
-// Helper function to generate student ID
-const generateStudentId = (schoolName: string = "School", index: number): string => {
-  const prefix = schoolName.substring(0, 2).toUpperCase() || "SC";
-  const year = new Date().getFullYear().toString().slice(-2);
-  // Use a mix of timestamp and random to ensure uniqueness better than just trailing timestamp
-  // Base 36 timestamp (last 4 chars) + random 3 digits + index suffix
-  const timestamp = Date.now().toString(36).toUpperCase().slice(-4);
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  const indexStr = String(index).padStart(2, '0');
-  return `${prefix}${year}${timestamp}${random}${indexStr}`;
+// Helper function to generate student ID - matching format with AddStudent
+// Format: {2 letter school initials}{2 digit year}{3 random alphanumeric} = 7 chars
+// Example: KA26VWD
+const generateStudentId = (schoolName: string = "School"): string => {
+  // Extract first two letters from school name, fallback to "SC"
+  const schoolInitials = schoolName
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .substring(0, 2)
+    .toUpperCase() || "SC";
+
+  const currentYear = new Date().getFullYear().toString().slice(-2);
+  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+  return `${schoolInitials}${currentYear}${random}`;
 };
 
 export interface BulkImportResult {
@@ -150,11 +155,11 @@ export const useBulkStudentImport = () => {
             takenIds.add(student.student_id.trim());
           } else {
             // Generate ID
-            let newId = generateStudentId(schoolName, index);
+            let newId = generateStudentId(schoolName);
             let attempts = 0;
             // Ensure uniqueness against DB and other new students
             while (takenIds.has(newId) && attempts < 20) {
-              newId = generateStudentId(schoolName, index + Math.floor(Math.random() * 10000));
+              newId = generateStudentId(schoolName);
               attempts++;
             }
             student.student_id = newId;
@@ -330,11 +335,15 @@ export const useBulkStudentImport = () => {
           variant: 'default'
         });
       } else {
-        // Display the first specific error message to help the user debugging
-        const firstError = result.errors[0]?.error || 'Unknown error';
+        // Build a more descriptive error message showing the first few errors
+        const errorDetails = result.errors.slice(0, 3).map(e =>
+          `Row ${e.row}: ${e.error}`
+        ).join('; ');
+        const moreErrors = result.errors.length > 3 ? ` (+${result.errors.length - 3} more)` : '';
+
         toast({
           title: 'Import Failed',
-          description: `Failed to import students. ${result.errors.length} errors occurred. First error: ${firstError}`,
+          description: errorDetails + moreErrors,
           variant: 'destructive'
         });
       }

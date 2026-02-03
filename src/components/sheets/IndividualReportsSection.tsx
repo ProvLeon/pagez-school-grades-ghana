@@ -20,12 +20,12 @@ export const IndividualReportsSection = () => {
   const [selectedYear, setSelectedYear] = useState("2024/2025");
   const [selectedStudent, setSelectedStudent] = useState("");
   const { toast } = useToast();
-  
+
   const { data: classes = [] } = useClasses();
   const { data: departments = [] } = useDepartments();
-  const { data: students = [] } = useStudents({ 
+  const { data: students = [] } = useStudents({
     class_id: selectedClass || undefined,
-    has_left: false 
+    has_left: false
   });
   const { data: results = [] } = useResults();
   const { isGenerating, generateSingleReport, generateBulkReports } = useReportCards();
@@ -44,8 +44,8 @@ export const IndividualReportsSection = () => {
 
   const getStudentResults = () => {
     if (!selectedClass || !selectedTerm || !selectedYear) return [];
-    
-    return results.filter(result => 
+
+    return results.filter(result =>
       result.class_id === selectedClass &&
       result.term === selectedTerm &&
       result.academic_year === selectedYear
@@ -62,7 +62,7 @@ export const IndividualReportsSection = () => {
       return;
     }
 
-    const studentResult = results.find(result => 
+    const studentResult = results.find(result =>
       result.student_id === selectedStudent &&
       result.term === selectedTerm &&
       result.academic_year === selectedYear
@@ -197,7 +197,7 @@ export const IndividualReportsSection = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleGenerateSingleReport}
                     disabled={!selectedStudent || isGenerating}
                     className="bg-blue-600 hover:bg-blue-700 w-full"
@@ -231,7 +231,7 @@ export const IndividualReportsSection = () => {
                       Total students: {students.length}
                     </p>
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleGenerateBulkReports}
                     disabled={studentResults.length === 0 || isGenerating}
                     className="bg-blue-600 hover:bg-blue-700 w-full"
@@ -252,42 +252,6 @@ export const IndividualReportsSection = () => {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Features Card */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader className="pb-4 sm:pb-6">
-          <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-            🇬🇭 <span>GES-Compliant Report Features</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Included Information</h4>
-              <ul className="space-y-2 text-xs sm:text-sm text-gray-600">
-                <li>• School logo and letterhead</li>
-                <li>• Student photo and basic information</li>
-                <li>• Subject-wise CA and exam scores</li>
-                <li>• Grading scale and position rankings</li>
-                <li>• Attendance and behavior assessment</li>
-                <li>• Teacher and headteacher comments</li>
-                <li>• Promotion status and next term dates</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">GES Compliance</h4>
-              <ul className="space-y-2 text-xs sm:text-sm text-gray-600">
-                <li>• Approved Ghana Education Service format</li>
-                <li>• SBA integration (50% CA + 50% Exam)</li>
-                <li>• Proper grading scale implementation</li>
-                <li>• Signature areas for authentication</li>
-                <li>• Termly academic calendar alignment</li>
-                <li>• Professional PDF output quality</li>
-              </ul>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

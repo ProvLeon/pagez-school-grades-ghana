@@ -471,9 +471,15 @@ export const useBulkResultsImport = () => {
           variant: 'default'
         });
       } else {
+        // Build a more descriptive error message showing the first few errors
+        const errorDetails = result.errors.slice(0, 3).map(e =>
+          `Row ${e.row}: ${e.error}`
+        ).join('; ');
+        const moreErrors = result.errors.length > 3 ? ` (+${result.errors.length - 3} more)` : '';
+
         toast({
           title: 'Import Failed',
-          description: `Failed to import results. ${result.errors.length} errors occurred.`,
+          description: errorDetails + moreErrors,
           variant: 'destructive'
         });
       }

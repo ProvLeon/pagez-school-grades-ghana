@@ -85,7 +85,7 @@ export const useResultsExcelParser = () => {
             // Find base column indices
             const studentIdIndex = findColumnIndex(headers, ['student id*', 'student_id*', 'student id', 'student_id', 'id']);
             const studentNameIndex = findColumnIndex(headers, ['student name', 'student_name', 'name', 'full name', 'full_name']);
-            const assessmentTypeIndex = findColumnIndex(headers, ['assessment type*', 'assessment_type*', 'assessment type', 'assessment_type', 'ca type', 'ca_type']);
+            const assessmentTypeIndex = findColumnIndex(headers, ['ca type*', 'ca_type*', 'assessment type*', 'assessment_type*', 'assessment type', 'assessment_type', 'ca type', 'ca_type']);
             const termIndex = findColumnIndex(headers, ['term*', 'term']);
             const academicYearIndex = findColumnIndex(headers, ['academic year*', 'academic_year*', 'academic year', 'academic_year', 'year']);
             const daysOpenedIndex = findColumnIndex(headers, ['days school opened', 'days_school_opened', 'school days']);
@@ -300,15 +300,16 @@ function findSubjectColumns(headers: string[]): SubjectColumn[] {
   const subjectColumns: SubjectColumn[] = [];
 
   // Define patterns that match CA/Exam assessment types
-  // This handles both the old format (- Score) and new format (- CA1, - CA2, etc.)
+  // This handles the new format (- CA, - Exam) and numbered formats (- CA1, - CA2, etc.)
   const scoreTypePatterns = [
+    { pattern: /- ca$/i, type: 'ca1' as const },     // New format: Subject - CA
     { pattern: /- ca1$/i, type: 'ca1' as const },
     { pattern: /- ca2$/i, type: 'ca2' as const },
     { pattern: /- ca3$/i, type: 'ca3' as const },
     { pattern: /- ca4$/i, type: 'ca4' as const },
     { pattern: /- exam$/i, type: 'exam' as const },
-    { pattern: /- sba$/i, type: 'ca1' as const }, // SBA maps to CA1
-    { pattern: /- score$/i, type: 'ca1' as const }, // Fallback: old format "Subject - Score" for CA types
+    { pattern: /- sba$/i, type: 'ca1' as const },    // SBA maps to CA1
+    { pattern: /- score$/i, type: 'ca1' as const },  // Legacy: old format "Subject - Score"
   ];
 
   headers.forEach((header, index) => {
