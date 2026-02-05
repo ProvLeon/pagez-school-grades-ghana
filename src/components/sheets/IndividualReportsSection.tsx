@@ -5,19 +5,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Download, FileText, Users, Eye, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useClasses } from "@/hooks/useClasses";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useStudents } from "@/hooks/useStudents";
 import { useResults } from "@/hooks/useResults";
 import { useReportCards } from "@/hooks/useReportCards";
 import { useToast } from "@/hooks/use-toast";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
+import { useGradingSettings } from "@/hooks/useGradingSettings";
 
 export const IndividualReportsSection = () => {
+  const { data: academicYearsData = [] } = useAcademicYears();
+  const { data: gradingSettings } = useGradingSettings();
+
+  // Initialize selectedYear with current academic year from grading settings or first available
+  const defaultYear = gradingSettings?.academic_year || (academicYearsData.length > 0 ? academicYearsData[0] : "2024/2025");
+
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
-  const [selectedYear, setSelectedYear] = useState("2024/2025");
+  const [selectedYear, setSelectedYear] = useState(defaultYear);
   const [selectedStudent, setSelectedStudent] = useState("");
   const { toast } = useToast();
 
@@ -36,11 +44,16 @@ export const IndividualReportsSection = () => {
     { id: "third", name: "Third Term" }
   ];
 
-  const academicYears = [
-    "2024/2025",
-    "2023/2024",
-    "2022/2023"
-  ];
+  // Use dynamic academic years from database/grading settings
+  const academicYears = academicYearsData.length > 0 ? academicYearsData : ["2024/2025", "2023/2024", "2022/2023"];
+
+  // Sync selected year and term with grading settings when they change
+  useEffect(() => {
+    if (gradingSettings) {
+      setSelectedYear(gradingSettings.academic_year);
+      setSelectedTerm(gradingSettings.term || "");
+    }
+  }, [gradingSettings]);
 
   const getStudentResults = () => {
     if (!selectedClass || !selectedTerm || !selectedYear) return [];

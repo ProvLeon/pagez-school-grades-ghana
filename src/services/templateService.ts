@@ -275,13 +275,24 @@ export class TemplateService {
     departmentName?: string,
     students: Array<{ student_id: string; full_name: string }> = [],
     subjects: Array<{ name: string; code?: string }> = [],
-    caTypeName?: string,
+    caTypes: Array<{ id: string; name: string }> = [],
     academicYear?: string
   ): void {
+    // Get example CA Type from the list or use default
+    const caTypeExample = caTypes.length > 0 ? caTypes[0].name : 'SBA 30/70';
+    const caTypeOptions = caTypes.length > 0 ? caTypes.map(ct => ct.name) : undefined;
+
     const baseColumns: TemplateColumn[] = [
       { header: 'Student ID', key: 'student_id', width: 14, required: true },
       { header: 'Student Name', key: 'student_name', width: 25 },
-      { header: 'CA Type', key: 'ca_type', width: 16, required: true, example: caTypeName || 'SBA 30/70' },
+      {
+        header: 'CA Type',
+        key: 'ca_type',
+        width: 16,
+        required: true,
+        example: caTypeExample,
+        validation: caTypeOptions ? { type: 'list', options: caTypeOptions } : undefined
+      },
       { header: 'Term', key: 'term', width: 12, required: true, validation: { type: 'list', options: ['first', 'second', 'third'] } },
       { header: 'Academic Year', key: 'academic_year', width: 14, required: true, example: academicYear || '2024/2025' }
     ];
@@ -304,33 +315,54 @@ export class TemplateService {
     const workbook = XLSX.utils.book_new();
 
     // ===== INSTRUCTIONS SHEET =====
+    // Build CA Type section dynamically
+    const caTypeSection = caTypes.length > 0
+      ? [
+        ['2. CONFIGURED CA TYPES (Use exactly as shown):'],
+        ...caTypes.map(ct => [`   • ${ct.name}`]),
+        ['']
+      ]
+      : [
+        ['2. CA TYPE EXAMPLES:'],
+        ['   Below are examples of valid CA Types. Use the exact name configured in your system:'],
+        ['   • SBA 30/70 (if configured)'],
+        ['   • SBA 40/60 (if configured)'],
+        ['   • SBA 50/50 (if configured)'],
+        ['   • Your custom assessment type name (if configured)'],
+        ['   Note: If your CA Type is not found, check the exact spelling and spacing in your system settings.'],
+        ['']
+      ];
+
     const instructionData = [
       ['📊 RESULTS ENTRY TEMPLATE'],
       [''],
       ['How to Use This Template:'],
       [''],
       ['1. REQUIRED FIELDS (Orange headers):'],
-      ['   • Student ID - Must match existing student records'],
-      ['   • CA Type - Use your configured assessment type (e.g., SBA 30/70)'],
-      ['   • Term - Select first, second, or third from dropdown'],
-      ['   • Academic Year - Format: 2024/2025'],
+      ['   • Student ID - Must match existing student records in your system'],
+      ['   • CA Type - Use EXACTLY one of the configured assessment types shown below'],
+      ['   • Term - Select: first, second, or third'],
+      ['   • Academic Year - Format: 2024/2025 (must match your grading settings)'],
       [''],
-      ['2. SCORE ENTRY:'],
-      ['   • CA Column - Enter continuous assessment score (0-100)'],
+      ...caTypeSection,
+      ['3. SCORE ENTRY:'],
+      ['   • CA Columns - Enter continuous assessment scores (0-100)'],
       ['   • Exam Column - Enter examination score (0-100)'],
-      ['   • Leave blank if assessment not taken'],
+      ['   • Leave cells blank if the assessment was not taken'],
       [''],
-      ['3. ATTENDANCE:'],
-      ['   • Days Present - Number of days student was present'],
+      ['4. ATTENDANCE:'],
+      ['   • Days Present - Number of days student was present this term'],
       [''],
-      ['4. CA TYPE WEIGHTINGS:'],
-      ['   • SBA 30/70 = 30% CA + 70% Exam'],
-      ['   • SBA 40/60 = 40% CA + 60% Exam'],
-      ['   • SBA 50/50 = 50% CA + 50% Exam'],
+      ['5. IMPORTANT NOTES:'],
+      ['   • All required fields (marked with *) must be filled'],
+      ['   • Students must exist in the system already'],
+      ['   • Do not modify the column headers'],
+      ['   • Save file as .xlsx (Excel format)'],
+      ['   • If import fails, check the CA Type spelling against configured types'],
       [''],
       className ? [`📍 Class: ${className}`] : [''],
       departmentName ? [`📍 Department: ${departmentName}`] : [''],
-      caTypeName ? [`📍 CA Type: ${caTypeName}`] : [''],
+      caTypes.length > 0 ? [`📍 Available CA Types: ${caTypes.map(ct => ct.name).join(', ')}`] : [''],
       academicYear ? [`📍 Academic Year: ${academicYear}`] : [''],
     ].map(row => [Array.isArray(row) ? row[0] : row]);
 
@@ -352,7 +384,7 @@ export class TemplateService {
         const row: (string | number)[] = [
           student.student_id,
           student.full_name,
-          caTypeName || '',
+          caTypes.length > 0 ? caTypes[0].name : '',
           '',  // term
           academicYear || '2024/2025',
           ...new Array(subjectColumns.length).fill(''),
@@ -365,7 +397,7 @@ export class TemplateService {
       const sampleRow: (string | number)[] = [
         'STD001',
         'Sample Student Name',
-        caTypeName || 'SBA 30/70',
+        caTypeExample,
         'first',
         academicYear || '2024/2025',
         ...new Array(subjectColumns.length).fill(''),
@@ -421,7 +453,7 @@ export class TemplateService {
 
     // Generate filename
     const timestamp = new Date().toISOString().slice(0, 10);
-    const caTypeSuffix = caTypeName ? `_${caTypeName.replace(/\s+/g, '_')}` : '';
+    const caTypeSuffix = caTypes.length > 0 ? `_${caTypes[0].name.replace(/\s+/g, '_')}` : '';
     const filename = `Results_Entry_Template_${className || 'All_Classes'}${caTypeSuffix}_${timestamp}.xlsx`;
 
     XLSX.writeFile(workbook, filename);

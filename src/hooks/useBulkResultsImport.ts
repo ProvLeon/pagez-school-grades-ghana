@@ -143,6 +143,39 @@ export const useBulkResultsImport = () => {
         // Create a mapping from CA type name to ID for flexible lookup
         const caTypeByName = new Map((allCATypes || []).map(ca => [ca.name.toLowerCase().trim(), ca.id]));
 
+        // Helper function to find CA type with partial matching
+        const findCATypeByName = (name: string): string | undefined => {
+          const trimmedLowerName = name.toLowerCase().trim();
+
+          // First try exact match
+          if (caTypeByName.has(trimmedLowerName)) {
+            return caTypeByName.get(trimmedLowerName);
+          }
+
+          // Try partial match (e.g., "SBA 50/50" matches "50/50")
+          const availableTypes = allCATypes || [];
+          for (const caType of availableTypes) {
+            const caTypeLower = caType.name.toLowerCase();
+            // Check if the input contains the CA type name or vice versa
+            if (caTypeLower.includes(trimmedLowerName) || trimmedLowerName.includes(caTypeLower)) {
+              return caType.id;
+            }
+            // Check if any part matches (e.g., "50/50" from "SBA 50/50")
+            const parts = caType.name.split(/[\s\-/]+/).filter(p => p);
+            if (parts.some(part => trimmedLowerName.includes(part.toLowerCase()) || part.toLowerCase().includes(trimmedLowerName))) {
+              return caType.id;
+            }
+          }
+
+          return undefined;
+        };
+
+        // Helper function to get available CA types for error messages
+        const getAvailableCATypes = (): string => {
+          const types = (allCATypes || []).map(ca => `"${ca.name}"`).join(', ');
+          return types || 'None configured';
+        };
+
         // Get CA type configuration if provided
         let caConfiguration: Record<string, number> | null = null;
         const resolvedCATypeId = caTypeId;
@@ -210,19 +243,32 @@ export const useBulkResultsImport = () => {
             // Resolve CA type ID - first from explicit caTypeId, then from ca_type_name in data
             let rowCATypeId = resolvedCATypeId;
             if (!rowCATypeId && resultData.ca_type_name) {
-              // Look up CA type ID by name from the template data
-              const lookedUpCATypeId = caTypeByName.get(resultData.ca_type_name.toLowerCase().trim());
+              // Look up CA type ID by name from the template data using flexible matching
+              const lookedUpCATypeId = findCATypeByName(resultData.ca_type_name);
               if (lookedUpCATypeId) {
                 rowCATypeId = lookedUpCATypeId;
               } else {
                 result.failedCount++;
+                const availableTypes = getAvailableCATypes();
                 result.errors.push({
                   row: processedCount,
                   studentId: resultData.student_id,
-                  error: `CA Type "${resultData.ca_type_name}" not found. Please use a configured assessment type.`
+                  error: `CA Type "${resultData.ca_type_name}" not found. Available types: ${availableTypes}. Please use one of the configured assessment types.`
                 });
                 continue;
               }
+            }
+
+            // Validate that we have a CA type ID before proceeding
+            if (!rowCATypeId) {
+              result.failedCount++;
+              const availableTypes = getAvailableCATypes();
+              result.errors.push({
+                row: processedCount,
+                studentId: resultData.student_id,
+                error: `Assessment Type (CA Type) is required. Please select an assessment type when importing or specify it in the Excel file. Available types: ${availableTypes}`
+              });
+              continue;
             }
 
             // Use student's class_id or provided classId

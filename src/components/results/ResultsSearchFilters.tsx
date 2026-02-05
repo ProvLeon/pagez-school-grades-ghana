@@ -1,9 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, X } from "lucide-react";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
+import { useGradingSettings } from "@/hooks/useGradingSettings";
 
 interface FilterState {
   class: string;
@@ -36,9 +38,14 @@ const ResultsSearchFilters = ({
   classes,
   departments,
   teachers,
-  onClearFilters
+  onClearFilters,
 }: ResultsSearchFiltersProps) => {
+  const { data: academicYearsData = [] } = useAcademicYears();
+  const { data: gradingSettings } = useGradingSettings();
   const [showFilters, setShowFilters] = useState(false);
+
+  // Use dynamic academic years from database/grading settings
+  const academicYears = academicYearsData.length > 0 ? academicYearsData : ["2024/2025", "2023/2024", "2022/2023"];
 
   return (
     <div className="space-y-4">
@@ -63,7 +70,7 @@ const ResultsSearchFilters = ({
 
       {showFilters && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-4 border-t">
-          <Select value={filters.department} onValueChange={(value) => setFilters({...filters, department: value})}>
+          <Select value={filters.department} onValueChange={(value) => setFilters({ ...filters, department: value })}>
             <SelectTrigger><SelectValue placeholder="All Departments" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Departments</SelectItem>
@@ -72,7 +79,7 @@ const ResultsSearchFilters = ({
               ))}
             </SelectContent>
           </Select>
-          <Select value={filters.class} onValueChange={(value) => setFilters({...filters, class: value})}>
+          <Select value={filters.class} onValueChange={(value) => setFilters({ ...filters, class: value })}>
             <SelectTrigger><SelectValue placeholder="All Classes" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Classes</SelectItem>
@@ -81,7 +88,7 @@ const ResultsSearchFilters = ({
               ))}
             </SelectContent>
           </Select>
-          <Select value={filters.teacher} onValueChange={(value) => setFilters({...filters, teacher: value})}>
+          <Select value={filters.teacher} onValueChange={(value) => setFilters({ ...filters, teacher: value })}>
             <SelectTrigger><SelectValue placeholder="All Teachers" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Teachers</SelectItem>
@@ -90,16 +97,16 @@ const ResultsSearchFilters = ({
               ))}
             </SelectContent>
           </Select>
-          <Select value={filters.session} onValueChange={(value) => setFilters({...filters, session: value})}>
+          <Select value={filters.session} onValueChange={(value) => setFilters({ ...filters, session: value })}>
             <SelectTrigger><SelectValue placeholder="All Sessions" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Sessions</SelectItem>
-              <SelectItem value="2022/2023">2022/2023</SelectItem>
-              <SelectItem value="2023/2024">2023/2024</SelectItem>
-              <SelectItem value="2024/2025">2024/2025</SelectItem>
+              {academicYears.map((year) => (
+                <SelectItem key={year} value={year}>{year}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Select value={filters.term} onValueChange={(value) => setFilters({...filters, term: value})}>
+          <Select value={filters.term} onValueChange={(value) => setFilters({ ...filters, term: value })}>
             <SelectTrigger><SelectValue placeholder="All Terms" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Terms</SelectItem>

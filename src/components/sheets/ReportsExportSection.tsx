@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +25,8 @@ import {
 import { useClasses } from "@/hooks/useClasses";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useToast } from "@/hooks/use-toast";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
+import { useGradingSettings } from "@/hooks/useGradingSettings";
 import { IndividualReportsSection } from "./IndividualReportsSection";
 import { ExportService, NoDataError } from "@/services/exportService";
 import { cn } from "@/lib/utils";
@@ -43,11 +45,17 @@ interface ReportType {
 }
 
 export const ReportsExportSection = () => {
+  const { data: academicYearsData = [] } = useAcademicYears();
+  const { data: gradingSettings } = useGradingSettings();
+
+  // Initialize selectedYear with current academic year from grading settings or first available
+  const defaultYear = gradingSettings?.academic_year || (academicYearsData.length > 0 ? academicYearsData[0] : "2024/2025");
+
   const [selectedReport, setSelectedReport] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
-  const [selectedYear, setSelectedYear] = useState("2024/2025");
+  const [selectedYear, setSelectedYear] = useState(defaultYear);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [lastGenerated, setLastGenerated] = useState<string | null>(null);
@@ -55,6 +63,14 @@ export const ReportsExportSection = () => {
 
   const { data: classes = [] } = useClasses();
   const { data: departments = [] } = useDepartments();
+
+  // Sync selected year and term with grading settings when they change
+  useEffect(() => {
+    if (gradingSettings) {
+      setSelectedYear(gradingSettings.academic_year);
+      setSelectedTerm(gradingSettings.term || "");
+    }
+  }, [gradingSettings]);
 
   const reportTypes: ReportType[] = [
     {
@@ -125,7 +141,8 @@ export const ReportsExportSection = () => {
     { value: "third", label: "Third Term" }
   ];
 
-  const academicYears = ["2024/2025", "2023/2024", "2022/2023"];
+  // Use dynamic academic years from database/grading settings
+  const academicYears = academicYearsData.length > 0 ? academicYearsData : ["2024/2025", "2023/2024", "2022/2023"];
 
   const filteredClasses = selectedDepartment
     ? classes.filter(c => c.department_id === selectedDepartment)
@@ -307,7 +324,7 @@ export const ReportsExportSection = () => {
     setSelectedClass("");
     setSelectedDepartment("");
     setSelectedTerm("");
-    setSelectedYear("2024/2025");
+    setSelectedYear(defaultYear);
   };
 
   // Show Individual Reports section if selected

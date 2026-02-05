@@ -25,7 +25,7 @@ import {
   Loader2,
   XCircle
 } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { useToast } from "@/hooks/use-toast";
 import { useClasses } from "@/hooks/useClasses";
@@ -39,16 +39,24 @@ import { useBulkStudentImport, BulkImportProgress } from "@/hooks/useBulkStudent
 import { useBulkResultsImport, BulkResultsImportProgress } from "@/hooks/useBulkResultsImport";
 import { TemplateService } from "@/services/templateService";
 import { cn } from "@/lib/utils";
+import { useGradingSettings } from "@/hooks/useGradingSettings";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
 
 type OperationType = "students" | "results";
 
 export const BulkOperationsSection = () => {
+  const { data: gradingSettings } = useGradingSettings();
+  const { data: academicYearsData = [] } = useAcademicYears();
+
+  // Initialize academicYear with current academic year from grading settings or first available
+  const defaultYear = gradingSettings?.academic_year || (academicYearsData.length > 0 ? academicYearsData[0] : "2024/2025");
+
   const [activeOperation, setActiveOperation] = useState<OperationType>("students");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [targetClass, setTargetClass] = useState("");
   const [targetDepartment, setTargetDepartment] = useState("");
   const [selectedCAType, setSelectedCAType] = useState("");
-  const [academicYear, setAcademicYear] = useState("2024/2025");
+  const [academicYear, setAcademicYear] = useState(defaultYear);
 
   // Parse results
   const [studentParseResult, setStudentParseResult] = useState<ParseResult | null>(null);
@@ -82,6 +90,13 @@ export const BulkOperationsSection = () => {
 
   const isParsing = isParsingStudents || isParsingResults;
   const isImporting = isImportingStudents || isImportingResults;
+
+  // Sync academic year with grading settings when they change
+  useEffect(() => {
+    if (gradingSettings) {
+      setAcademicYear(gradingSettings.academic_year);
+    }
+  }, [gradingSettings]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -197,7 +212,7 @@ export const BulkOperationsSection = () => {
     setTargetClass("");
     setTargetDepartment("");
     setSelectedCAType("");
-    setAcademicYear("2024/2025");
+    setAcademicYear(defaultYear);
     resetStudentProgress();
     resetResultsProgress();
   };
@@ -227,17 +242,21 @@ export const BulkOperationsSection = () => {
           return;
         }
 
-        const caTypeName = caTypes.find(ca => ca.id === selectedCAType)?.name;
         const transformedSubjects = filteredSubjects.map(s => ({
           name: s.name,
           code: s.code || s.name.substring(0, 3).toUpperCase()
+        }));
+        // Pass all CA Types to template for dynamic population
+        const caTypesForTemplate = caTypes.map(ca => ({
+          id: ca.id,
+          name: ca.name
         }));
         TemplateService.generateResultsEntryTemplate(
           className,
           deptName,
           students,
           transformedSubjects,
-          caTypeName,
+          caTypesForTemplate,
           academicYear
         );
         toast({
