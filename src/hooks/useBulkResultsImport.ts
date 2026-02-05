@@ -133,8 +133,7 @@ export const useBulkResultsImport = () => {
         // Fetch all CA types for this organization to support name-to-ID mapping
         const { data: allCATypes, error: caTypesError } = await supabase
           .from('ca_types')
-          .select('id, name, configuration')
-          .eq('organization_id', organizationId);
+          .select('id, name, configuration');
 
         if (caTypesError) {
           console.warn('Failed to fetch CA types:', caTypesError.message);
@@ -187,7 +186,6 @@ export const useBulkResultsImport = () => {
           const { data: caType } = await supabase
             .from('ca_types')
             .select('configuration')
-            .eq('organization_id', organizationId)
             .eq('id', resolvedCATypeId)
             .single();
           caConfiguration = caType?.configuration as Record<string, number> | null;
