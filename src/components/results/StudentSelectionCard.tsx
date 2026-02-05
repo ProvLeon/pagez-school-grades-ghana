@@ -16,17 +16,27 @@ interface Student {
   photo_url?: string;
 }
 
-interface StudentSelectionCardProps {
-  formData: {
-    class_id: string;
-    student_id: string;
-    term: "first" | "second" | "third" | "";
+interface Class {
+  id: string;
+  name: string;
+  department?: {
+    name: string;
   };
-  setFormData: (data: any) => void;
-  classes: any[];
+}
+
+interface FormData {
+  class_id: string;
+  student_id: string;
+  term: "first" | "second" | "third" | "";
+}
+
+interface StudentSelectionCardProps {
+  formData: FormData;
+  setFormData: (data: FormData) => void;
+  classes: Class[];
   studentsInClass: Student[];
   selectedStudent: Student | null;
-  selectedClass?: any;
+  selectedClass?: Class;
 }
 
 const StudentSelectionCard = ({

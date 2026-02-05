@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, X } from "lucide-react";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
-import { useGradingSettings } from "@/hooks/useGradingSettings";
 
 interface FilterState {
   class: string;
@@ -15,6 +14,22 @@ interface FilterState {
   teacher: string;
 }
 
+interface Department {
+  id: string;
+  name: string;
+}
+
+interface Class {
+  id: string;
+  name: string;
+  department_id: string;
+}
+
+interface Teacher {
+  id: string;
+  full_name: string;
+}
+
 interface ResultsSearchFiltersProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
@@ -22,9 +37,9 @@ interface ResultsSearchFiltersProps {
   setFilters: (filters: FilterState) => void;
   pageSize: string;
   setPageSize: (value: string) => void;
-  classes: any[];
-  departments: any[];
-  teachers: any[];
+  classes: Class[];
+  departments: Department[];
+  teachers: Teacher[];
   onClearFilters: () => void;
 }
 
@@ -41,7 +56,6 @@ const ResultsSearchFilters = ({
   onClearFilters,
 }: ResultsSearchFiltersProps) => {
   const { data: academicYearsData = [] } = useAcademicYears();
-  const { data: gradingSettings } = useGradingSettings();
   const [showFilters, setShowFilters] = useState(false);
 
   // Use dynamic academic years from database/grading settings

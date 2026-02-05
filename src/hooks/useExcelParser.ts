@@ -66,7 +66,7 @@ export const useExcelParser = () => {
             const jsonData = XLSX.utils.sheet_to_json(worksheet, {
               header: 1,
               defval: ''
-            }) as any[][];
+            }) as Array<Array<string | number | undefined>>;
 
             if (jsonData.length < 2) {
               resolve({
@@ -80,7 +80,7 @@ export const useExcelParser = () => {
             }
 
             // Get header row and map column indices
-            const headers = jsonData[0].map((h: any) => String(h).toLowerCase().trim());
+            const headers = jsonData[0].map((h: string | number | undefined) => String(h).toLowerCase().trim());
             const dataRows = jsonData.slice(1);
 
             // Column mapping for different possible header names
@@ -117,7 +117,7 @@ export const useExcelParser = () => {
             const parsedData: ParsedStudentData[] = [];
             const errors: string[] = [];
 
-            dataRows.forEach((row: any[], index: number) => {
+            dataRows.forEach((row: Array<string | number | undefined>, index: number) => {
               const rowNumber = index + 2; // +2 because of header and 0-based index
 
               // Skip empty rows
@@ -214,7 +214,7 @@ function findColumnIndex(headers: string[], possibleNames: string[]): number {
   return -1;
 }
 
-function getCellValue(row: any[], columnIndex: number): string {
+function getCellValue(row: Array<string | number | undefined>, columnIndex: number): string {
   if (columnIndex === -1 || !row[columnIndex]) return '';
   return String(row[columnIndex]).trim();
 }
