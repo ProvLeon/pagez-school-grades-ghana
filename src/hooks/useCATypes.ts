@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { getUserOrganizationId } from '@/utils/organizationHelper';
@@ -10,6 +9,7 @@ export interface CAType {
   configuration: Record<string, number>;
   created_at: string;
   updated_at: string;
+  organization_id: string | null;
 }
 
 export const useCATypes = () => {
@@ -25,7 +25,8 @@ export const useCATypes = () => {
       const { data, error } = await supabase
         .from('ca_types')
         .select('*')
-        .or(`organization_id.eq.${organizationId},organization_id.is.null`);
+        .eq('organization_id', organizationId);
+
       if (error) throw error;
       return data as CAType[];
     },
