@@ -269,6 +269,15 @@ export const useBulkResultsImport = () => {
               continue;
             }
 
+            // Get CA configuration for this row (use prop-level config, or look up from allCATypes)
+            let rowCAConfig = caConfiguration;
+            if (!rowCAConfig && rowCATypeId && allCATypes) {
+              const caTypeObj = allCATypes.find(ca => ca.id === rowCATypeId);
+              if (caTypeObj?.configuration) {
+                rowCAConfig = caTypeObj.configuration as Record<string, number>;
+              }
+            }
+
             // Use student's class_id or provided classId
             const effectiveClassId = classId || studentInfo.class_id;
 
@@ -384,16 +393,12 @@ export const useBulkResultsImport = () => {
                 continue;
               }
 
-              // Calculate total score based on CA configuration
+              // Calculate total score based on CA configuration (per-row)
               let totalScore = 0;
-              if (caConfiguration) {
-                const ca1Weight = caConfiguration.ca1 || caConfiguration.ca || 0;
-                const ca2Weight = caConfiguration.ca2 || 0;
-                const ca3Weight = caConfiguration.ca3 || 0;
-                const ca4Weight = caConfiguration.ca4 || 0;
-                const examWeight = caConfiguration.exam || 0;
+              if (rowCAConfig) {
+                const examWeight = rowCAConfig.exam || 0;
 
-                if (caConfiguration.ca) {
+                if (rowCAConfig.ca) {
                   // Simple CA/Exam split (e.g., 50/50)
                   // Use the actual CA score provided, do not convert/scale
                   const caScore = subjectData.ca1_score || 0;
@@ -420,7 +425,7 @@ export const useBulkResultsImport = () => {
               }
 
               // Calculate grade based on total score
-              const grade = calculateGrade(totalScore);
+              const grade = calculateGrade(totalScore, gradingScales || undefined);
 
               // Get automatic remark based on total score
               const autoRemark = getRemarkForScore(totalScore);
@@ -550,14 +555,21 @@ export const useBulkResultsImport = () => {
 };
 
 // Helper function to calculate grade based on score
-function calculateGrade(score: number): string {
-  if (score >= 80) return 'A1';
-  if (score >= 70) return 'B2';
-  if (score >= 65) return 'B3';
-  if (score >= 60) return 'C4';
-  if (score >= 55) return 'C5';
-  if (score >= 50) return 'C6';
-  if (score >= 45) return 'D7';
-  if (score >= 40) return 'E8';
-  return 'F9';
+// Uses organization's grading scales if available, falls back to single-letter grades
+// matching the format used by display/PDF components
+function calculateGrade(score: number, gradingScales?: any[]): string {
+  if (gradingScales && gradingScales.length > 0) {
+    for (const scale of gradingScales) {
+      if (score >= scale.from_percentage && score <= scale.to_percentage) {
+        return scale.grade;
+      }
+    }
+  }
+  // Single-letter fallback matching SubjectsTableSection, reportCardService, exportService
+  if (score >= 80) return 'A';
+  if (score >= 70) return 'B';
+  if (score >= 60) return 'C';
+  if (score >= 50) return 'D';
+  if (score >= 40) return 'E';
+  return 'F';
 }
