@@ -142,13 +142,25 @@ export const useGradingSettings = () => {
   return useQuery({
     queryKey: ['grading-settings'],
     queryFn: async () => {
+      // Get user's organization for multi-tenant data isolation
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return null;
+      }
+
+      // Use .maybeSingle() instead of .single() to avoid HTTP 406 when 0 rows match
       const { data, error } = await supabase
         .from('grading_settings')
         .select('*')
         .eq('is_active', true)
-        .single();
+        .eq('organization_id', organizationId)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) {
+        console.error('Error fetching grading settings:', error);
+        throw error;
+      }
       return data as GradingSettings | null;
     },
     staleTime: Infinity,
@@ -196,11 +208,11 @@ export const useAssessmentConfig = (department?: string, academicYear?: string, 
         .eq('department', department)
         .eq('academic_year', academicYear)
         .eq('term', term)
-        .single();
+        .maybeSingle();
 
       console.log('Assessment config query result:', { data, error });
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
       return data as AssessmentConfig | null;
     },
     enabled: !!department && !!academicYear && !!term,
@@ -225,6 +237,8 @@ export const useCommentOptions = () => {
 };
 
 // Save grading settings - Fixed to handle unique constraint properly
+// DB constraint is UNIQUE(academic_year, term, organization_id) for multi-tenant support.
+// We use .maybeSingle() instead of .single() to avoid HTTP 406 on 0 rows.
 export const useSaveGradingSettings = () => {
   const queryClient = useQueryClient();
 
@@ -247,14 +261,20 @@ export const useSaveGradingSettings = () => {
       const normalizedTerm = normalizeTerm(settings.term);
       console.log(`Normalized term from "${settings.term}" to "${normalizedTerm}"`);
 
-      // Check if settings already exist for this academic year and term
-      const { data: existingSettings } = await supabase
+      // Check if settings already exist for this org + academic year + term
+      // Use .maybeSingle() to gracefully return null for 0 rows (instead of 406 error)
+      const { data: existingSettings, error: checkError } = await supabase
         .from('grading_settings')
         .select('id')
         .eq('academic_year', settings.academic_year)
         .eq('term', normalizedTerm)
         .eq('organization_id', organizationId)
-        .single();
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking existing grading settings:', checkError);
+        throw checkError;
+      }
 
       if (existingSettings) {
         // Update existing settings
@@ -276,7 +296,7 @@ export const useSaveGradingSettings = () => {
           throw error;
         }
 
-        // Deactivate all other settings
+        // Deactivate all other settings for this org
         await supabase
           .from('grading_settings')
           .update({ is_active: false })
@@ -286,7 +306,8 @@ export const useSaveGradingSettings = () => {
         console.log('Grading settings updated successfully:', data);
         return data;
       } else {
-        // First deactivate any existing active settings
+        // No existing record — safe to insert
+        // First deactivate any existing active settings for this org
         await supabase
           .from('grading_settings')
           .update({ is_active: false })

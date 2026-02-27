@@ -250,9 +250,9 @@ export function BulkPromotionDialog({ trigger }: BulkPromotionDialogProps) {
         <Separator />
 
         {/* Step Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {step === "select" && (
-            <div className="space-y-4 h-full overflow-auto py-4">
+            <div className="space-y-4 py-4">
               {/* Class Progression Info */}
               <Alert className="bg-blue-50 border-blue-200">
                 <Info className="h-4 w-4 text-blue-600" />

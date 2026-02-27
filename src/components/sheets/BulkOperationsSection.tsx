@@ -246,11 +246,11 @@ export const BulkOperationsSection = () => {
           name: s.name,
           code: s.code || s.name.substring(0, 3).toUpperCase()
         }));
-        // Pass all CA Types to template for dynamic population
-        const caTypesForTemplate = caTypes.map(ca => ({
-          id: ca.id,
-          name: ca.name
-        }));
+        // Pass only the SELECTED CA Type to template so it uses the correct one
+        const selectedCA = caTypes.find(ca => ca.id === selectedCAType);
+        const caTypesForTemplate = selectedCA
+          ? [{ id: selectedCA.id, name: selectedCA.name }]
+          : caTypes.map(ca => ({ id: ca.id, name: ca.name }));
         TemplateService.generateResultsEntryTemplate(
           className,
           deptName,
