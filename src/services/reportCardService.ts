@@ -113,19 +113,19 @@ export class ReportCardService {
         .maybeSingle();
 
       // Fetch grading scale for the department/term (scoped to org)
-      const { data: gradingScale } = await supabase
+      const { data: gradingScale } = await (supabase
         .from('grading_scales')
         .select('*')
         .eq('academic_year', result.academic_year)
-        .eq('term', result.term)
+        .eq('term', result.term) as any)
         .eq('organization_id', result.organization_id);
 
       // Fetch grading settings to get attendance_for_term (scoped to org)
-      const { data: gradingSettings } = await supabase
+      const { data: gradingSettings } = await (supabase
         .from('grading_settings')
         .select('attendance_for_term')
         .eq('academic_year', result.academic_year)
-        .eq('term', result.term)
+        .eq('term', result.term) as any)
         .eq('organization_id', result.organization_id)
         .maybeSingle();
 
