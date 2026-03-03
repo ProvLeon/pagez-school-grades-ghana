@@ -130,6 +130,17 @@ export const useBulkResultsImport = () => {
           console.warn('Failed to fetch grading scales:', gradingScalesError.message);
         }
 
+        // Fetch active grading settings to get attendance_for_term
+        // This is used to auto-fill days_school_opened when not provided in the template
+        const { data: gradingSettings } = await supabase
+          .from('grading_settings')
+          .select('attendance_for_term')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        const defaultDaysSchoolOpened = gradingSettings?.attendance_for_term || null;
+
         // Fetch all CA types for this organization to support name-to-ID mapping
         const { data: allCATypes, error: caTypesError } = await supabase
           .from('ca_types')
@@ -310,7 +321,7 @@ export const useBulkResultsImport = () => {
                 .update({
                   class_id: effectiveClassId,
                   ca_type_id: rowCATypeId || null,
-                  days_school_opened: resultData.days_school_opened || null,
+                  days_school_opened: resultData.days_school_opened || defaultDaysSchoolOpened,
                   days_present: resultData.days_present || null,
                   days_absent: resultData.days_absent || null,
                   updated_at: new Date().toISOString()
@@ -341,7 +352,7 @@ export const useBulkResultsImport = () => {
                   term: resultData.term,
                   academic_year: resultData.academic_year,
                   ca_type_id: rowCATypeId || null,
-                  days_school_opened: resultData.days_school_opened || null,
+                  days_school_opened: resultData.days_school_opened || defaultDaysSchoolOpened,
                   days_present: resultData.days_present || null,
                   days_absent: resultData.days_absent || null,
                   admin_approved: false,

@@ -112,19 +112,21 @@ export class ReportCardService {
         .select('*')
         .maybeSingle();
 
-      // Fetch grading scale for the department/term
+      // Fetch grading scale for the department/term (scoped to org)
       const { data: gradingScale } = await supabase
         .from('grading_scales')
         .select('*')
         .eq('academic_year', result.academic_year)
-        .eq('term', result.term);
+        .eq('term', result.term)
+        .eq('organization_id', result.organization_id);
 
-      // Fetch grading settings to get attendance_for_term
+      // Fetch grading settings to get attendance_for_term (scoped to org)
       const { data: gradingSettings } = await supabase
         .from('grading_settings')
         .select('attendance_for_term')
         .eq('academic_year', result.academic_year)
         .eq('term', result.term)
+        .eq('organization_id', result.organization_id)
         .maybeSingle();
 
       // Count total students with results for the same term, academic year, and class
