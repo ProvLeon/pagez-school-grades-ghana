@@ -1061,18 +1061,84 @@ export default function MockExams() {
     currentY += 7;
     doc.line(margin + 2, currentY, pageWidth - margin - 2, currentY);
     
-    const aggregate = result.position || result.calculatedAggregate || '-';
-    const rawScore = (result as any).calculatedTotal || 0;
+    // Calculate Raw Score and Aggregate based on instructions:
+    // Aggregate = Core Subjects Plus Two Best Subjects
+    // Raw Score = Total Raw Score (Four Core Subjects)
+    let aggregateStr = '-';
+    let rawScoreStr = '-';
+
+    if (result.subject_scores && result.subject_scores.length > 0) {
+      // Define core subjects (usually by name or code)
+      const coreSubjects = ['english language', 'mathematics', 'science', 'social studies'];
+      
+      let coreScoreSum = 0;
+      let coreGradesSum = 0;
+      let coreSubjectCount = 0;
+      
+      const otherGrades: number[] = [];
+
+      // We need getGradeForScore here to calculate the aggregate
+      const getGrade = (score: number | null | undefined): number => {
+        if (score === null || score === undefined) return 9; // Worst grade
+        if (gradingScalesData && gradingScalesData.length > 0) {
+          const sorted = [...gradingScalesData].sort((a, b) => b.from_percentage - a.from_percentage);
+          for (const scale of sorted) {
+            if (score >= scale.from_percentage && score <= scale.to_percentage) {
+              return parseInt(scale.grade) || 9;
+            }
+          }
+        }
+        if (score >= 80) return 1;
+        if (score >= 70) return 2;
+        if (score >= 60) return 3;
+        if (score >= 50) return 4;
+        if (score >= 40) return 5;
+        if (score >= 30) return 6;
+        if (score >= 20) return 7;
+        if (score >= 10) return 8;
+        return 9;
+      };
+
+      result.subject_scores.forEach(s => {
+        const subName = s.subject_name.toLowerCase();
+        const score = Number(s.total_score || 0);
+        const grade = getGrade(score);
+
+        const isCore = coreSubjects.some(core => subName.includes(core) || core.includes(subName));
+        
+        if (isCore) {
+          coreScoreSum += score;
+          coreGradesSum += grade;
+          coreSubjectCount++;
+        } else {
+          otherGrades.push(grade);
+        }
+      });
+
+      // Raw Score: Sum of ONLY the 4 core subjects
+      if (coreSubjectCount > 0) {
+        rawScoreStr = coreScoreSum.toString();
+      }
+
+      // Aggregate: 4 core subjects + best 2 other subjects
+      // "Best" grade is visually lowest number (1 is best, 9 is worst)
+      if (coreSubjectCount > 0) {
+        const sortedOtherGrades = otherGrades.sort((a, b) => a - b);
+        const bestTwoOtherGradesSum = (sortedOtherGrades[0] || 0) + (sortedOtherGrades[1] || 0);
+        const totalAggregate = coreGradesSum + bestTwoOtherGradesSum;
+        aggregateStr = totalAggregate.toString();
+      }
+    }
 
     doc.setFont('helvetica', 'normal');
     doc.text(`AGGREGATE: `, margin + 4, currentY + 5);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${aggregate}`, margin + 30, currentY + 5);
+    doc.text(`${aggregateStr}`, margin + 30, currentY + 5);
     
     doc.setFont('helvetica', 'normal');
     doc.text(`RAW SCORE: `, (pageWidth / 2) + 4, currentY + 5);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${rawScore}`, (pageWidth / 2) + 30, currentY + 5);
+    doc.text(`${rawScoreStr}`, (pageWidth / 2) + 30, currentY + 5);
     
     currentY += 7;
     doc.line(margin + 2, currentY, pageWidth - margin - 2, currentY);
@@ -1211,6 +1277,16 @@ export default function MockExams() {
     doc.setLineDashPattern([], 0); 
     doc.text(`Headteacher's Signature`, margin + 6, currentY);
     doc.setLineDashPattern([1, 2], 0);
+    
+    // Attempt to load and embed the headteacher's signature
+    if (schoolSettings?.headteacher_signature_url) {
+      const signatureBase64 = await getImageAsBase64(schoolSettings.headteacher_signature_url);
+      if (signatureBase64) {
+        // Position signature above the dotted line
+        doc.addImage(signatureBase64, 'PNG', margin + 48, currentY - 12, 40, 15);
+      }
+    }
+    
     doc.line(margin + 48, currentY, pageWidth - margin - 6, currentY);
     doc.setLineDashPattern([], 0); 
 
