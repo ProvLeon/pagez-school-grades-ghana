@@ -1,5 +1,23 @@
 // Mock exam grade and calculation utilities
 
+// Default core subject name patterns (matches any subject whose lowercased name contains these)
+const DEFAULT_CORE_PATTERNS = ['english', 'mathematics', 'science', 'social studies', 'social'];
+
+/**
+ * Determine if a subject name is a core subject.
+ * Uses the provided coreNames list (from the DB/dynamic form) or falls back to defaults.
+ */
+export const isCoreSubject = (
+  name: string,
+  coreNames?: string[]
+): boolean => {
+  const lower = name.toLowerCase();
+  const patterns = coreNames
+    ? coreNames.map(n => n.toLowerCase())
+    : DEFAULT_CORE_PATTERNS;
+  return patterns.some(p => lower.includes(p) || p.includes(lower));
+};
+
 /**
  * Calculate grade from score using the mock exam formula
  * Score >= 80 = Grade 1, >= 70 = Grade 2, etc.
@@ -18,31 +36,24 @@ export const calculateMockGrade = (score: number): number => {
 
 /**
  * Calculate total raw score for mock exams (sum of all subject scores)
- * Returns the sum of all entered subject scores
  */
 export const calculateMockTotalScore = (scores: Record<string, number | undefined>): number => {
   let total = 0;
-  let count = 0;
-
   for (const key of Object.keys(scores)) {
     const score = scores[key];
     if (typeof score === 'number' && !isNaN(score) && score > 0) {
       total += Math.max(0, Math.min(100, score));
-      count++;
     }
   }
-
   return total;
 };
 
 /**
  * Calculate average percentage score for mock exams
- * Returns the average of all entered subject scores (0-100)
  */
 export const calculateMockRawScore = (scores: Record<string, number | undefined>): number => {
   let total = 0;
   let count = 0;
-
   for (const key of Object.keys(scores)) {
     const score = scores[key];
     if (typeof score === 'number' && !isNaN(score) && score > 0) {
@@ -50,69 +61,66 @@ export const calculateMockRawScore = (scores: Record<string, number | undefined>
       count++;
     }
   }
-
   if (count === 0) return 0;
   return Math.round(total / count);
 };
 
 /**
- * Calculate aggregate for mock exams
- * - Core subjects: Mathematics, English, Social Studies, Science
- * - Plus any two best optional subjects
+ * Calculate aggregate for mock exams.
+ * Now works dynamically: keys in `scores` are subject NAMES (from DB).
+ * Core subjects: English, Mathematics, Integrated Science, Social Studies.
+ * Plus the two best optional subjects by grade (lowest grade number is best).
+ *
+ * @param scores - Record<subjectName, score>
+ * @param coreNames - Optional override list of core subject names (defaults to standard 4)
  */
-export const calculateMockAggregate = (scores: Record<string, number | undefined>): number => {
-  const coreSubjects = ['mathematics', 'english', 'social', 'science'];
-  const optionalSubjects = ['career_technology', 'rme', 'ict', 'creative_arts', 'gh_language', 'french'];
-
+export const calculateMockAggregate = (
+  scores: Record<string, number | undefined>,
+  coreNames?: string[]
+): number => {
   let aggregate = 0;
-
-  // Add grades for core subjects
-  for (const subject of coreSubjects) {
-    const score = scores[subject];
-    if (typeof score === 'number' && !isNaN(score)) {
-      const clampedScore = Math.max(0, Math.min(100, score));
-      aggregate += calculateMockGrade(clampedScore);
-    } else {
-      // If core subject is missing, assign worst grade
-      aggregate += 9;
-    }
-  }
-
-  // Get best two optional subjects
+  const coreGrades: number[] = [];
   const optionalGrades: number[] = [];
-  for (const subject of optionalSubjects) {
-    const score = scores[subject];
-    if (typeof score === 'number' && !isNaN(score)) {
-      const clampedScore = Math.max(0, Math.min(100, score));
-      optionalGrades.push(calculateMockGrade(clampedScore));
+
+  for (const subjectName of Object.keys(scores)) {
+    const score = scores[subjectName];
+    const numericScore = typeof score === 'number' && !isNaN(score)
+      ? Math.max(0, Math.min(100, score))
+      : null;
+
+    const grade = numericScore !== null ? calculateMockGrade(numericScore) : 9;
+
+    if (isCoreSubject(subjectName, coreNames)) {
+      coreGrades.push(grade);
+    } else {
+      if (numericScore !== null) {
+        optionalGrades.push(grade);
+      }
     }
   }
 
-  // Sort optional grades (best grades are lowest numbers)
-  optionalGrades.sort((a, b) => a - b);
+  // Pad missing core subjects with grade 9 (worst)
+  const CORE_COUNT = 4;
+  while (coreGrades.length < CORE_COUNT) {
+    coreGrades.push(9);
+  }
 
-  // Add best two optional grades (or assign worst grades if not enough)
+  aggregate = coreGrades.reduce((sum, g) => sum + g, 0);
+
+  // Best two optional subjects (lowest numbers = best)
+  optionalGrades.sort((a, b) => a - b);
   if (optionalGrades.length >= 2) {
     aggregate += optionalGrades[0] + optionalGrades[1];
   } else if (optionalGrades.length === 1) {
-    aggregate += optionalGrades[0] + 9; // One best + one worst
+    aggregate += optionalGrades[0] + 9;
   } else {
-    aggregate += 18; // Two worst grades (9 + 9)
+    aggregate += 18;
   }
 
   return aggregate;
 };
 
 /**
- * Get subject keys that are core subjects for mock exams
+ * Get default core subject name patterns
  */
-export const getCoreSubjects = (): string[] => {
-  return ['mathematics', 'english', 'social', 'science'];
-};
-
-/**
- * Get subject keys that are optional subjects for mock exams
- */
-export const getOptionalSubjects = (): string[] => {
-  return ['career_technology', 'rme', 'ict', 'creative_arts', 'gh_language', 'french'];
-};
+export const getCoreSubjectPatterns = (): string[] => DEFAULT_CORE_PATTERNS;

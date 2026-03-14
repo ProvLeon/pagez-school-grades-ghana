@@ -17,16 +17,16 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  getSubjectsForExamType,
-  getExamTypeName,
-  MockExamType,
-} from "@/hooks/useMockExamDepartments";
 import { useStudentsWithMockResults, MockExamStudent } from "@/hooks/useMockExamStudents";
 import { useSaveMockScores, SubjectScoreInput } from "@/hooks/useSaveMockScores";
+import { useSubjects } from "@/hooks/useSubjects";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Info, User, CheckCircle2, AlertCircle } from "lucide-react";
+import { isCoreSubject } from "@/utils/mockGradeCalculations";
+
+// BECE Core subject patterns — English, Mathematics, Integrated Science, Social Studies
+const CORE_PATTERNS = ["english", "mathematics", "science", "social studies", "social"];
 
 interface AddScoresDialogProps {
   sessionId: string | null;
@@ -39,23 +39,40 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"select" | "scores">("select");
 
-  // Selection state
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
-  const [examType] = useState<MockExamType>("bece"); // Only BECE for Basic 9
-
-  // Store selected student info to persist across re-renders when on scores step
   const [selectedStudentInfo, setSelectedStudentInfo] = useState<MockExamStudent | null>(null);
-
-  // Scores state
   const [scores, setScores] = useState<SubjectScoreInput>({});
 
-  // Data hooks - only Basic 9 students
   const { data: students = [], isLoading: studentsLoading } = useBasic9Students();
   const { data: studentsWithResults = new Set() } = useStudentsWithMockResults(sessionId);
+  const { data: allSubjects = [], isLoading: subjectsLoading } = useSubjects();
 
   const saveScores = useSaveMockScores(sessionId);
 
-  // Get selected student info - use stored info if available (for step 2), otherwise find from students array
+  // Filter to JHS department only, then deduplicate by normalized name
+  const jhsSubjects = useMemo(() => {
+    const seen = new Set<string>();
+    return allSubjects.filter(s => {
+      const deptName = (s.department?.name || '').toLowerCase();
+      const isJHS = deptName.includes('jhs') || deptName.includes('junior high') || deptName.includes('basic');
+      if (!isJHS) return false;
+      const key = s.name.toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [allSubjects]);
+
+  // Classify into core and optional using BECE patterns
+  const coreSubjects = useMemo(
+    () => jhsSubjects.filter(s => isCoreSubject(s.name, CORE_PATTERNS)),
+    [jhsSubjects]
+  );
+  const optionalSubjects = useMemo(
+    () => jhsSubjects.filter(s => !isCoreSubject(s.name, CORE_PATTERNS)),
+    [jhsSubjects]
+  );
+
   const selectedStudent = useMemo(() => {
     if (selectedStudentInfo && selectedStudentInfo.id === selectedStudentId) {
       return selectedStudentInfo;
@@ -63,47 +80,21 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
     return students.find((s) => s.id === selectedStudentId) || null;
   }, [students, selectedStudentId, selectedStudentInfo]);
 
-  // Check if student already has results
   const studentHasResults = selectedStudentId
     ? studentsWithResults.has(selectedStudentId)
     : false;
 
-  // Get subjects based on exam type
-  const subjectConfig = useMemo(() => getSubjectsForExamType(examType), [examType]);
+  // Calculate totals using subject name keys
+  const coreTotal = coreSubjects.reduce((sum, s) => sum + (Number(scores[s.name]) || 0), 0);
+  const optionalTotal = optionalSubjects.reduce((sum, s) => sum + (Number(scores[s.name]) || 0), 0);
+  const grandTotal = coreTotal + optionalTotal;
 
-  // Calculate totals
-  const coreTotal = subjectConfig.core.reduce(
-    (sum, subj) => sum + (Number(scores[subj.key]) || 0),
-    0
-  );
-  const electiveTotal = subjectConfig.electives.reduce(
-    (sum, subj) => sum + (Number(scores[subj.key]) || 0),
-    0
-  );
-  const grandTotal = coreTotal + electiveTotal;
-
-  // Count subjects with scores
-  const coreCount = subjectConfig.core.filter(
-    (subj) => typeof scores[subj.key] === "number" && scores[subj.key]! > 0
-  ).length;
-  const electiveCount = subjectConfig.electives.filter(
-    (subj) => typeof scores[subj.key] === "number" && scores[subj.key]! > 0
-  ).length;
-
-  // Validation
-  const hasAnyScore = Object.values(scores).some(
-    (v) => typeof v === "number" && v > 0
-  );
+  const hasAnyScore = Object.values(scores).some((v) => typeof v === "number" && v > 0);
   const invalidScores = Object.entries(scores).filter(
     ([, v]) => typeof v === "number" && (v < 0 || v > 100)
   );
-  const isValid =
-    sessionId &&
-    selectedStudentId &&
-    hasAnyScore &&
-    invalidScores.length === 0;
+  const isValid = sessionId && selectedStudentId && hasAnyScore && invalidScores.length === 0;
 
-  // Reset form
   const resetForm = () => {
     setStep("select");
     setSelectedStudentId("");
@@ -111,43 +102,27 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
     setScores({});
   };
 
-  // Handle score change
-  const handleScoreChange = (key: string, value: string) => {
+  const handleScoreChange = (subjectName: string, value: string) => {
     const numValue = value === "" ? undefined : Number(value);
-    setScores((prev) => ({ ...prev, [key]: numValue }));
+    setScores((prev) => ({ ...prev, [subjectName]: numValue }));
   };
 
-  // Proceed to scores step
   const handleProceedToScores = () => {
     if (selectedStudentId) {
-      // Store the selected student info before moving to step 2
       const student = students.find((s) => s.id === selectedStudentId);
-      if (student) {
-        setSelectedStudentInfo(student);
-      }
+      if (student) setSelectedStudentInfo(student);
       setStep("scores");
     }
   };
 
-  // Go back to selection
-  const handleBackToSelection = () => {
-    setStep("select");
-  };
+  const handleBackToSelection = () => setStep("select");
 
-  // Save scores
   const handleSave = async (addAnother: boolean) => {
     if (!isValid) return;
-
     try {
-      await saveScores.mutateAsync({
-        studentId: selectedStudentId,
-        scores,
-      });
-
+      await saveScores.mutateAsync({ studentId: selectedStudentId, scores });
       onSuccess?.();
-
       if (addAnother) {
-        // Keep student list visible, clear student and scores
         setSelectedStudentId("");
         setSelectedStudentInfo(null);
         setScores({});
@@ -156,9 +131,31 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
         setOpen(false);
         resetForm();
       }
-    } catch (error) {
-      // Error handled by mutation
+    } catch {
+      // Error handled in mutation
     }
+  };
+
+  const renderSubjectRow = (subjectName: string) => {
+    const hasError = typeof scores[subjectName] === "number" &&
+      (scores[subjectName]! < 0 || scores[subjectName]! > 100);
+    return (
+      <div key={subjectName} className="grid grid-cols-[1fr,100px] gap-2 items-center">
+        <Label htmlFor={`score-${subjectName}`} className="text-sm">
+          {subjectName}
+        </Label>
+        <Input
+          id={`score-${subjectName}`}
+          type="number"
+          min={0}
+          max={100}
+          value={scores[subjectName] ?? ""}
+          onChange={(e) => handleScoreChange(subjectName, e.target.value)}
+          placeholder="0-100"
+          className={cn("text-center", hasError && "border-destructive")}
+        />
+      </div>
+    );
   };
 
   return (
@@ -177,22 +174,17 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
         </DialogHeader>
 
         {step === "select" ? (
-          // STEP 1: Student Selection (Basic 9 only)
           <div className="flex-1 overflow-hidden flex flex-col space-y-4">
             <div className="space-y-2 flex-1 overflow-hidden flex flex-col">
               <Label>Select Student *</Label>
               {studentsLoading ? (
                 <div className="space-y-2">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
+                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
                 </div>
               ) : students.length === 0 ? (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    No Basic 9 students found.
-                  </AlertDescription>
+                  <AlertDescription>No Basic 9 students found.</AlertDescription>
                 </Alert>
               ) : (
                 <ScrollArea className="flex-1 border rounded-md">
@@ -200,7 +192,6 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
                     {students.map((student) => {
                       const hasResults = studentsWithResults.has(student.id);
                       const isSelected = selectedStudentId === student.id;
-
                       return (
                         <button
                           key={student.id}
@@ -208,23 +199,16 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
                           onClick={() => setSelectedStudentId(student.id)}
                           className={cn(
                             "w-full flex items-center justify-between p-3 rounded-md text-left transition-colors",
-                            isSelected
-                              ? "bg-primary text-primary-foreground"
-                              : "hover:bg-muted",
+                            isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted",
                             hasResults && !isSelected && "bg-green-50"
                           )}
                         >
                           <div className="flex items-center gap-3">
                             <User className="h-4 w-4" />
-                            <div>
-                              <p className="font-medium">{student.full_name}</p>
-                            </div>
+                            <p className="font-medium">{student.full_name}</p>
                           </div>
                           {hasResults && (
-                            <Badge
-                              variant={isSelected ? "secondary" : "outline"}
-                              className="text-xs"
-                            >
+                            <Badge variant={isSelected ? "secondary" : "outline"} className="text-xs">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Has Scores
                             </Badge>
@@ -237,37 +221,25 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
               )}
             </div>
 
-            {/* Student has existing results warning */}
             {studentHasResults && (
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  This student already has scores for this session. Adding new
-                  scores will update existing ones.
+                  This student already has scores for this session. Adding new scores will update existing ones.
                 </AlertDescription>
               </Alert>
             )}
 
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setOpen(false);
-                  resetForm();
-                }}
-              >
+              <Button variant="outline" onClick={() => { setOpen(false); resetForm(); }}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleProceedToScores}
-                disabled={!selectedStudentId}
-              >
+              <Button onClick={handleProceedToScores} disabled={!selectedStudentId}>
                 Continue to Scores
               </Button>
             </DialogFooter>
           </div>
         ) : (
-          // STEP 2: Enter Scores
           <div className="flex-1 overflow-hidden flex flex-col">
             {/* Student Info Card */}
             <Card className="mb-4">
@@ -278,90 +250,60 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
                       <User className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-semibold">
-                        {selectedStudent?.full_name}
-                      </p>
-                      <div className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {getExamTypeName(examType)}
-                        </Badge>
-                      </div>
+                      <p className="font-semibold">{selectedStudent?.full_name}</p>
+                      <Badge variant="outline" className="text-xs">BECE</Badge>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleBackToSelection}
-                  >
+                  <Button variant="ghost" size="sm" onClick={handleBackToSelection}>
                     Change
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* All Subjects - Simplified View */}
             <ScrollArea className="flex-1">
               <div className="space-y-4 pr-4">
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    Enter the raw score (0-100) for each subject. All subjects are displayed in order.
+                    Enter the raw score (0-100) for each subject.
                   </AlertDescription>
                 </Alert>
 
-                {/* Subject Input Grid - All subjects in one view */}
-                <div className="space-y-3">
-                  <div className="grid grid-cols-[1fr,100px] gap-2 text-sm font-medium text-muted-foreground border-b pb-2">
-                    <span>Subject</span>
-                    <span className="text-center">Raw Score</span>
+                {subjectsLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                   </div>
-
-                  {/* Core Subjects First */}
-                  {subjectConfig.core.map((subj) => (
-                    <div key={subj.key} className="grid grid-cols-[1fr,100px] gap-2 items-center">
-                      <Label htmlFor={`score-${subj.key}`} className="text-sm">
-                        {subj.name}
-                      </Label>
-                      <Input
-                        id={`score-${subj.key}`}
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={scores[subj.key] ?? ""}
-                        onChange={(e) => handleScoreChange(subj.key, e.target.value)}
-                        placeholder="0-100"
-                        className={cn(
-                          "text-center",
-                          typeof scores[subj.key] === "number" && (scores[subj.key]! < 0 || scores[subj.key]! > 100) && "border-destructive"
-                        )}
-                      />
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-[1fr,100px] gap-2 text-sm font-medium text-muted-foreground border-b pb-2">
+                      <span>Subject</span>
+                      <span className="text-center">Raw Score</span>
                     </div>
-                  ))}
 
-                  {/* Elective Subjects */}
-                  {subjectConfig.electives.map((subj) => (
-                    <div key={subj.key} className="grid grid-cols-[1fr,100px] gap-2 items-center">
-                      <Label htmlFor={`score-${subj.key}`} className="text-sm">
-                        {subj.name}
-                      </Label>
-                      <Input
-                        id={`score-${subj.key}`}
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={scores[subj.key] ?? ""}
-                        onChange={(e) => handleScoreChange(subj.key, e.target.value)}
-                        placeholder="0-100"
-                        className={cn(
-                          "text-center",
-                          typeof scores[subj.key] === "number" && (scores[subj.key]! < 0 || scores[subj.key]! > 100) && "border-destructive"
-                        )}
-                      />
-                    </div>
-                  ))}
-                </div>
+                    {/* Core Subjects */}
+                    {coreSubjects.length > 0 && (
+                      <>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-2">
+                          Core Subjects
+                        </p>
+                        {coreSubjects.map(s => renderSubjectRow(s.name))}
+                      </>
+                    )}
 
-                {/* Grand Total Only */}
+                    {/* Optional Subjects */}
+                    {optionalSubjects.length > 0 && (
+                      <>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-2">
+                          Optional Subjects
+                        </p>
+                        {optionalSubjects.map(s => renderSubjectRow(s.name))}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Grand Total */}
                 <div className="p-3 bg-muted rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">Total Score</p>
                   <p className="text-2xl font-bold text-primary">{grandTotal}</p>
@@ -369,21 +311,17 @@ export function AddScoresDialog({ sessionId, onSuccess, children }: AddScoresDia
               </div>
             </ScrollArea>
 
-            {/* Validation Errors */}
             {invalidScores.length > 0 && (
               <Alert variant="destructive" className="mt-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Some scores are out of range (0-100). Please correct them
-                  before saving.
+                  Some scores are out of range (0-100). Please correct them before saving.
                 </AlertDescription>
               </Alert>
             )}
 
             <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={handleBackToSelection}>
-                Back
-              </Button>
+              <Button variant="outline" onClick={handleBackToSelection}>Back</Button>
               <Button
                 variant="outline"
                 onClick={() => handleSave(true)}

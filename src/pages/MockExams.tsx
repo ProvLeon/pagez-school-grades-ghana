@@ -58,6 +58,7 @@ import { useCanAccessClass } from "@/hooks/useTeacherClassAccess";
 import { useToast } from "@/hooks/use-toast";
 import { useGradingSettings, useGradingScales } from "@/hooks/useGradingSettings";
 import { useSchoolSettings } from "@/hooks/useSchoolSettings";
+import { useSubjects } from "@/hooks/useSubjects";
 import { cn } from "@/lib/utils";
 
 import jsPDF from "jspdf";
@@ -179,6 +180,20 @@ export default function MockExams() {
     gradingSettings?.academic_year,
     gradingSettings?.term
   );
+
+  // Fetch subjects from DB for canonical name resolution
+  const { data: subjectsData = [] } = useSubjects();
+
+  // Build a lookup: lowercase-stripped subject name -> canonical DB name
+  const subjectNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    subjectsData.forEach(sub => {
+      const key = sub.name.toLowerCase().replace(/[^a-z]/g, '');
+      map.set(key, sub.name);
+    });
+    return map;
+  }, [subjectsData]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"results" | "analytics">("results");
@@ -1206,10 +1221,31 @@ export default function MockExams() {
         }
       };
 
+      // Normalize subject names: ICT aliases take priority, then DB canonical name
+      const normalizeSubjectName = (name: string): string => {
+        const lower = name.toLowerCase().replace(/[^a-z]/g, '');
+        // ICT alias check FIRST — catches 'ICT', 'ICT / Computing', 'ICT & Computing' etc.
+        if (
+          lower === 'ict' ||
+          lower === 'ictcomputing' ||
+          lower === 'ictandcomputing' ||
+          lower === 'informationcommunicationstechnology' ||
+          lower === 'informationtechnology' ||
+          lower.startsWith('ict')
+        ) {
+          return 'COMPUTING';
+        }
+        // Then try DB canonical name lookup
+        if (subjectNameMap.has(lower)) {
+          return (subjectNameMap.get(lower) as string).toUpperCase();
+        }
+        return name.toUpperCase();
+      };
+
       const subjectTableHeaders = ['SUBJECT', 'SCORE\n(100 %)', 'GRADE IN\nSUBJECT', 'REMARKS'];
       
       const subjectTableBody = result.subject_scores.map((s) => [
-        s.subject_name.toUpperCase(),
+        normalizeSubjectName(s.subject_name),
         s.total_score ?? '-',
         getGradeForScore(Number(s.total_score)),
         getRemarkForScore(Number(s.total_score)).toUpperCase(),
@@ -1739,11 +1775,17 @@ export default function MockExams() {
                               <thead>
                                 <tr className="bg-slate-200">
                                   <th className="border px-3 py-2 text-left font-semibold">Grade</th>
-                                  {Object.keys(stats.gradeBySubject).map((subject) => (
-                                    <th key={subject} className="border px-3 py-2 text-center font-semibold">
-                                      {subject}
-                                    </th>
-                                  ))}
+                                  {Object.keys(stats.gradeBySubject).map((subject) => {
+                                    const lower = subject.toLowerCase().replace(/[^a-z]/g, '');
+                                    // Resolve from DB first, then aliases
+                                    const displayName = subjectNameMap.get(lower)
+                                      || ((lower === 'ict' || lower === 'informationtechnology') ? 'Computing' : subject);
+                                    return (
+                                      <th key={subject} className="border px-3 py-2 text-center font-semibold">
+                                        {displayName}
+                                      </th>
+                                    );
+                                  })}
                                 </tr>
                               </thead>
                               <tbody>
