@@ -1091,11 +1091,11 @@ export default function MockExams() {
         if (score >= 80) return 1;
         if (score >= 70) return 2;
         if (score >= 60) return 3;
-        if (score >= 50) return 4;
-        if (score >= 40) return 5;
-        if (score >= 30) return 6;
-        if (score >= 20) return 7;
-        if (score >= 10) return 8;
+        if (score >= 55) return 4;
+        if (score >= 50) return 5;
+        if (score >= 45) return 6;
+        if (score >= 40) return 7;
+        if (score >= 35) return 8;
         return 9;
       };
 
@@ -1173,11 +1173,11 @@ export default function MockExams() {
         if (score >= 80) return '1';
         if (score >= 70) return '2';
         if (score >= 60) return '3';
-        if (score >= 50) return '4';
-        if (score >= 40) return '5';
-        if (score >= 30) return '6';
-        if (score >= 20) return '7';
-        if (score >= 10) return '8';
+        if (score >= 55) return '4';
+        if (score >= 50) return '5';
+        if (score >= 45) return '6';
+        if (score >= 40) return '7';
+        if (score >= 35) return '8';
         return '9';
       };
 
@@ -1193,15 +1193,15 @@ export default function MockExams() {
         }
         const grade = parseInt(getGradeForScore(score));
         switch(grade) {
-          case 1: return 'Highest';
-          case 2: return 'Higher';
-          case 3: return 'High';
-          case 4: return 'High Average';
-          case 5: return 'Average';
-          case 6: return 'Low Average';
-          case 7: return 'Low';
-          case 8: return 'Lower';
-          case 9: return 'Lowest';
+          case 1: return 'Excellent';
+          case 2: return 'Very Good';
+          case 3: return 'Good';
+          case 4: return 'Credit';
+          case 5: return 'Credit';
+          case 6: return 'Credit';
+          case 7: return 'Pass';
+          case 8: return 'Pass';
+          case 9: return 'Fail';
           default: return '';
         }
       };
