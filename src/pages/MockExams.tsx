@@ -1760,9 +1760,6 @@ export default function MockExams() {
                                     allPossibleGrades = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
                                   }
 
-                                  // Make allPossibleGrades available for summary rows
-                                  window.__allPossibleGrades = allPossibleGrades;
-
                                   return allPossibleGrades.map((grade, index) => (
                                     <tr key={`grade-${grade}`} className={index % 2 === 0 ? 'bg-slate-50' : ''}>
                                       <td className="border px-3 py-2 font-semibold">Grade {String(grade)}</td>
