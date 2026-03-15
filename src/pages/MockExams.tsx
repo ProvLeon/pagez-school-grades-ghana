@@ -59,6 +59,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGradingSettings, useGradingScales } from "@/hooks/useGradingSettings";
 import { useSchoolSettings } from "@/hooks/useSchoolSettings";
 import { useSubjects } from "@/hooks/useSubjects";
+import { getMockGradeLabel } from "@/utils/mockGradeCalculations";
 import { cn } from "@/lib/utils";
 
 import jsPDF from "jspdf";
@@ -158,7 +159,7 @@ export default function MockExams() {
 
   // Data hooks
   const { data: sessions = [], isLoading: sessionsLoading } = useMockExamSessions();
-  // Only JHS and SHS departments/classes for mock exams
+  // Only JHS departments/classes for mock exams
   const { departments: mockDepartments, isLoading: departmentsLoading } = useMockExamDepartments();
   const { classes: allClasses, isLoading: classesLoading } = useMockExamClasses();
 
@@ -327,32 +328,18 @@ export default function MockExams() {
       color: GRADE_COLORS[index] || GRADE_COLORS[6],
     })).filter((g) => g.value > 0);
 
-    // Grade distribution by subject - using grading scales from database
-    // Helper function to calculate grade from score using grading scales
+    // Grade distribution by subject - using BECE mock grading scale
+    // Helper function to calculate grade from score using BECE scale
     const getGradeFromScore = (score: number | null | undefined): string => {
       if (score === null || score === undefined) return '9';
-
-      // Use grading scales from database if available
-      if (gradingScalesData && gradingScalesData.length > 0) {
-        // Sort by from_percentage descending to check from highest to lowest
-        const sorted = [...gradingScalesData].sort((a, b) => b.from_percentage - a.from_percentage);
-        for (const scale of sorted) {
-          if (score >= scale.from_percentage && score <= scale.to_percentage) {
-            return scale.grade || '9';
-          }
-        }
-        return '9';
-      }
-
-      // Fallback to default grading if no scales found
-      if (score >= 80) return '1';
-      if (score >= 70) return '2';
-      if (score >= 60) return '3';
-      if (score >= 50) return '4';
-      if (score >= 40) return '5';
-      if (score >= 30) return '6';
-      if (score >= 20) return '7';
-      if (score >= 10) return '8';
+      if (score >= 90) return '1';
+      if (score >= 80) return '2';
+      if (score >= 70) return '3';
+      if (score >= 60) return '4';
+      if (score >= 55) return '5';
+      if (score >= 50) return '6';
+      if (score >= 40) return '7';
+      if (score >= 35) return '8';
       return '9';
     };
 
@@ -363,13 +350,9 @@ export default function MockExams() {
     });
     const allSubjectsInResults = Array.from(allSubjectsSet).sort();
 
-    // Initialize grade tracking with all possible grades from grading scales
+    // Initialize grade tracking with all possible BECE grades 1-9
     const allPossibleGrades = new Set<string>();
-    if (gradingScalesData && gradingScalesData.length > 0) {
-      gradingScalesData.forEach(scale => allPossibleGrades.add(scale.grade));
-    } else {
-      ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach(g => allPossibleGrades.add(g));
-    }
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach(g => allPossibleGrades.add(g));
 
     const gradeBySubject: Record<string, Record<string, number>> = {};
 
@@ -1001,7 +984,7 @@ export default function MockExams() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 12;
-    
+
     const primaryColorHex = schoolSettings?.primary_color || '#000000';
     const primaryRGB = hexToRgb(primaryColorHex);
     // Use primary color for borders to respect school theme while maintaining formal look
@@ -1013,13 +996,13 @@ export default function MockExams() {
     doc.setDrawColor(...borderColor);
     doc.setLineWidth(1.5);
     doc.rect(margin, margin, pageWidth - (margin * 2), pageHeight - (margin * 2));
-    
+
     doc.setLineWidth(0.4);
     doc.rect(margin + 2, margin + 2, pageWidth - (margin * 2) - 4, pageHeight - (margin * 2) - 4);
 
     // 2. Header Section
     currentY = margin + 8;
-    
+
     if (schoolSettings?.logo_url) {
       const logoBase64 = await getImageAsBase64(schoolSettings.logo_url);
       if (logoBase64) {
@@ -1029,11 +1012,11 @@ export default function MockExams() {
 
     doc.setTextColor(0, 0, 0);
     const schoolNameText = (schoolSettings?.school_name || "SCHOOL NAME").toUpperCase();
-    
+
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text(schoolNameText, pageWidth / 2, currentY + 8, { align: 'center' });
-    
+
     doc.setFontSize(14);
     doc.text(`(${currentSession.name.toUpperCase()}) MOCK RESULTS`, pageWidth / 2, currentY + 16, { align: 'center' });
 
@@ -1042,40 +1025,40 @@ export default function MockExams() {
     // 3. Student Info Grid
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.2);
-    
+
     doc.line(margin + 2, currentY, pageWidth - margin - 2, currentY);
-    
+
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    
+
     doc.text(`NAME: `, margin + 4, currentY + 5);
     doc.setFont('helvetica', 'bold');
     doc.text(`${result.student_name}`, margin + 20, currentY + 5);
-    
+
     doc.line(pageWidth / 2, currentY, pageWidth / 2, currentY + 21);
-    
+
     doc.setFont('helvetica', 'normal');
     doc.text(`MOCK: `, (pageWidth / 2) + 4, currentY + 5);
     doc.setFont('helvetica', 'bold');
     doc.text(`${currentSession.name}`, (pageWidth / 2) + 18, currentY + 5);
-    
+
     currentY += 7;
     doc.line(margin + 2, currentY, pageWidth - margin - 2, currentY);
-    
+
     doc.setFont('helvetica', 'normal');
     doc.text(`YEAR: `, margin + 4, currentY + 5);
     doc.setFont('helvetica', 'bold');
     doc.text(`${currentSession.academic_year}`, margin + 18, currentY + 5);
-    
+
     doc.setFont('helvetica', 'normal');
     doc.text(`DATE: `, (pageWidth / 2) + 4, currentY + 5);
     doc.setFont('helvetica', 'bold');
     const today = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
     doc.text(`${today.toUpperCase()}`, (pageWidth / 2) + 18, currentY + 5);
-    
+
     currentY += 7;
     doc.line(margin + 2, currentY, pageWidth - margin - 2, currentY);
-    
+
     // Calculate Raw Score and Aggregate based on instructions:
     // Aggregate = Core Subjects Plus Two Best Subjects
     // Raw Score = Total Raw Score (Four Core Subjects)
@@ -1085,11 +1068,11 @@ export default function MockExams() {
     if (result.subject_scores && result.subject_scores.length > 0) {
       // Define core subjects (usually by name or code)
       const coreSubjects = ['english language', 'mathematics', 'science', 'social studies'];
-      
+
       let coreScoreSum = 0;
       let coreGradesSum = 0;
       let coreSubjectCount = 0;
-      
+
       const otherGrades: number[] = [];
 
       // We need getGradeForScore here to calculate the aggregate
@@ -1113,7 +1096,7 @@ export default function MockExams() {
         const grade = getGrade(score);
 
         const isCore = coreSubjects.some(core => subName.includes(core) || core.includes(subName));
-        
+
         if (isCore) {
           coreScoreSum += score;
           coreGradesSum += grade;
@@ -1142,28 +1125,28 @@ export default function MockExams() {
     doc.text(`AGGREGATE: `, margin + 4, currentY + 5);
     doc.setFont('helvetica', 'bold');
     doc.text(`${aggregateStr}`, margin + 30, currentY + 5);
-    
+
     doc.setFont('helvetica', 'normal');
     doc.text(`RAW SCORE: `, (pageWidth / 2) + 4, currentY + 5);
     doc.setFont('helvetica', 'bold');
     doc.text(`${rawScoreStr}`, (pageWidth / 2) + 30, currentY + 5);
-    
+
     currentY += 7;
     doc.line(margin + 2, currentY, pageWidth - margin - 2, currentY);
-    
+
     doc.setFillColor(235, 235, 235);
     doc.rect(margin + 2.1, currentY + 0.1, pageWidth - (margin * 2) - 4.2, 5.8, 'F');
     doc.line(pageWidth / 2, currentY, pageWidth / 2, currentY + 6);
-    
+
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(50, 50, 50);
     doc.text(`NB: Core Subjects Plus Two Best Subjects = Aggregate`, margin + 4, currentY + 4);
     doc.text(`Total Raw Score`, (pageWidth / 2) + 4, currentY + 4);
-    
+
     currentY += 6;
     doc.line(margin + 2, currentY, pageWidth - margin - 2, currentY);
-    
+
     currentY += 6;
 
     // 4. Subjects Table
@@ -1184,7 +1167,7 @@ export default function MockExams() {
       const getGradeForScore = (score: number | null | undefined): string => {
         if (score === null || score === undefined) return '-';
         const g = getMockNumericGrade(score);
-        switch(g) {
+        switch (g) {
           case 1: return 'A+';
           case 2: return 'A';
           case 3: return 'B+';
@@ -1200,7 +1183,7 @@ export default function MockExams() {
 
       const getRemarkForScore = (score: number | null | undefined): string => {
         if (score === null || score === undefined) return '';
-        switch(getMockNumericGrade(score)) {
+        switch (getMockNumericGrade(score)) {
           case 1: return 'Highest';
           case 2: return 'Higher';
           case 3: return 'High';
@@ -1236,7 +1219,7 @@ export default function MockExams() {
       };
 
       const subjectTableHeaders = ['SUBJECT', 'SCORE\n(100 %)', 'GRADE IN\nSUBJECT', 'REMARKS'];
-      
+
       const subjectTableBody = result.subject_scores.map((s) => [
         normalizeSubjectName(s.subject_name),
         s.total_score ?? '-',
@@ -1267,7 +1250,7 @@ export default function MockExams() {
           halign: 'center',
           valign: 'middle',
           lineWidth: 0.2,
-          lineColor: [0,0,0]
+          lineColor: [0, 0, 0]
         },
         columnStyles: {
           0: { cellWidth: 65, halign: 'left' },
@@ -1289,24 +1272,24 @@ export default function MockExams() {
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    
+
     currentY += 8;
     doc.text(`Class Teacher's Remarks`, margin + 6, currentY);
     doc.setLineDashPattern([1, 2], 0);
     doc.line(margin + 48, currentY, pageWidth - margin - 6, currentY);
-    doc.setLineDashPattern([], 0); 
-    
+    doc.setLineDashPattern([], 0);
+
     currentY += 10;
     doc.setLineDashPattern([1, 2], 0);
     doc.line(margin + 6, currentY, pageWidth - margin - 6, currentY);
     currentY += 10;
     doc.line(margin + 6, currentY, pageWidth - margin - 6, currentY);
-    
+
     currentY += 15;
-    doc.setLineDashPattern([], 0); 
+    doc.setLineDashPattern([], 0);
     doc.text(`Headteacher's Signature`, margin + 6, currentY);
     doc.setLineDashPattern([1, 2], 0);
-    
+
     // Attempt to load and embed the headteacher's signature
     if (schoolSettings?.headteacher_signature_url) {
       const signatureBase64 = await getImageAsBase64(schoolSettings.headteacher_signature_url);
@@ -1315,9 +1298,9 @@ export default function MockExams() {
         doc.addImage(signatureBase64, 'PNG', margin + 48, currentY - 12, 40, 15);
       }
     }
-    
+
     doc.line(margin + 48, currentY, pageWidth - margin - 6, currentY);
-    doc.setLineDashPattern([], 0); 
+    doc.setLineDashPattern([], 0);
 
     const fileName = `${result.student_name.replace(/\s+/g, '-')}-mock-result-${currentSession.name.replace(/\s+/g, '-')}.pdf`.toLowerCase();
     doc.save(fileName);
@@ -1783,76 +1766,73 @@ export default function MockExams() {
                               </thead>
                               <tbody>
                                 {(() => {
-                                  // Always show all possible grades (from grading scales or 1-9)
-                                  let allPossibleGrades: string[] = [];
-                                  if (gradingScalesData && gradingScalesData.length > 0) {
-                                    const gradeSet = new Set<string>();
-                                    [...gradingScalesData]
-                                      .sort((a, b) => b.from_percentage - a.from_percentage)
-                                      .forEach(scale => gradeSet.add(scale.grade));
-                                    allPossibleGrades = Array.from(gradeSet);
-                                  } else {
-                                    allPossibleGrades = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
-                                  }
+                                  // Always show BECE grades 1-9
+                                  const allPossibleGrades = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
-                                  return allPossibleGrades.map((grade, index) => (
-                                    <tr key={`grade-${grade}`} className={index % 2 === 0 ? 'bg-slate-50' : ''}>
-                                      <td className="border px-3 py-2 font-semibold">Grade {String(grade)}</td>
-                                      {Object.keys(stats.gradeBySubject).map((subject) => (
-                                        <td key={`${subject}-${grade}`} className="border px-3 py-2 text-center">
-                                          {stats.gradeBySubject[subject][grade] || 0}
+                                  return allPossibleGrades.map((grade, index) => {
+                                    const numericGrade = parseInt(grade, 10);
+                                    const label = getMockGradeLabel(numericGrade);
+                                    return (
+                                      <tr key={`grade-${grade}`} className={index % 2 === 0 ? 'bg-slate-50' : ''}>
+                                        <td className="border px-3 py-2 font-semibold">
+                                          Grade {label} ({grade})
                                         </td>
-                                      ))}
-                                    </tr>
-                                  ));
+                                        {Object.keys(stats.gradeBySubject).map((subject) => (
+                                          <td key={`${subject}-${grade}`} className="border px-3 py-2 text-center">
+                                            {stats.gradeBySubject[subject][grade] || 0}
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    );
+                                  });
                                 })()}
-                                {/* Total No. of Students row */}
-                                <tr className="bg-blue-100 font-semibold">
-                                  <td className="border px-3 py-2">Total No. of Students</td>
-                                  {Object.keys(stats.gradeBySubject).map((subject) => (
-                                    <td key={`total-${subject}`} className="border px-3 py-2 text-center">
-                                      {stats.totalStudents}
-                                    </td>
-                                  ))}
-                                </tr>
-                                {/* Best Grade row (lowest grade number with count > 0) */}
-                                <tr className="bg-blue-100 font-semibold">
-                                  <td className="border px-3 py-2">Best Grade</td>
-                                  {Object.keys(stats.gradeBySubject).map((subject) => {
-                                    // Find best grade (first one with count > 0 in sorted order)
-                                    const allGradesForSubject = Object.keys(stats.gradeBySubject[subject]).sort((a, b) => {
-                                      const aNum = parseInt(a);
-                                      const bNum = parseInt(b);
-                                      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-                                      return a.localeCompare(b);
-                                    });
-                                    const bestGrade = allGradesForSubject.find(g => (stats.gradeBySubject[subject][g] || 0) > 0);
-                                    return (
-                                      <td key={`best-${subject}`} className="border px-3 py-2 text-center">
-                                        {bestGrade || '-'}
+                                  {/* Total No. of Students row */ }
+                                  <tr className="bg-blue-100 font-semibold">
+                                    <td className="border px-3 py-2">Total No. of Students</td>
+                                    {Object.keys(stats.gradeBySubject).map((subject) => (
+                                      <td key={`total-${subject}`} className="border px-3 py-2 text-center">
+                                        {stats.totalStudents}
                                       </td>
-                                    );
-                                  })}
-                                </tr>
-                                {/* Worst Grade row (highest grade number with count > 0) */}
-                                <tr className="bg-blue-100 font-semibold">
-                                  <td className="border px-3 py-2">Worst Grade</td>
-                                  {Object.keys(stats.gradeBySubject).map((subject) => {
-                                    // Find worst grade (last one with count > 0 in sorted order)
-                                    const allGradesForSubject = Object.keys(stats.gradeBySubject[subject]).sort((a, b) => {
-                                      const aNum = parseInt(a);
-                                      const bNum = parseInt(b);
-                                      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-                                      return a.localeCompare(b);
-                                    }).reverse();
-                                    const worstGrade = allGradesForSubject.find(g => (stats.gradeBySubject[subject][g] || 0) > 0);
-                                    return (
-                                      <td key={`worst-${subject}`} className="border px-3 py-2 text-center">
-                                        {worstGrade || '-'}
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
+                                    ))}
+                                  </tr>
+                                  {/* Best Grade row (lowest grade number with count > 0) */ }
+                                  <tr className="bg-blue-100 font-semibold">
+                                    <td className="border px-3 py-2">Best Grade</td>
+                                    {Object.keys(stats.gradeBySubject).map((subject) => {
+                                      // Find best grade (first one with count > 0 in sorted order)
+                                      const allGradesForSubject = Object.keys(stats.gradeBySubject[subject]).sort((a, b) => {
+                                        const aNum = parseInt(a);
+                                        const bNum = parseInt(b);
+                                        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+                                        return a.localeCompare(b);
+                                      });
+                                      const bestGrade = allGradesForSubject.find(g => (stats.gradeBySubject[subject][g] || 0) > 0);
+                                      return (
+                                        <td key={`best-${subject}`} className="border px-3 py-2 text-center">
+                                          {bestGrade || '-'}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                  {/* Worst Grade row (highest grade number with count > 0) */ }
+                                  <tr className="bg-blue-100 font-semibold">
+                                    <td className="border px-3 py-2">Worst Grade</td>
+                                    {Object.keys(stats.gradeBySubject).map((subject) => {
+                                      // Find worst grade (last one with count > 0 in sorted order)
+                                      const allGradesForSubject = Object.keys(stats.gradeBySubject[subject]).sort((a, b) => {
+                                        const aNum = parseInt(a);
+                                        const bNum = parseInt(b);
+                                        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+                                        return a.localeCompare(b);
+                                      }).reverse();
+                                      const worstGrade = allGradesForSubject.find(g => (stats.gradeBySubject[subject][g] || 0) > 0);
+                                      return (
+                                        <td key={`worst-${subject}`} className="border px-3 py-2 text-center">
+                                          {worstGrade || '-'}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
                               </tbody>
                             </table>
                           </div>
