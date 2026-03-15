@@ -23,15 +23,51 @@ export const isCoreSubject = (
  * Score >= 80 = Grade 1, >= 70 = Grade 2, etc.
  */
 export const calculateMockGrade = (score: number): number => {
-  if (score >= 80) return 1;
-  if (score >= 70) return 2;
-  if (score >= 60) return 3;
-  if (score >= 55) return 4;
-  if (score >= 50) return 5;
-  if (score >= 45) return 6;
-  if (score >= 40) return 7;
-  if (score >= 35) return 8;
-  return 9;
+  if (score >= 90) return 1;  // A+
+  if (score >= 80) return 2;  // A
+  if (score >= 70) return 3;  // B+
+  if (score >= 60) return 4;  // B
+  if (score >= 55) return 5;  // C+
+  if (score >= 50) return 6;  // C
+  if (score >= 40) return 7;  // D+
+  if (score >= 35) return 8;  // E
+  return 9;                   // F
+};
+
+/**
+ * Convert a numeric BECE grade (1-9) to its letter label
+ */
+export const getMockGradeLabel = (grade: number): string => {
+  switch(grade) {
+    case 1: return 'A+';
+    case 2: return 'A';
+    case 3: return 'B+';
+    case 4: return 'B';
+    case 5: return 'C+';
+    case 6: return 'C';
+    case 7: return 'D+';
+    case 8: return 'E';
+    case 9: return 'F';
+    default: return '-';
+  }
+};
+
+/**
+ * Get the official BECE remark for a numeric grade
+ */
+export const getMockRemark = (grade: number): string => {
+  switch(grade) {
+    case 1: return 'Highest';
+    case 2: return 'Higher';
+    case 3: return 'High';
+    case 4: return 'High Average';
+    case 5: return 'Average';
+    case 6: return 'Low Average';
+    case 7: return 'Low';
+    case 8: return 'Lower';
+    case 9: return 'Lowest';
+    default: return '';
+  }
 };
 
 /**

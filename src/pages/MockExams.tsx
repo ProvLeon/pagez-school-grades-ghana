@@ -1093,25 +1093,18 @@ export default function MockExams() {
       const otherGrades: number[] = [];
 
       // We need getGradeForScore here to calculate the aggregate
+      // BECE aggregate grade — same scale as the PDF display, separate from system grading
       const getGrade = (score: number | null | undefined): number => {
-        if (score === null || score === undefined) return 9; // Worst grade
-        if (gradingScalesData && gradingScalesData.length > 0) {
-          const sorted = [...gradingScalesData].sort((a, b) => b.from_percentage - a.from_percentage);
-          for (const scale of sorted) {
-            if (score >= scale.from_percentage && score <= scale.to_percentage) {
-              return parseInt(scale.grade) || 9;
-            }
-          }
-        }
-        if (score >= 80) return 1;
-        if (score >= 70) return 2;
-        if (score >= 60) return 3;
-        if (score >= 55) return 4;
-        if (score >= 50) return 5;
-        if (score >= 45) return 6;
-        if (score >= 40) return 7;
-        if (score >= 35) return 8;
-        return 9;
+        if (score === null || score === undefined) return 9;
+        if (score >= 90) return 1;  // A+
+        if (score >= 80) return 2;  // A
+        if (score >= 70) return 3;  // B+
+        if (score >= 60) return 4;  // B
+        if (score >= 55) return 5;  // C+
+        if (score >= 50) return 6;  // C
+        if (score >= 40) return 7;  // D+
+        if (score >= 35) return 8;  // E
+        return 9;                   // F
       };
 
       result.subject_scores.forEach(s => {
@@ -1175,48 +1168,48 @@ export default function MockExams() {
 
     // 4. Subjects Table
     if (result.subject_scores && result.subject_scores.length > 0) {
+      // BECE mock grading — always use this scale, separate from the system grading
+      const getMockNumericGrade = (score: number): number => {
+        if (score >= 90) return 1;  // A+
+        if (score >= 80) return 2;  // A
+        if (score >= 70) return 3;  // B+
+        if (score >= 60) return 4;  // B
+        if (score >= 55) return 5;  // C+
+        if (score >= 50) return 6;  // C
+        if (score >= 40) return 7;  // D+
+        if (score >= 35) return 8;  // E
+        return 9;                   // F
+      };
+
       const getGradeForScore = (score: number | null | undefined): string => {
         if (score === null || score === undefined) return '-';
-        if (gradingScalesData && gradingScalesData.length > 0) {
-          const sorted = [...gradingScalesData].sort((a, b) => b.from_percentage - a.from_percentage);
-          for (const scale of sorted) {
-            if (score >= scale.from_percentage && score <= scale.to_percentage) {
-              return scale.grade || '-';
-            }
-          }
+        const g = getMockNumericGrade(score);
+        switch(g) {
+          case 1: return 'A+';
+          case 2: return 'A';
+          case 3: return 'B+';
+          case 4: return 'B';
+          case 5: return 'C+';
+          case 6: return 'C';
+          case 7: return 'D+';
+          case 8: return 'E';
+          case 9: return 'F';
+          default: return '-';
         }
-        if (score >= 80) return '1';
-        if (score >= 70) return '2';
-        if (score >= 60) return '3';
-        if (score >= 55) return '4';
-        if (score >= 50) return '5';
-        if (score >= 45) return '6';
-        if (score >= 40) return '7';
-        if (score >= 35) return '8';
-        return '9';
       };
 
       const getRemarkForScore = (score: number | null | undefined): string => {
         if (score === null || score === undefined) return '';
-        if (gradingScalesData && gradingScalesData.length > 0) {
-          const sorted = [...gradingScalesData].sort((a, b) => b.from_percentage - a.from_percentage);
-          for (const scale of sorted) {
-            if (score >= scale.from_percentage && score <= scale.to_percentage) {
-              return scale.remark || '';
-            }
-          }
-        }
-        const grade = parseInt(getGradeForScore(score));
-        switch(grade) {
-          case 1: return 'Excellent';
-          case 2: return 'Very Good';
-          case 3: return 'Good';
-          case 4: return 'Credit';
-          case 5: return 'Credit';
-          case 6: return 'Credit';
-          case 7: return 'Pass';
-          case 8: return 'Pass';
-          case 9: return 'Fail';
+        switch(getMockNumericGrade(score)) {
+          case 1: return 'Highest';
+          case 2: return 'Higher';
+          case 3: return 'High';
+          case 4: return 'High Average';
+          case 5: return 'Average';
+          case 6: return 'Low Average';
+          case 7: return 'Low';
+          case 8: return 'Lower';
+          case 9: return 'Lowest';
           default: return '';
         }
       };
