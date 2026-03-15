@@ -27,11 +27,12 @@ interface SubjectsTableSectionProps {
     ca?: number;
     exam?: number;
   };
+  themeColor?: string;
 }
 
-export const SubjectsTableSection = ({ 
-  subjectMarks, 
-  caTypeConfig 
+export const SubjectsTableSection = ({
+  subjectMarks,
+  caTypeConfig
 }: SubjectsTableSectionProps) => {
   // Calculate CA percentage and Exam percentage
   const caPercentage = (caTypeConfig?.ca ?? ((caTypeConfig?.ca1 || 0) + (caTypeConfig?.ca2 || 0) + (caTypeConfig?.ca3 || 0) + (caTypeConfig?.ca4 || 0)));
@@ -90,34 +91,34 @@ export const SubjectsTableSection = ({
   };
 
   return (
-    <Card className="mb-6 bg-gradient-to-r from-card to-card/80 border-primary/10 shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b border-primary/10">
-        <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2">
-          <div className="w-2 h-6 bg-primary rounded-full"></div>
+    <div className="mb-6 rounded-xl border border-primary/20 bg-card text-card-foreground shadow-sm overflow-hidden">
+      <div className="px-6 py-4 flex items-center gap-3 border-b border-primary/10 bg-primary/5">
+        <div className="w-1.5 h-6 rounded-full bg-primary"></div>
+        <h3 className="text-lg font-semibold text-primary">
           Academic Performance
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-6">
+        </h3>
+      </div>
+      <div className="p-0 sm:p-6">
         <div className="overflow-x-auto">
           <Table className="text-sm">
             <TableHeader>
-              <TableRow className="bg-gradient-to-r from-muted/50 to-muted/30">
-                <TableHead className="border border-border font-bold text-foreground text-center py-4">
+              <TableRow className="bg-primary hover:bg-primary/90">
+                <TableHead className="font-bold text-primary-foreground text-center py-4 border-r border-primary-foreground/20">
                   SUBJECT
                 </TableHead>
-                <TableHead className="border border-border font-bold text-foreground text-center py-4">
+                <TableHead className="font-bold text-primary-foreground text-center py-4 border-r border-primary-foreground/20">
                   CLASS SCORE ({caPercentage}%)
                 </TableHead>
-                <TableHead className="border border-border font-bold text-foreground text-center py-4">
+                <TableHead className="font-bold text-primary-foreground text-center py-4 border-r border-primary-foreground/20">
                   EXAMS SCORE ({examPercentage}%)
                 </TableHead>
-                <TableHead className="border border-border font-bold text-foreground text-center py-4">
+                <TableHead className="font-bold text-primary-foreground text-center py-4 border-r border-primary-foreground/20">
                   TOTAL SCORE (100%)
                 </TableHead>
-                <TableHead className="border border-border font-bold text-foreground text-center py-4">
+                <TableHead className="font-bold text-primary-foreground text-center py-4 border-r border-primary-foreground/20">
                   GRADE
                 </TableHead>
-                <TableHead className="border border-border font-bold text-foreground text-center py-4">
+                <TableHead className="font-bold text-primary-foreground text-center py-4">
                   REMARKS
                 </TableHead>
               </TableRow>
@@ -127,40 +128,43 @@ export const SubjectsTableSection = ({
                 <TableRow>
                   <TableCell colSpan={6} className="border border-border text-center py-8 text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-                        📚
-                      </div>
+                      {/* <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+
+                      </div> */}
                       <span>No subjects found for this result</span>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
                 subjectMarks.map((mark, index) => (
-                  <TableRow key={mark.id} className={`hover:bg-muted/20 transition-colors ${index % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}>
-                    <TableCell className="border border-border font-semibold text-foreground py-4">
+                  <TableRow
+                    key={mark.id}
+                    className={`hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-transparent' : 'bg-primary/5'}`}
+                  >
+                    <TableCell className="border-b border-border font-semibold text-foreground py-4 px-4 text-left">
                       {mark.subject?.name || `Subject ID: ${mark.subject_id || 'Missing'}`}
                     </TableCell>
-                    <TableCell className="border border-border text-center py-4">
-                      <span className="font-semibold bg-muted/30 px-3 py-1 rounded-full">
+                    <TableCell className="border-b border-border text-center py-4">
+                      <span className="font-semibold bg-muted/50 px-3 py-1 rounded-full">
                         {calculateWeightedScores(mark).weightedCaScore}
                       </span>
                     </TableCell>
-                    <TableCell className="border border-border text-center py-4">
-                      <span className="font-semibold bg-muted/30 px-3 py-1 rounded-full">
+                    <TableCell className="border-b border-border text-center py-4">
+                      <span className="font-semibold bg-muted/50 px-3 py-1 rounded-full">
                         {calculateWeightedScores(mark).weightedExamScore}
                       </span>
                     </TableCell>
-                    <TableCell className="border border-border text-center py-4">
-                      <span className="font-bold text-lg bg-primary/10 text-primary px-3 py-1 rounded-full border border-primary/20">
+                    <TableCell className="border-b border-border text-center py-4">
+                      <span className="font-bold text-lg px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary">
                         {Math.round(mark.total_score || 0)}
                       </span>
                     </TableCell>
-                    <TableCell className="border border-border text-center py-4">
+                    <TableCell className="border-b border-border text-center py-4">
                       <span className={`font-bold px-3 py-1 rounded-full border ${getGradeColor(mark.grade)}`}>
                         {mark.grade || 'F'}
                       </span>
                     </TableCell>
-                    <TableCell className="border border-border text-center py-4">
+                    <TableCell className="border-b border-border text-center py-4">
                       <span className="text-muted-foreground font-medium">
                         {getRemarkForGrade(mark.grade)}
                       </span>
@@ -170,19 +174,22 @@ export const SubjectsTableSection = ({
               )}
               {/* Add empty rows if less than 10 subjects */}
               {subjectMarks.length > 0 && Array.from({ length: Math.max(0, 10 - subjectMarks.length) }).map((_, index) => (
-                <TableRow key={`empty-${index}`} className={`${(subjectMarks.length + index) % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}>
-                  <TableCell className="border border-border h-12 text-center text-muted-foreground/50">—</TableCell>
-                  <TableCell className="border border-border text-center text-muted-foreground/50">—</TableCell>
-                  <TableCell className="border border-border text-center text-muted-foreground/50">—</TableCell>
-                  <TableCell className="border border-border text-center text-muted-foreground/50">—</TableCell>
-                  <TableCell className="border border-border text-center text-muted-foreground/50">—</TableCell>
-                  <TableCell className="border border-border text-center text-muted-foreground/50">—</TableCell>
+                <TableRow
+                  key={`empty-${index}`}
+                  className={(subjectMarks.length + index) % 2 === 0 ? 'bg-transparent' : 'bg-primary/5'}
+                >
+                  <TableCell className="border-b border-border h-12 text-center text-muted-foreground/30">—</TableCell>
+                  <TableCell className="border-b border-border text-center text-muted-foreground/30">—</TableCell>
+                  <TableCell className="border-b border-border text-center text-muted-foreground/30">—</TableCell>
+                  <TableCell className="border-b border-border text-center text-muted-foreground/30">—</TableCell>
+                  <TableCell className="border-b border-border text-center text-muted-foreground/30">—</TableCell>
+                  <TableCell className="border-b border-border text-center text-muted-foreground/30">—</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

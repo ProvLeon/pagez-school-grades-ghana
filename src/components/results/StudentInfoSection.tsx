@@ -34,78 +34,59 @@ export const StudentInfoSection = ({
   };
 
   return (
-    <Card className="mb-6 bg-gradient-to-r from-card to-card/80 border-primary/10 shadow-sm">
-      <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b border-primary/10">
-        <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2">
-          <div className="w-2 h-6 bg-primary rounded-full"></div>
-          Student Information
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-sm">
-          {/* Left Column */}
-          <div className="space-y-6">
-            <div className="group">
-              <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide mb-2 block">
-                Student's Name
-              </span>
-              <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
-                <span className="font-semibold text-foreground">
-                  {studentName || "Not specified"}
-                </span>
-              </div>
-            </div>
-            
-            <div className="group">
-              <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide mb-2 block">
-                Class
-              </span>
-              <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
-                <span className="font-semibold text-foreground">
-                  {className || "Not specified"}
-                </span>
-              </div>
-            </div>
-            
-            <div className="group">
-              <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide mb-2 block">
-                Academic Year
-              </span>
-              <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
-                <span className="font-semibold text-foreground">
-                  {academicYear || "Not specified"}
-                </span>
-              </div>
-            </div>
-            
-            <div className="group">
-              <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide mb-2 block">
-                Overall Position
-              </span>
-              <div className="bg-primary/10 rounded-lg p-3 border border-primary/20">
-                <span className="font-bold text-primary text-lg">
-                  {isLoadingPosition ? "Calculating..." : overallPosition || "Not ranked"}
-                </span>
-              </div>
-            </div>
+    <div className="mb-6 rounded-2xl border border-primary/20 bg-card text-card-foreground shadow-sm overflow-hidden">
+      {/* Top Banner / Name Section */}
+      <div className="px-6 py-6 sm:px-8 sm:py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-primary/10 bg-primary/5 relative overflow-hidden">
+        {/* Decorative Background Element */}
+        <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full blur-3xl opacity-20 bg-primary pointer-events-none" />
+
+        <div className="flex items-center gap-5 z-10">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold shadow-sm border-2 border-primary/20 bg-white text-primary">
+            {studentName ? studentName.charAt(0).toUpperCase() : '?'}
           </div>
-          
-          {/* Right Column */}
-          <div className="space-y-6">
-            <div className="group">
-              <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide mb-2 block">
-                Term
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mb-1">
+              {studentName || "Unknown Student"}
+            </h2>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full text-sm font-semibold border border-primary/20 bg-primary/10 text-primary">
+                {className || "Unassigned Class"}
               </span>
-              <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
-                <span className="font-semibold text-foreground">
-                  {term ? `${term.charAt(0).toUpperCase() + term.slice(1)} Term` : "Not specified"}
-                </span>
-              </div>
             </div>
-            
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Bottom Stats Strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x border-border/50 bg-background/50">
+        <div className="p-5 flex flex-col justify-center">
+          <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">Academic Year</span>
+          <span className="text-base font-medium text-foreground">{academicYear || "—"}</span>
+        </div>
+        
+        <div className="p-5 flex flex-col justify-center">
+          <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">Term</span>
+          <span className="text-base font-medium text-foreground">
+            {term ? `${term.charAt(0).toUpperCase() + term.slice(1)} Term` : "—"}
+          </span>
+        </div>
+
+        <div className="p-5 flex flex-col justify-center">
+          <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">No. on Roll</span>
+          <span className="text-base font-medium text-foreground">{noOnRoll || "—"}</span>
+        </div>
+
+        <div className="p-5 flex flex-col justify-center relative overflow-hidden group">
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-primary/5" />
+          <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1 z-10 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+            Overall Position
+          </span>
+          <span className="text-xl sm:text-2xl font-bold z-10 text-primary">
+            {isLoadingPosition ? "..." : overallPosition || "Not ranked"}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 };
