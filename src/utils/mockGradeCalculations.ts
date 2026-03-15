@@ -35,21 +35,13 @@ export const calculateMockGrade = (score: number): number => {
 };
 
 /**
- * Convert a numeric BECE grade (1-9) to its letter label
+ * Convert a numeric BECE grade (1-9) to its string representation
  */
 export const getMockGradeLabel = (grade: number): string => {
-  switch(grade) {
-    case 1: return 'A+';
-    case 2: return 'A';
-    case 3: return 'B+';
-    case 4: return 'B';
-    case 5: return 'C+';
-    case 6: return 'C';
-    case 7: return 'D+';
-    case 8: return 'E';
-    case 9: return 'F';
-    default: return '-';
+  if (grade >= 1 && grade <= 9) {
+    return grade.toString();
   }
+  return '-';
 };
 
 /**

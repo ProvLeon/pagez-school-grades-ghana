@@ -1167,18 +1167,7 @@ export default function MockExams() {
       const getGradeForScore = (score: number | null | undefined): string => {
         if (score === null || score === undefined) return '-';
         const g = getMockNumericGrade(score);
-        switch (g) {
-          case 1: return 'A+';
-          case 2: return 'A';
-          case 3: return 'B+';
-          case 4: return 'B';
-          case 5: return 'C+';
-          case 6: return 'C';
-          case 7: return 'D+';
-          case 8: return 'E';
-          case 9: return 'F';
-          default: return '-';
-        }
+        return g.toString();
       };
 
       const getRemarkForScore = (score: number | null | undefined): string => {
@@ -1775,7 +1764,7 @@ export default function MockExams() {
                                     return (
                                       <tr key={`grade-${grade}`} className={index % 2 === 0 ? 'bg-slate-50' : ''}>
                                         <td className="border px-3 py-2 font-semibold">
-                                          Grade {label} ({grade})
+                                          Grade {grade}
                                         </td>
                                         {Object.keys(stats.gradeBySubject).map((subject) => (
                                           <td key={`${subject}-${grade}`} className="border px-3 py-2 text-center">
