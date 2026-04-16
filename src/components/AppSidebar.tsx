@@ -183,12 +183,14 @@ export function AppSidebar() {
 
   // Fetch school settings for name and logo
   useEffect(() => {
+    let isMounted = true;
+
     const fetchSchoolSettings = async () => {
       try {
         // Get current user
         const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-        if (userError || !user) {
+        if (userError || !user || !isMounted) {
           console.error('Error getting user:', userError);
           return;
         }
@@ -205,7 +207,7 @@ export function AppSidebar() {
           return;
         }
 
-        if (data) {
+        if (data && isMounted) {
           if (data.school_name) {
             setSchoolName(data.school_name);
           }
@@ -221,34 +223,46 @@ export function AppSidebar() {
 
     fetchSchoolSettings();
 
-    // Subscribe to changes in school_settings
-    const channel = supabase
-      .channel('school_settings_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'school_settings'
-        },
-        (payload: { new: { school_name?: string; logo_url?: string } | null }) => {
-          if (payload.new) {
-            if (payload.new.school_name) {
-              setSchoolName(payload.new.school_name);
-            }
-            if (payload.new.logo_url) {
-              setSchoolLogo(payload.new.logo_url);
-              setLogoError(false);
-            } else {
-              setSchoolLogo(null);
+    // Subscribe to changes in school_settings - properly handle React 18 Strict Mode
+    let channel: any = null;
+    try {
+      // Clean up any existing channels with this name to prevent duplicates
+      supabase.removeAllChannels();
+
+      // Create and subscribe to channel
+      channel = supabase
+        .channel('school_settings_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'school_settings'
+          },
+          (payload: { new: { school_name?: string; logo_url?: string } | null }) => {
+            if (payload.new && isMounted) {
+              if (payload.new.school_name) {
+                setSchoolName(payload.new.school_name);
+              }
+              if (payload.new.logo_url) {
+                setSchoolLogo(payload.new.logo_url);
+                setLogoError(false);
+              } else {
+                setSchoolLogo(null);
+              }
             }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    } catch (error) {
+      console.error('Error setting up school_settings subscription:', error);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      isMounted = false;
+      if (channel) {
+        channel.unsubscribe();
+      }
     };
   }, []);
 

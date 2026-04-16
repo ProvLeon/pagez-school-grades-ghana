@@ -11,12 +11,15 @@ import { WalkthroughProvider } from "@/contexts/WalkthroughContext";
 import { WalkthroughOverlay, FloatingHelpButton } from "@/components/walkthrough";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { SubscriptionOverlay } from "@/components/billing/SubscriptionOverlay";
+import { TrialBanner } from "@/components/billing/TrialBanner";
 // TeacherProtectedRoute no longer needed - using unified role-based routes
 import { getUserOrganizationId } from "@/utils/organizationHelper";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 
 // Pages
+import Index from "./pages/Index";
 import NoOrganization from "./pages/NoOrganization";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -163,6 +166,8 @@ const ProtectedAppRoute = ({
   return (
     <ProtectedRoute requireAdmin={requireAdmin}>
       <AppLayout>
+        <TrialBanner />
+        <SubscriptionOverlay />
         {children}
       </AppLayout>
     </ProtectedRoute>
@@ -238,7 +243,8 @@ const App = () => {
                   <FloatingHelpButton />
                   <Routes>
                     {/* Public Routes */}
-                    <Route path="/login" element={disableAuth ? <ForceRedirect to="/" /> : <Login />} />
+                    <Route path="/" element={<Index />} />
+                    <Route path="/login" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <Login />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/signup" element={<SignUp />} />
@@ -257,7 +263,7 @@ const App = () => {
 
                     {/* Protected Routes */}
                     <Route
-                      path="/"
+                      path="/dashboard"
                       element={
                         <ProtectedAppRoute>
                           <Dashboard />
@@ -456,18 +462,17 @@ const App = () => {
                     />
 
                     {/* Legacy routes - redirect to unified routes */}
-                    <Route path="/teacher/dashboard" element={<Navigate to="/" replace />} />
-                    <Route path="/teacher-dashboard" element={<Navigate to="/" replace />} />
+                    <Route path="/teacher/dashboard" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/teacher-dashboard" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/teacher/results/add" element={<Navigate to="/results/add-results" replace />} />
                     <Route path="/teacher/results/manage" element={<Navigate to="/results/manage-results" replace />} />
                     <Route path="/teacher/manage-results" element={<Navigate to="/results/manage-results" replace />} />
 
                     {/* Redirects */}
-                    <Route path="/dashboard" element={<Navigate to="/" replace />} />
                     <Route path="/manage-profile" element={<Navigate to="/profile" replace />} />
 
                     {/* 404 - Keep this last */}
-                    <Route path="*" element={disableAuth ? <ForceRedirect to="/" /> : <NotFound />} />
+                    <Route path="*" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <NotFound />} />
                   </Routes>
                 </WalkthroughProvider>
               </BrowserRouter>

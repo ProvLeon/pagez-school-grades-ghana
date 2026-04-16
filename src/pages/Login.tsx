@@ -72,7 +72,7 @@ const Login = () => {
 
   // If authenticated, redirect immediately - don't render anything else
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const validateForm = (): boolean => {
