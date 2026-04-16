@@ -18,7 +18,7 @@ export const billingService = {
 
     const { data, error } = await supabase
       .from('organizations')
-      .select('id, name, subscription_status, declared_seat_count, trial_ends_at, current_subscription_ends_at')
+      .select('id, name, subscription_status, declared_seat_count, trial_ends_at, current_subscription_ends_at, billing_enabled')
       .eq('id', userOrg.organization_id)
       .single();
 
@@ -35,12 +35,51 @@ export const billingService = {
       .from('students')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', orgId);
-      
+
     if (error) {
       console.error('Error getting student count:', error);
       return 0;
     }
     return count || 0;
+  },
+
+  async toggleBillingEnabled(orgId: string, enabled: boolean): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .rpc('toggle_organization_billing', {
+          org_id: orgId,
+          enabled: enabled
+        });
+
+      if (error) {
+        console.error('Error toggling billing status:', error);
+        return false;
+      }
+
+      return data === true;
+    } catch (err) {
+      console.error('Failed to toggle billing:', err);
+      return false;
+    }
+  },
+
+  async updateBillingEnabledDirect(orgId: string, enabled: boolean): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({ billing_enabled: enabled })
+        .eq('id', orgId);
+
+      if (error) {
+        console.error('Error updating billing status:', error);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Failed to update billing status:', err);
+      return false;
+    }
   },
 
   async loadPaystack(): Promise<any> {
@@ -61,7 +100,7 @@ export const billingService = {
   async initializePayment(email: string, amountGHS: number, organizationId: string, reference: string, onSuccess: () => void) {
     try {
       const PaystackPop = await this.loadPaystack();
-      
+
       // Paystack amount is always the lowest currency unit (pesewas)
       const amountInPesewas = amountGHS * 100;
       const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
@@ -71,13 +110,13 @@ export const billingService = {
         alert("Payment configuration error. Please contact support.");
         return;
       }
-      
+
       const handler = PaystackPop.setup({
         key: publicKey,
         email: email,
         amount: amountInPesewas,
         currency: "GHS",
-        ref: reference, 
+        ref: reference,
         metadata: {
           organization_id: organizationId, // For the webhook to know which tenant to upgrade
           custom_fields: [
@@ -88,12 +127,12 @@ export const billingService = {
             }
           ]
         },
-        callback: function(response: any) {
+        callback: function (response: any) {
           console.log("Paystack payment success. Reference:", response.reference);
           // Webhook handles actual verification and DB updating, but frontend can refresh optimistically
           onSuccess();
         },
-        onClose: function() {
+        onClose: function () {
           console.log("Paystack window closed by user.");
         }
       });

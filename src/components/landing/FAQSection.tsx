@@ -11,12 +11,12 @@ const faqs = [
     a: "e-Results GH is a purpose-built school management platform for Ghanaian schools. It provides BECE-standard grading, instant report sheet generation, student lifecycle management, mock exam administration, teacher portals, and powerful analytics — all in one secure, cloud-based system designed around the realities of Ghana Education Service requirements.",
   },
   {
-    q: "How does the 30-day free trial work?",
-    a: "When you sign up, you get full, unrestricted access to all platform features for 30 days — no payment information or credit card required. At day 30, the platform enters a Soft-Lock state: your school's data is fully preserved and viewable, but new entries and edits are paused until an active subscription is in place. You can activate a plan at any point during or after the trial.",
+    q: "How does the 14-day free trial work?",
+    a: "When you sign up, you get full access to all platform features for 14 days with a cap of 10 students — no payment or credit card required. After the trial, the platform enters a Soft-Lock state: your school's data is fully preserved and viewable, but new entries and edits are paused until an active subscription is in place. You can activate your plan at any point during or after the trial.",
   },
   {
     q: "How is pricing calculated?",
-    a: "Pricing is based on the number of enrolled students in your school and is charged annually. The per-student rate decreases as your student count grows — Starter (1–250 students) at GHS 2.50/student/year, Standard (251–600 students) at GHS 2.00/student/year, and Growth (601–1,200 students) at GHS 1.75/student/year. You only pay for the students you register.",
+    a: "Pricing is a simple flat rate of GHS 2.00 per registered student, billed annually. You only pay for the students you register — no hidden fees, no tiers. The more students you have, the more value you get from the platform.",
   },
   {
     q: "Can I pay with Mobile Money?",

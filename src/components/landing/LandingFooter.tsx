@@ -12,8 +12,8 @@ const LandingFooter = () => {
           {/* Brand Column */}
           <div className="md:col-span-1 space-y-5">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-[#2563EB] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">e</span>
+              <div className="rounded-lg flex items-center justify-center">
+                <img src="/ERESULTS_LOGO.png" alt="Logo" className="w-8 h-8" />
               </div>
               <span className="text-lg font-bold">e-Results GH</span>
             </div>

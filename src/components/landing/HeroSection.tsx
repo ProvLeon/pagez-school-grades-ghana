@@ -81,7 +81,7 @@ const HeroSection = () => {
 
         {/* Social proof hint */}
         <p className="mt-4 text-xs text-gray-400 text-center">
-          30-day free trial · No credit card required · Cancel anytime
+          14-day free trial · 10 student cap · No credit card required
         </p>
 
         {/* Browser Mockup */}

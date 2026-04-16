@@ -30,7 +30,7 @@ const CTASection = () => {
         {/* Subtitle */}
         <p className="mt-5 text-base md:text-lg text-slate-400 max-w-xl mx-auto leading-relaxed">
           Join schools across Ghana managing their results the smart way. Your
-          30-day free trial is waiting — no setup fees, no complexity.
+          14-day free trial is waiting — no setup fees, no complexity.
         </p>
 
         {/* CTA Button */}
@@ -57,7 +57,7 @@ const CTASection = () => {
         {/* Trust indicators */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
           {[
-            "30-Day Free Trial",
+            "14-Day Free Trial",
             "BECE-Standard Grading",
             "Secure Cloud Storage",
             "MTN MoMo Payments",

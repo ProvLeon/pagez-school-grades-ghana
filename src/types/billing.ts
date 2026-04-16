@@ -7,4 +7,5 @@ export interface OrganizationBilling {
   declared_seat_count: number;
   trial_ends_at: string | null;
   current_subscription_ends_at: string | null;
+  billing_enabled: boolean;
 }

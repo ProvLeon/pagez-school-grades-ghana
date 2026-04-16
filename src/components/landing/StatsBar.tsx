@@ -3,7 +3,7 @@ import { Award, FileOutput, CalendarCheck, ShieldCheck } from "lucide-react";
 const stats = [
   { icon: Award, label: "BECE-Standard Grading" },
   { icon: FileOutput, label: "Instant PDF Reports" },
-  { icon: CalendarCheck, label: "30-Day Free Trial" },
+  { icon: CalendarCheck, label: "14-Day Free Trial" },
   { icon: ShieldCheck, label: "Secure Cloud Storage" },
 ];
 

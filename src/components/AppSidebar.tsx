@@ -54,7 +54,7 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/dashboard",
     icon: LayoutDashboard,
     tourId: "sidebar-dashboard"
     // All roles can see dashboard

@@ -4,6 +4,7 @@ import HeroSection from "@/components/landing/HeroSection";
 import StatsBar from "@/components/landing/StatsBar";
 import FeaturesSection from "@/components/landing/FeaturesSection";
 import WhyChooseSection from "@/components/landing/WhyChooseSection";
+import VideoTeaserSection from "@/components/landing/VideoTeaserSection";
 import PricingSection from "@/components/landing/PricingSection";
 import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import FAQSection from "@/components/landing/FAQSection";
@@ -47,6 +48,9 @@ const Index = () => {
 
         {/* Why Choose Section */}
         <WhyChooseSection />
+
+        {/* Video Teaser Section - Optimal position: post-awareness, pre-pricing decision */}
+        <VideoTeaserSection />
 
         {/* Pricing Section */}
         <PricingSection />

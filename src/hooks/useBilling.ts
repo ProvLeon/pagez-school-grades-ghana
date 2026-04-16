@@ -10,6 +10,7 @@ export const useBilling = () => {
   const [billing, setBilling] = useState<OrganizationBilling | null>(null);
   const [studentCount, setStudentCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
+  const [togglingBilling, setTogglingBilling] = useState<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,24 +46,87 @@ export const useBilling = () => {
 
   const initiatePayment = async (amountGHS: number) => {
     if (!billing || !user) {
-      toast({ title: "Error", description: "Cannot initiate payment. Missing user or organization info.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Cannot initiate payment. Missing user or organization info.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!billing.billing_enabled) {
+      toast({
+        title: "Billing Disabled",
+        description: "Billing has been disabled for this organization by the administrator.",
+        variant: "destructive"
+      });
       return;
     }
 
     const reference = `REF_${Date.now()}_${billing.id.substring(0, 8)}`;
-    
+
     await billingService.initializePayment(user.email || 'admin@school.com', amountGHS, billing.id, reference, () => {
-      toast({ title: "Payment Successful", description: "Your payment was processed. Your account status should update shortly." });
+      toast({
+        title: "Payment Successful",
+        description: "Your payment was processed. Your account status should update shortly."
+      });
       // Optimistically reload billing
       setTimeout(fetchBilling, 2000); // Small delay to allow webhook processing
     });
+  };
+
+  const toggleBillingEnabled = async (enabled: boolean) => {
+    if (!billing) {
+      toast({
+        title: "Error",
+        description: "Cannot toggle billing without organization info.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setTogglingBilling(true);
+
+      // Try using the RPC function first
+      const success = await billingService.toggleBillingEnabled(billing.id, enabled);
+
+      if (success) {
+        // Update local state
+        setBilling(prev => prev ? { ...prev, billing_enabled: enabled } : null);
+        toast({
+          title: "Success",
+          description: `Billing has been ${enabled ? 'enabled' : 'disabled'} for your organization.`
+        });
+        // Refresh to get latest data
+        await fetchBilling();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update billing status. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (err) {
+      console.error("Error toggling billing:", err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while updating billing status.",
+        variant: "destructive"
+      });
+    } finally {
+      setTogglingBilling(false);
+    }
   };
 
   return {
     billing,
     studentCount,
     loading,
+    togglingBilling,
     refreshBilling: fetchBilling,
-    initiatePayment
+    initiatePayment,
+    toggleBillingEnabled,
+    isBillingEnabled: billing?.billing_enabled ?? true
   };
 };

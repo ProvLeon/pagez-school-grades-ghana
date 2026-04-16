@@ -26,7 +26,8 @@ import {
   Settings as SettingsIcon,
   Building2,
   Sparkles,
-  Loader2
+  Loader2,
+  CreditCard
 } from "lucide-react";
 import { SettingsLoadingState } from '@/components/settings/SettingsLoadingState';
 import { useSettingsForm } from '@/hooks/useSettingsForm';
@@ -34,8 +35,9 @@ import { WalkthroughTrigger } from '@/components/walkthrough';
 import { cn } from '@/lib/utils';
 import { Suspense } from 'react';
 const SignatureUpload = React.lazy(() => import('@/components/SignatureUpload'));
+import { BillingAdminSettings } from '@/components/settings/BillingAdminSettings';
 
-type SettingsTab = 'school' | 'branding';
+type SettingsTab = 'school' | 'branding' | 'billing';
 
 const Settings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -98,6 +100,13 @@ const Settings = () => {
       icon: Palette,
       description: 'Logo, signature & colors',
       complete: brandingComplete
+    },
+    {
+      id: 'billing' as SettingsTab,
+      label: 'Billing',
+      icon: CreditCard,
+      description: 'Billing & subscriptions',
+      complete: true
     },
   ];
 
@@ -322,6 +331,13 @@ const Settings = () => {
                     </div>
                   </CardContent>
                 </Card>
+              </div>
+            )}
+
+            {/* Billing Tab */}
+            {activeTab === 'billing' && (
+              <div className="space-y-6 animate-fade-in">
+                <BillingAdminSettings />
               </div>
             )}
 

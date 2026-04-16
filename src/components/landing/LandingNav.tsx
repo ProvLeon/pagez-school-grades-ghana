@@ -46,8 +46,8 @@ const LandingNav = () => {
             onClick={(e) => { e.preventDefault(); handleNavClick("#home"); }}
             className="flex items-center gap-2.5 group"
           >
-            <div className="w-8 h-8 bg-[#2563EB] rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
-              <BookOpen className="w-4 h-4 text-white" />
+            <div className="rounded-lg flex items-center justify-center transition-transform">
+              <img src="/ERESULTS_LOGO.png" alt="Logo" className="w-8 h-8" />
             </div>
             <span
               className={cn(
