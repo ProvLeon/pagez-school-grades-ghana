@@ -21,7 +21,7 @@ const PremiumImageMockup = ({ src, alt, align }: { src: string; alt: string; ali
             ? 'linear-gradient(to right, black 10%, transparent 100%)'
             : 'linear-gradient(to left, black 60%, transparent 100%)',
           maskImage: align === 'left'
-            ? 'linear-gradient(to right, black 40%, transparent 100%)'
+            ? 'linear-gradient(to right, black 10%, transparent 100%)'
             : 'linear-gradient(to left, black 60%, transparent 100%)',
         }}
       >
