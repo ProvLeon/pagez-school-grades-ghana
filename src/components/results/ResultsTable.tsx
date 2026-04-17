@@ -44,7 +44,14 @@ const ResultsTable = ({ results, ...props }: ResultsTableProps) => {
 const MobileResultsView = ({ results, selectedResults, onSelectResult, onView, onEdit, onDownload, onPublish, onDelete }: Omit<ResultsTableProps, 'isAllSelected' | 'isIndeterminate' | 'onSelectAll'>) => (
   <div className="space-y-4">
     {results.map((result) => (
-      <Card key={result.id} className="p-4">
+      <Card 
+        key={result.id} 
+        className="p-4 cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-500/30 transition-all hover:shadow-md hover:shadow-indigo-500/5"
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('[role="checkbox"]')) return;
+          onView(result.id);
+        }}
+      >
         <div className="flex items-start gap-4">
           <Checkbox
             checked={selectedResults.includes(result.id)}
@@ -63,6 +70,11 @@ const MobileResultsView = ({ results, selectedResults, onSelectResult, onView, o
               <p className="font-semibold truncate">{result.student?.full_name || 'Unknown'}</p>
               <p className="text-sm text-muted-foreground truncate">{result.student?.student_id}</p>
               <p className="text-xs text-muted-foreground truncate">{result.class?.name} &bull; {result.term} Term {result.academic_year}</p>
+              {(!result.subject_marks || result.subject_marks.length === 0) ? (
+                <Badge variant="outline" className="mt-2 text-[10px] uppercase font-bold py-0.5 px-2 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20">Pending Scores</Badge>
+              ) : (
+                <Badge variant="secondary" className="mt-2 text-[10px] uppercase font-bold py-0.5 px-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-0 dark:bg-emerald-500/10 dark:text-emerald-400">Scores Added</Badge>
+              )}
             </div>
           </div>
           <DropdownMenu>
@@ -93,12 +105,20 @@ const DesktopResultsView = ({ results, selectedResults, isAllSelected, isIndeter
             <TableHead>Student</TableHead>
             <TableHead>Class/Dept</TableHead>
             <TableHead>Term/Session</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {results.map((result) => (
-            <TableRow key={result.id}>
+            <TableRow 
+              key={result.id} 
+              className="cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 transition-colors group"
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('[role="checkbox"]')) return;
+                onView(result.id);
+              }}
+            >
               <TableCell><Checkbox checked={selectedResults.includes(result.id)} onCheckedChange={(checked) => onSelectResult(result.id, checked as boolean)} /></TableCell>
               <TableCell>
                 <div className="flex items-center gap-3">
@@ -122,6 +142,13 @@ const DesktopResultsView = ({ results, selectedResults, isAllSelected, isIndeter
               <TableCell>
                 <div>{result.term} Term</div>
                 <div className="text-sm text-muted-foreground">{result.academic_year}</div>
+              </TableCell>
+              <TableCell>
+                {(!result.subject_marks || result.subject_marks.length === 0) ? (
+                  <Badge variant="outline" className="text-[10px] uppercase font-bold py-0.5 px-2 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20">Pending Scores</Badge>
+                ) : (
+                   <Badge variant="secondary" className="text-[10px] uppercase font-bold py-0.5 px-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-0 dark:bg-emerald-500/10 dark:text-emerald-400">Scores Added</Badge>
+                )}
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
