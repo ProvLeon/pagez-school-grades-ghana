@@ -15,7 +15,7 @@ const features = [
     textPosition: "top"
   },
   {
-    title: "BECE-Standard Grading",
+    title: "WAEC-BECE Standard Grading",
     description: "Automated grading mathematically aligned to Ghana Education Service standards. SBA, exam scores, aggregates, and positions computed instantly.",
     highlight: false,
     large: false,
@@ -40,7 +40,7 @@ const features = [
     highlight: false,
     large: false,
     gridClass: "md:col-span-1 lg:col-span-1 lg:row-span-1",
-    image: "/images/Screenshot 2026-04-16 at 07.24.00.png",
+    image: "/images/classes.png",
     imageClass: "absolute -bottom-8 -right-8 w-[95%] h-auto rounded-tl-2xl shadow-xl transition-transform duration-700 group-hover:-translate-y-2",
     textPosition: "top"
   },
@@ -50,8 +50,8 @@ const features = [
     highlight: false,
     large: false,
     gridClass: "md:col-span-1 lg:col-span-2 lg:row-span-1",
-    image: "/images/Screenshot 2026-04-16 at 07.26.48.png",
-    imageClass: "absolute top-8 -right-10 w-3/5 h-auto rounded-l-2xl shadow-2xl transition-transform duration-700 group-hover:-translate-x-2",
+    image: "/images/mock_exam.png",
+    imageClass: "absolute top-8 -right-10 w-6/6 h-auto rounded-l-2xl shadow-2xl transition-transform duration-700 group-hover:-translate-x-2 object-cover object-top-left",
     textPosition: "left"
   },
   {
@@ -61,7 +61,7 @@ const features = [
     large: false,
     gridClass: "md:col-span-1 lg:col-span-2 lg:row-span-1",
     image: "/images/analytics.png",
-    imageClass: "absolute top-8 -right-10 w-3/5 h-[120%] rounded-l-xl shadow-xl object-cover object-left-bottom transition-transform duration-700 group-hover:-translate-x-2",
+    imageClass: "absolute top-8 -right-10 w-4/6 h-[120%] rounded-l-xl shadow-xl object-cover object-left-bottom transition-transform duration-700 group-hover:-translate-x-2",
     textPosition: "left"
   },
 ];

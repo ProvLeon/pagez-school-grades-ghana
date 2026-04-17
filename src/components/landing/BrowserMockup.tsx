@@ -7,8 +7,8 @@ interface BrowserMockupProps {
 
 const BrowserMockup = ({ dark = false, variant = "dashboard" }: BrowserMockupProps) => {
   const screenshotMap = {
-    dashboard: "/images/Screenshot 2026-04-16 at 07.26.48.png",
-    classes: "/images/Screenshot 2026-04-16 at 07.24.00.png",
+    dashboard: "/images/dashboard.png",
+    classes: "/images/classes.png",
   };
 
   const screenshotUrl = screenshotMap[variant];
