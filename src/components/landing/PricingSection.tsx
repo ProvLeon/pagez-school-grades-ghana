@@ -82,13 +82,13 @@ const PricingSection = () => {
 
                 {/* Price */}
                 <div className="flex items-end justify-center gap-1 mb-2">
-                  <span className="text-xl md:text-2xl font-bold text-gray-400 self-start mt-3">
+                  <span className="text-xl md:text-2xl font-bold text-gray-400 self-start mt-4">
                     GHS
                   </span>
-                  <span className="text-7xl md:text-8xl font-black text-gray-900 leading-none tracking-tighter">
+                  <span className="text-8xl md:text-9xl font-black pb-1 text-transparent bg-clip-text bg-gradient-to-br from-black to-slate-400 leading-none tracking-tighter drop-shadow-sm">
                     2
                   </span>
-                  <span className="text-3xl md:text-4xl font-extrabold text-gray-400 self-end mb-2">
+                  <span className="text-3xl md:text-4xl font-extrabold text-gray-400 self-end mb-3">
                     .00
                   </span>
                 </div>
