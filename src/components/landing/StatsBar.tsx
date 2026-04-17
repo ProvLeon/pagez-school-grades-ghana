@@ -1,6 +1,6 @@
 const stats = [
   { imgUrl: "/logos Statsbar/WAEC-Logo2.png", label: "WAEC-BECE Standard Grading" },
-  { imgUrl: "/logos Statsbar/—Pngtree—pdf file icon png vector_7965915.png", label: "Instant PDF Reports" },
+  { imgUrl: "/logos Statsbar/PDF_file_icon.png", label: "Instant PDF Reports" },
   { imgUrl: "/logos Statsbar/day-free-trial-rubber-stamp-days.png", label: "14-Day Free Trial" },
   { imgUrl: "/logos Statsbar/Cloudflare.png", label: "Secure Cloud Storage" },
 ];
@@ -13,9 +13,9 @@ const StatsBar = () => {
           {stats.map(({ imgUrl, label }) => (
             <div
               key={label}
-              className="flex items-center justify-center gap-4 py-4 md:py-6 px-6 flex-1 group"
+              className="flex items-center justify-center gap-4 py-4 md:py-6 px-6 flex-1 group cursor-default"
             >
-              <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 transition-transform duration-400 ease-out group-hover:-translate-y-1">
+              <div className={`${label === "WAEC-BECE Standard Grading" ? "w-16 h-16" : "w-12 h-12"} flex items-center justify-center flex-shrink-0`}>
                 <img
                   src={imgUrl}
                   alt={label}
