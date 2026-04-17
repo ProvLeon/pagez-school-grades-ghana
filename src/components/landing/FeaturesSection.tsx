@@ -11,6 +11,7 @@ const features = [
     gridClass: "md:col-span-2 lg:col-span-2 lg:row-span-2",
     image: "/images/report.png",
     imageClass: "absolute -bottom-8 -right-8 w-[85%] h-auto max-h-[80%] rounded-tl-3xl shadow-2xl ring-1 ring-black/10 object-cover object-left-top transition-transform duration-700 group-hover:-translate-y-2 group-hover:-translate-x-2",
+    overlayClass: "absolute inset-0 pointer-events-none bg-gradient-to-br from-[#1E3A8B] via-[#2563EB]/95 via-[#2563EB]/90 to-transparent",
     textPosition: "top"
   },
   {
@@ -60,7 +61,7 @@ const features = [
     large: false,
     gridClass: "md:col-span-1 lg:col-span-2 lg:row-span-1",
     image: "/images/analytics.png",
-    imageClass: "absolute top-8 -right-10 w-3/5 h-[120%] rounded-l-xl shadow-xl object-cover object-left-top transition-transform duration-700 group-hover:-translate-x-2",
+    imageClass: "absolute top-8 -right-10 w-3/5 h-[120%] rounded-l-xl shadow-xl object-cover object-left-bottom transition-transform duration-700 group-hover:-translate-x-2",
     textPosition: "left"
   },
 ];
@@ -71,7 +72,7 @@ const FeaturesSection = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px" }}
@@ -80,7 +81,7 @@ const FeaturesSection = () => {
           >
             Capabilities
           </motion.div>
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px" }}
@@ -91,7 +92,7 @@ const FeaturesSection = () => {
             <br className="hidden sm:block" />
             School Administration
           </motion.h2>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-50px" }}
@@ -103,7 +104,7 @@ const FeaturesSection = () => {
         </div>
 
         {/* Bento Grid */}
-        <motion.div 
+        <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: false, margin: "-50px" }}
@@ -116,7 +117,7 @@ const FeaturesSection = () => {
           }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 auto-rows-[minmax(300px,_auto)]"
         >
-          {features.map(({ title, description, highlight, large, gridClass, image, imageClass, textPosition }) => (
+          {features.map(({ title, description, highlight, large, gridClass, image, imageClass, overlayClass, textPosition }) => (
             <motion.div
               key={title}
               variants={{
@@ -129,7 +130,7 @@ const FeaturesSection = () => {
                 className={cn(
                   "group relative h-full w-full rounded-[30px] overflow-hidden transition-all duration-500",
                   highlight
-                    ? "bg-gradient-to-br from-[#2563EB] to-[#1E3A8A] text-white shadow-2xl shadow-blue-900/20"
+                    ? "bg-gradient-to-br from-primary to-[#1E3A8A] text-white shadow-2xl shadow-blue-900/20"
                     : "bg-white text-gray-900 border border-gray-200/50 shadow-lg shadow-gray-200/30 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1"
                 )}
               >
@@ -137,13 +138,17 @@ const FeaturesSection = () => {
                 {image && (
                   <>
                     <img src={image} alt={title} className={imageClass} />
-                    {/* Shadow masking so text over image remains perfectly legible in corners */}
-                    <div className={cn(
-                      "absolute inset-0 pointer-events-none transition-opacity duration-500",
-                      highlight 
-                         ? "bg-gradient-to-t from-transparent via-[#2563EB]/40 to-[#2563EB]/80 opacity-50"
-                         : "bg-gradient-to-t from-white/90 via-white/50 to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/90 lg:to-transparent"
-                    )} />
+                    {/* Per-card custom overlay OR shared default gradient mask */}
+                    {overlayClass ? (
+                      <div className={overlayClass} />
+                    ) : (
+                      <div className={cn(
+                        "absolute inset-0 pointer-events-none transition-opacity duration-500",
+                        highlight
+                          ? "bg-gradient-to-t from-transparent via-primary to-primary opacity-50"
+                          : "bg-gradient-to-t from-white/90 via-white/50 to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/90 lg:to-transparent"
+                      )} />
+                    )}
                   </>
                 )}
 
@@ -152,13 +157,13 @@ const FeaturesSection = () => {
                   "relative z-10 flex flex-col h-full gap-4 p-8 md:p-10 pointer-events-none",
                   textPosition === "left" && !highlight ? "w-full md:w-3/5 lg:w-1/2 justify-center" : "justify-start"
                 )}>
-                  
+
                   {/* Subtle Text Tagging */}
                   {highlight && large && (
                     <div className="mb-2">
-                       <span className="inline-block py-1 px-3 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold text-white uppercase tracking-widest border border-white/20">
-                          Flagship Engine
-                       </span>
+                      <span className="inline-block py-1 px-3 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold text-white uppercase tracking-widest border border-white/20">
+                        Flagship Engine
+                      </span>
                     </div>
                   )}
 
