@@ -20,6 +20,8 @@ const PricingSection = () => {
 
   return (
     <section id="pricing" className="py-20 md:py-28 bg-gray-50/80">
+      <div className="absolute inset-y-0 left-0 w-24 md:w-52 bg-gradient-to-r from-white to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-y-0 right-0 w-24 md:w-52 bg-gradient-to-l from-white to-transparent pointer-events-none z-10" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Section Header */}
@@ -60,21 +62,24 @@ const PricingSection = () => {
           whileInView={{ opacity: 1, scale: 1, y: 0 }}
           viewport={{ once: false, margin: "-50px" }}
           transition={{ duration: 0.6, ease: [0.21, 0.47, 0.32, 0.98] }}
-          className="relative max-w-xl mx-auto group"
+          className="relative max-w-5xl mx-auto group"
         >
           {/* Ambient Glow behind the card */}
-          <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/0 via-blue-500/20 to-blue-500/0 rounded-[3rem] blur-2xl pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity duration-700" />
+          <div className="absolute -inset-6 bg-gradient-to-r from-transparent via-blue-400/15 to-transparent rounded-[3rem] blur-3xl pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity duration-700" />
 
-          {/* Fading Border Container */}
-          <div className="relative p-[1.5px] rounded-[32px] bg-gradient-to-r from-transparent via-blue-500/70 to-transparent shadow-2xl shadow-blue-500/10 text-center transition-all duration-500 group-hover:shadow-blue-500/30">
-
-            {/* Inner Glassmorphic Surface */}
-            <div className="relative bg-white/90 backdrop-blur-2xl rounded-[30px] p-8 md:p-12 overflow-hidden border-y border-white flex flex-col items-center">
+          {/* Single Card Surface — masked edges, no nested wrapper */}
+          <div
+            className="relative bg-white rounded-[32px] p-8 md:p-12 overflow-hidden flex flex-col items-center border-t border-b border-blue-300/40 shadow-[0_20px_60px_-15px_rgba(37,99,235,0.10)] transition-all duration-500 group-hover:shadow-[0_20px_60px_-15px_rgba(37,99,235,0.20)]"
+            style={{
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+              maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+            }}
+          >
               {/* Internal ambient glow */}
-              <div className="absolute -top-32 -right-32 w-96 h-96 bg-blue-50/50 rounded-full blur-[80px] pointer-events-none" />
-              <div className="absolute -bottom-32 -left-40 w-96 h-96 bg-purple-50/50 rounded-full blur-[80px] pointer-events-none" />
+              <div className="absolute -top-32 -right-32 w-96 h-96 bg-blue-50/40 rounded-full blur-[100px] pointer-events-none" />
+              <div className="absolute -bottom-32 -left-40 w-96 h-96 bg-purple-50/30 rounded-full blur-[100px] pointer-events-none" />
 
-              <div className="relative z-10 w-full">
+              <div className="relative z-10 w-full text-center">
                 {/* Badge */}
                 <span className="inline-block py-1.5 px-5 rounded-full bg-blue-50 text-primary font-bold text-xs tracking-wide uppercase mb-8 border border-blue-100">
                   Annual Plan
@@ -142,7 +147,6 @@ const PricingSection = () => {
                   required.
                 </p>
               </div>
-            </div>
           </div>
         </motion.div>
 
