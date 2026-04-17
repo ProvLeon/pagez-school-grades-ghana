@@ -147,28 +147,28 @@ export function findNextClassInDatabase(
   allClasses: ClassMapping[],
   preferredDepartmentId?: string
 ): ClassMapping | null {
-  const nextClassName = getNextClass(currentClassName);
+  const currentIndex = getProgressionIndex(currentClassName);
 
-  if (!nextClassName) {
-    return null; // Graduation or not in progression
+  if (currentIndex === -1) {
+    return null; // Not in progression
   }
 
-  if (nextClassName === "Graduation") {
-    return null; // Special case - will be handled separately
+  if (shouldGraduate(currentClassName)) {
+    return null; // Graduation
   }
 
-  const normalizedNext = normalizeClassName(nextClassName);
+  const expectedNextIndex = currentIndex + 1;
 
-  // First try to find a class in the same department
+  // First try to find a class in the same department with the next progression index
   if (preferredDepartmentId) {
     const sameDeptClass = allClasses.find(
-      cls => cls.normalizedName === normalizedNext && cls.department_id === preferredDepartmentId
+      cls => cls.progressionIndex === expectedNextIndex && cls.department_id === preferredDepartmentId
     );
     if (sameDeptClass) return sameDeptClass;
   }
 
-  // Fall back to any class with the right name
-  return allClasses.find(cls => cls.normalizedName === normalizedNext) || null;
+  // Fall back to any class with the right progression index
+  return allClasses.find(cls => cls.progressionIndex === expectedNextIndex) || null;
 }
 
 /**
