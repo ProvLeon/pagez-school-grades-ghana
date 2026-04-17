@@ -443,9 +443,8 @@ export function BulkPromotionDialog({ trigger }: BulkPromotionDialogProps) {
                           >
                             <Checkbox
                               checked={selectedStudentIds.includes(student.id)}
-                              onCheckedChange={() =>
-                                handleStudentToggle(student.id)
-                              }
+                              onCheckedChange={() => handleStudentToggle(student.id)}
+                              onClick={(e) => e.stopPropagation()}
                             />
                             <div className="flex-1">
                               <p className="font-medium text-sm">
