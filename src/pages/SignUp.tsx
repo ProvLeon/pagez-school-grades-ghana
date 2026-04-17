@@ -178,12 +178,12 @@ const SignUp = () => {
       console.error("Sign up error:", err);
 
       let errorMessage = "Failed to create account. Please try again.";
-      
+
       // Handle the new Supabase error signatures for duplicates
       if (
-        err.message?.toLowerCase().includes("already registered") || 
+        err.message?.toLowerCase().includes("already registered") ||
         err.message?.toLowerCase().includes("user already exists") ||
-        err.status === 422 || 
+        err.status === 422 ||
         err.code === "user_already_exists"
       ) {
         errorMessage = "An account with this email or phone number already exists.";

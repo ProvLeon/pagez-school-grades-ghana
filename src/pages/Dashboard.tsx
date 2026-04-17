@@ -79,102 +79,103 @@ const TeacherDashboardContent = () => {
 
   return (
     <div className="space-y-6">
-      {/* Teacher Welcome */}
-      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            Welcome back, {teacherRecord?.full_name || 'Teacher'}!
-          </CardTitle>
-          <CardDescription>
-            Here's an overview of your classes and results
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      {/* Teacher Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {teacherStats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Teacher Welcome - Elevated */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-[#0f172a] to-[#1e3a8a] p-8 shadow-lg shadow-blue-900/20">
+        <div className="absolute -right-20 -top-20 z-0 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="absolute inset-0 z-0 bg-[url('/grid-pattern.svg')] opacity-10 mix-blend-overlay" />
+        
+        <div className="relative z-10">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-2">
+            Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-white">{teacherRecord?.full_name || 'Teacher'}</span>!
+          </h2>
+          <p className="text-slate-300/80 max-w-xl text-sm">
+            Here's your operational dashboard. Manage your classes, view pending assignments, and submit grades seamlessy.
+          </p>
+        </div>
       </div>
+
+      {/* Elevated Teacher Stats */}
+      <DashboardStats stats={teacherStats} />
 
       {/* Quick Actions for Teachers */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-card p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 dark:border-border flex flex-col">
+          <div className="mb-4 flex items-center gap-2 border-b border-slate-100 dark:border-border pb-4">
+            <ClipboardList className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-lg font-bold text-slate-900 dark:text-card-foreground">Quick Actions</h3>
+          </div>
+          <div className="space-y-3 flex-1">
             <Link to="/results/add-results">
-              <Button className="w-full justify-start mb-2" variant="outline">
-                <FileText className="h-4 w-4 mr-2" />
+              <Button className="w-full justify-start mb-2 h-12 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 text-blue-900 dark:text-blue-100 border-none shadow-none transition-colors" variant="outline">
+                <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-slate-800 shadow-sm">
+                  <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
                 Add New Results
               </Button>
             </Link>
             <Link to="/results/manage-results">
-              <Button className="w-full justify-start mb-2" variant="outline">
-                <TrendingUp className="h-4 w-4 mr-2" />
+              <Button className="w-full justify-start mb-2 h-12 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border-none shadow-none transition-colors" variant="outline">
+                <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-slate-800 shadow-sm">
+                  <TrendingUp className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                </div>
                 View My Results
               </Button>
             </Link>
             <Link to="/profile">
-              <Button className="w-full justify-start mb-2" variant="outline">
-                <Users className="h-4 w-4 mr-2" />
+              <Button className="w-full justify-start h-12 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border-none shadow-none transition-colors" variant="outline">
+                <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-slate-800 shadow-sm">
+                  <Users className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                </div>
                 My Profile
               </Button>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <GraduationCap className="h-5 w-5" />
-              My Classes
-            </CardTitle>
-            <CardDescription>Classes assigned to you</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-card p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 dark:border-border flex flex-col">
+          <div className="mb-4 flex items-center gap-2 border-b border-slate-100 dark:border-border pb-4 justify-between">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-card-foreground">My Classes</h3>
+            </div>
+          </div>
+          <div className="flex-1">
             {assignedClasses.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No classes assigned yet. Contact your administrator.
-              </p>
+              <div className="flex h-full flex-col items-center justify-center space-y-3 rounded-xl border border-dashed border-slate-200 dark:border-border bg-slate-50/50 dark:bg-background/50 p-6 text-center">
+                <div className="rounded-full bg-slate-100 dark:bg-muted p-3">
+                  <GraduationCap className="h-6 w-6 text-slate-400 dark:text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium text-slate-500 dark:text-muted-foreground">
+                  No classes assigned yet. <br /> Contact your administrator.
+                </p>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {assignedClasses.slice(0, 5).map((cls) => (
                   <div
                     key={cls.id}
-                    className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-slate-50/80 dark:bg-muted/50 hover:bg-slate-100 dark:hover:bg-muted transition-colors rounded-xl border border-slate-100 dark:border-border"
                   >
-                    <span className="font-medium text-sm">{cls.name}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold text-xs">
+                        {cls.name.charAt(0)}
+                      </div>
+                      <span className="font-semibold text-sm text-slate-800 dark:text-card-foreground">{cls.name}</span>
+                    </div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-muted-foreground bg-white dark:bg-background px-2 py-1 rounded-md shadow-sm border border-slate-100 dark:border-border">
                       {cls.department?.name || 'No department'}
                     </span>
                   </div>
                 ))}
                 {assignedClasses.length > 5 && (
-                  <p className="text-xs text-muted-foreground text-center mt-2">
-                    +{assignedClasses.length - 5} more classes
+                  <p className="text-xs font-medium text-slate-400 dark:text-muted-foreground text-center mt-3 pt-2 border-t border-slate-50 dark:border-border">
+                    +{assignedClasses.length - 5} more classes available
                   </p>
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -233,13 +234,13 @@ const AdminDashboardContent = () => {
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <div className="lg:col-span-3 space-y-6">
+    <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+      <div className="xl:col-span-3 space-y-6">
         <WelcomeSection />
         <DashboardStats stats={stats} />
         <PerformanceOverview />
       </div>
-      <div className="lg:col-span-1 space-y-6">
+      <div className="xl:col-span-1 space-y-6 flex flex-col">
         <QuickActions />
         <RecentActivity notifications={notifications} />
         <UpcomingEvents />
@@ -282,7 +283,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-background">
       {/* Welcome Modal for first-time users */}
       <WelcomeModal
         open={showWelcome}
