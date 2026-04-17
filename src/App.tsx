@@ -181,6 +181,12 @@ const ForceRedirect = ({ to }: { to: string }) => {
   return null; // This component doesn't render anything itself
 };
 
+const RouteAwareHelpButton = () => {
+  const location = useLocation();
+  if (location.pathname === '/') return null;
+  return <FloatingHelpButton />;
+};
+
 const App = () => {
   const [hideAuthBanner, setHideAuthBanner] = useState<boolean>(() => {
     try {
@@ -240,7 +246,7 @@ const App = () => {
               <BrowserRouter>
                 <WalkthroughProvider>
                   <WalkthroughOverlay />
-                  <FloatingHelpButton />
+                  <RouteAwareHelpButton />
                   <Routes>
                     {/* Public Routes */}
                     <Route path="/" element={<Index />} />

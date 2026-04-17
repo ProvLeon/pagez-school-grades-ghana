@@ -29,22 +29,22 @@ const HeroSection = () => {
         {/* Headline area with floating icons */}
         <div className="relative text-center">
           {/* Floating icon — top left */}
-          <div className="absolute left-0 top-0 hidden lg:flex items-center justify-center w-11 h-11 bg-blue-100/90 rounded-xl opacity-75 shadow-sm">
+          <div className="absolute left-10 top-10 hidden lg:flex items-center justify-center w-11 h-11 bg-blue-100/90 rounded-xl opacity-75 shadow-sm transform rotate-12">
             <BookOpen className="w-5 h-5 text-blue-600" />
           </div>
 
           {/* Floating icon — top right */}
-          <div className="absolute right-0 top-0 hidden lg:flex items-center justify-center w-11 h-11 bg-purple-100/90 rounded-xl opacity-75 shadow-sm">
+          <div className="absolute right-10 top-10 hidden lg:flex items-center justify-center w-11 h-11 bg-purple-100/90 rounded-xl opacity-75 shadow-sm transform -rotate-12">
             <Users className="w-5 h-5 text-purple-600" />
           </div>
 
           {/* Floating icon — mid left */}
-          <div className="absolute left-20 top-16 hidden lg:flex items-center justify-center w-9 h-9 bg-emerald-100/90 rounded-lg opacity-65 shadow-sm">
+          <div className="absolute left-52 top-60 hidden lg:flex items-center justify-center w-9 h-9 bg-emerald-100/90 rounded-lg opacity-65 shadow-sm transform rotate-12">
             <FileText className="w-4 h-4 text-emerald-600" />
           </div>
 
           {/* Floating icon — mid right */}
-          <div className="absolute right-20 top-16 hidden lg:flex items-center justify-center w-9 h-9 bg-orange-100/90 rounded-lg opacity-65 shadow-sm">
+          <div className="absolute right-60 top-52 hidden lg:flex items-center justify-center w-9 h-9 bg-orange-100/90 rounded-lg opacity-65 shadow-sm transform -rotate-12">
             <BarChart3 className="w-4 h-4 text-orange-500" />
           </div>
 
