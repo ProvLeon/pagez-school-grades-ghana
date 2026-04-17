@@ -127,6 +127,22 @@ export const schoolSettingsService = {
         console.error('Database update error:', error);
         throw error;
       }
+
+      // SYNCHRONIZATION FIX: Also update the root organizations table with the new school name
+      if (updates.school_name && existingSettings.organization_id) {
+        const { error: orgUpdateError } = await (supabase as any)
+          .from('organizations')
+          .update({
+            name: updates.school_name,
+            school_name: updates.school_name
+          })
+          .eq('id', existingSettings.organization_id);
+
+        if (orgUpdateError) {
+          console.error('Failed to sync new school name to organizations table:', orgUpdateError);
+        }
+      }
+
       return data;
     } else {
       // Create new record with organization_id
