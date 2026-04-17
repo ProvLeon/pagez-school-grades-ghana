@@ -6,6 +6,7 @@ import { authService, LoginCredentials } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Link } from "react-router-dom";
+import AuthPanelDecoration from "@/components/auth/AuthPanelDecoration";
 
 const Login = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -115,10 +116,8 @@ const Login = () => {
     <div className="min-h-screen flex">
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex lg:w-[45%] xl:w-[40%] relative bg-gradient-to-br from-[#1E3A8A] via-[#2563EB] to-[#1d4ed8] overflow-hidden">
-        {/* Decorative orbs */}
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px]" />
+        {/* Abstract geometric decoration */}
+        <AuthPanelDecoration />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-10 xl:p-16 w-full">
