@@ -4,58 +4,64 @@ import { cn } from "@/lib/utils";
 
 const features = [
   {
-    icon: FileText,
     title: "Results & Report Sheets",
-    description:
-      "Generate professional, BECE-compliant report sheets for individual students or entire classes in seconds. Designed meticulously for Ghana Education Service standards, ready for instant print or secure PDF download.",
+    description: "Generate professional, BECE-compliant report sheets for individual students or entire classes in seconds. Designed meticulously for Ghana Education Service standards.",
     highlight: true,
     large: true,
     gridClass: "md:col-span-2 lg:col-span-2 lg:row-span-2",
+    image: "/images/report.png",
+    imageClass: "absolute -bottom-8 -right-8 w-[85%] h-auto max-h-[80%] rounded-tl-3xl shadow-2xl ring-1 ring-black/10 object-cover object-left-top transition-transform duration-700 group-hover:-translate-y-2 group-hover:-translate-x-2",
+    textPosition: "top"
   },
   {
-    icon: GraduationCap,
     title: "BECE-Standard Grading",
-    description:
-      "Automated grading mathematically aligned to Ghana Education Service standards. SBA, exam scores, aggregates, and overall class positions are computed instantly with absolute accuracy.",
+    description: "Automated grading mathematically aligned to Ghana Education Service standards. SBA, exam scores, aggregates, and positions computed instantly.",
     highlight: false,
     large: false,
     gridClass: "md:col-span-2 lg:col-span-2 lg:row-span-1",
+    image: "/images/bece-settings.png",
+    imageClass: "absolute top-8 -right-12 w-3/5 h-auto rounded-l-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] ring-1 ring-white object-cover object-left transition-transform duration-700 group-hover:translate-x-[-12px]",
+    textPosition: "left"
   },
   {
-    icon: Users,
-    title: "Student Management",
-    description:
-      "Manage enrolments, track promotions, and handle transcripts effortlessly.",
+    title: "Student Lifecycle",
+    description: "Manage enrolments, track promotions, and handle transcripts effortlessly.",
     highlight: false,
     large: false,
     gridClass: "md:col-span-1 lg:col-span-1 lg:row-span-1",
+    image: "/images/bulk transfer.png",
+    imageClass: "absolute -bottom-10 -right-10 w-[95%] h-auto rounded-tl-2xl shadow-xl border-t border-l border-white/50 transition-transform duration-700 group-hover:-translate-y-2",
+    textPosition: "top"
   },
   {
-    icon: UserCog,
     title: "Teacher Portals",
-    description:
-      "Role-based access for teachers to securely enter subject scores.",
+    description: "Role-based access for teachers to securely enter subject scores.",
     highlight: false,
     large: false,
     gridClass: "md:col-span-1 lg:col-span-1 lg:row-span-1",
+    image: "/images/Screenshot 2026-04-16 at 07.24.00.png",
+    imageClass: "absolute -bottom-8 -right-8 w-[95%] h-auto rounded-tl-2xl shadow-xl transition-transform duration-700 group-hover:-translate-y-2",
+    textPosition: "top"
   },
   {
-    icon: ClipboardList,
     title: "Mock Exam Management",
-    description:
-      "Deploy and publish custom mock exam results with subject comparisons and deeply analytical performance insights.",
+    description: "Deploy and publish custom mock exam results with subject comparisons and deeply analytical performance insights.",
     highlight: false,
     large: false,
     gridClass: "md:col-span-1 lg:col-span-2 lg:row-span-1",
+    image: "/images/Screenshot 2026-04-16 at 07.26.48.png",
+    imageClass: "absolute top-8 -right-10 w-3/5 h-auto rounded-l-2xl shadow-2xl transition-transform duration-700 group-hover:-translate-x-2",
+    textPosition: "left"
   },
   {
-    icon: BarChart3,
     title: "Analytics & Insights",
-    description:
-      "Visualise class performance trends and school-wide aggregates to make truly informed, data-driven academic decisions.",
+    description: "Visualise class performance trends to make truly informed, data-driven decisions.",
     highlight: false,
     large: false,
     gridClass: "md:col-span-1 lg:col-span-2 lg:row-span-1",
+    image: "/images/analytics.png",
+    imageClass: "absolute top-8 -right-10 w-3/5 h-[120%] rounded-l-xl shadow-xl object-cover object-left-top transition-transform duration-700 group-hover:-translate-x-2",
+    textPosition: "left"
   },
 ];
 
@@ -108,9 +114,9 @@ const FeaturesSection = () => {
               transition: { staggerChildren: 0.1 },
             },
           }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 auto-rows-fr"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 auto-rows-[minmax(300px,_auto)]"
         >
-          {features.map(({ icon: Icon, title, description, highlight, large, gridClass }) => (
+          {features.map(({ title, description, highlight, large, gridClass, image, imageClass, textPosition }) => (
             <motion.div
               key={title}
               variants={{
@@ -121,41 +127,47 @@ const FeaturesSection = () => {
             >
               <div
                 className={cn(
-                  "group relative h-full w-full rounded-3xl p-8 md:p-10 flex flex-col justify-between overflow-hidden transition-all duration-500",
+                  "group relative h-full w-full rounded-[30px] overflow-hidden transition-all duration-500",
                   highlight
-                    ? "bg-gradient-to-br from-[#2563EB] to-indigo-700 text-white shadow-2xl shadow-blue-900/20"
-                    : "bg-white text-gray-900 border border-gray-200/60 shadow-lg shadow-gray-200/20 hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1"
+                    ? "bg-gradient-to-br from-[#2563EB] to-[#1E3A8A] text-white shadow-2xl shadow-blue-900/20"
+                    : "bg-white text-gray-900 border border-gray-200/50 shadow-lg shadow-gray-200/30 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1"
                 )}
               >
-                {/* Optional ambient inner glow for highlights */}
-                {highlight && (
-                  <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3" />
+                {/* Floating Image Asset */}
+                {image && (
+                  <>
+                    <img src={image} alt={title} className={imageClass} />
+                    {/* Shadow masking so text over image remains perfectly legible in corners */}
+                    <div className={cn(
+                      "absolute inset-0 pointer-events-none transition-opacity duration-500",
+                      highlight 
+                         ? "bg-gradient-to-t from-transparent via-[#2563EB]/40 to-[#2563EB]/80 opacity-50"
+                         : "bg-gradient-to-t from-white/90 via-white/50 to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/90 lg:to-transparent"
+                    )} />
+                  </>
                 )}
 
-                <div className="relative z-10 flex flex-col h-full gap-6">
-                  {/* Icon Container */}
-                  <div
-                    className={cn(
-                      "rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform duration-500 group-hover:scale-110",
-                      highlight ? "bg-white/20 backdrop-blur-md shadow-inner" : "bg-blue-50 border border-blue-100/50",
-                      large ? "w-16 h-16 md:w-20 md:h-20" : "w-12 h-12"
-                    )}
-                  >
-                    <Icon
-                      className={cn(
-                        highlight ? "text-white" : "text-[#2563EB]",
-                        large ? "w-8 h-8 md:w-10 md:h-10" : "w-6 h-6"
-                      )}
-                    />
-                  </div>
+                {/* Inner Content Block */}
+                <div className={cn(
+                  "relative z-10 flex flex-col h-full gap-4 p-8 md:p-10 pointer-events-none",
+                  textPosition === "left" && !highlight ? "w-full md:w-3/5 lg:w-1/2 justify-center" : "justify-start"
+                )}>
+                  
+                  {/* Subtle Text Tagging */}
+                  {highlight && large && (
+                    <div className="mb-2">
+                       <span className="inline-block py-1 px-3 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold text-white uppercase tracking-widest border border-white/20">
+                          Flagship Engine
+                       </span>
+                    </div>
+                  )}
 
-                  {/* Text Container */}
-                  <div className={cn("space-y-3 mt-auto", large && "space-y-4 pt-12")}>
+                  <div className={cn("space-y-4", textPosition === "top" && !large && "max-w-[70%]")}>
                     <h3
                       className={cn(
-                        "font-black tracking-tight",
-                        highlight ? "text-white" : "text-gray-900",
-                        large ? "text-2xl md:text-4xl" : "text-lg md:text-xl"
+                        "font-extrabold tracking-tight leading-tight",
+                        highlight ? "text-white drop-shadow-md" : "text-gray-900",
+                        large ? "text-3xl md:text-4xl pr-8" : "text-xl md:text-2xl"
                       )}
                     >
                       {title}
@@ -163,8 +175,9 @@ const FeaturesSection = () => {
                     <p
                       className={cn(
                         "leading-relaxed font-medium",
-                        highlight ? "text-blue-100" : "text-gray-500",
-                        large ? "text-base md:text-xl max-w-md" : "text-sm md:text-base"
+                        highlight ? "text-white/90 drop-shadow-sm font-semibold" : "text-gray-600",
+                        large ? "text-lg max-w-md pr-6" : "text-sm md:text-base",
+                        !highlight && textPosition === "top" && "bg-white/80 backdrop-blur-md px-1 py-0.5 rounded shadow-sm inline-block"
                       )}
                     >
                       {description}
@@ -172,14 +185,6 @@ const FeaturesSection = () => {
                   </div>
                 </div>
 
-                {/* Accent line for highlighted card */}
-                {highlight && large && (
-                  <div className="relative z-10 mt-8 pt-6 border-t border-blue-400/30">
-                    <span className="text-xs font-bold text-blue-200 uppercase tracking-widest">
-                      Flagship Engine
-                    </span>
-                  </div>
-                )}
               </div>
             </motion.div>
           ))}
