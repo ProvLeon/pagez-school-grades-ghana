@@ -43,7 +43,7 @@ const BrowserMockup = ({ dark = false, variant = "dashboard" }: BrowserMockupPro
                 : "bg-gray-200 text-gray-600"
             )}
           >
-            <span className="truncate">pagez.example.com/{variant}</span>
+            <span className="truncate">e-resultsgh.com/{variant}</span>
           </div>
         </div>
       </div>
