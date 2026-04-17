@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, User, Building2, Phone, Lock, AlertCircle, UserPlus, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, ArrowRight, Check, Shield, Zap, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +12,6 @@ interface SignUpFormData {
   email: string;
   phoneNumber: string;
   password: string;
-  confirmPassword: string;
 }
 
 const SignUp = () => {
@@ -27,10 +24,8 @@ const SignUp = () => {
     email: "",
     phoneNumber: "",
     password: "",
-    confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -57,19 +52,13 @@ const SignUp = () => {
     if (!formData.phoneNumber.trim()) {
       newErrors.phoneNumber = "Phone number is required";
     } else if (!/^(\+233|0)\d{9}$/.test(formData.phoneNumber.replace(/\s/g, ""))) {
-      newErrors.phoneNumber = "Please enter a valid Ghana phone number (e.g., 0201234567 or +233201234567)";
+      newErrors.phoneNumber = "Enter a valid Ghana number (e.g., 0201234567)";
     }
 
     if (!formData.password) {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password";
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
     }
 
     setErrors(newErrors);
@@ -84,7 +73,6 @@ const SignUp = () => {
   };
 
   const formatPhoneAsEmail = (phone: string): string => {
-    // Remove spaces and format phone for use as email identifier
     const cleanPhone = phone.replace(/\s/g, "").replace("+", "");
     return `${cleanPhone}@eresults.gh`;
   };
@@ -99,10 +87,8 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
-      // Use provided email or generate one from phone number for Supabase auth
       const email = formData.email.trim() || formatPhoneAsEmail(formData.phoneNumber);
 
-      // Sign up with Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
         password: formData.password,
@@ -121,7 +107,6 @@ const SignUp = () => {
       }
 
       if (data.user) {
-        // Step 1: Create the organization for this school
         const { data: newOrg, error: orgError } = await supabase
           .from("organizations")
           .insert({
@@ -134,12 +119,10 @@ const SignUp = () => {
 
         if (orgError) {
           console.error("Error creating organization:", orgError);
-          // Continue anyway - organization can be created later
         }
 
         const organizationId = newOrg?.id;
 
-        // Step 2: Create profile with admin role
         const { error: profileError } = await supabase
           .from("profiles")
           .insert({
@@ -151,7 +134,6 @@ const SignUp = () => {
           console.error("Error creating profile:", profileError);
         }
 
-        // Step 3: Link user to organization
         if (organizationId) {
           const { error: orgProfileError } = await (supabase as any)
             .from("user_organization_profiles")
@@ -167,26 +149,22 @@ const SignUp = () => {
           }
         }
 
-        // Step 4: Create school_settings with organization_id
         const { error: settingsError } = await (supabase as any)
           .from("school_settings")
           .insert({
             school_name: formData.schoolName.trim(),
             admin_id: data.user.id,
-            organization_id: organizationId, // Link to organization for multi-tenancy
+            organization_id: organizationId,
           });
 
         if (settingsError) {
           console.error("Error creating school settings:", settingsError);
         }
 
-        // Sign out the user immediately after signup
-        // Supabase auto-authenticates during signup, but we want users to explicitly login
         try {
           await supabase.auth.signOut();
         } catch (signOutError) {
           console.warn("Error signing out after signup:", signOutError);
-          // Continue anyway, the signup was successful
         }
 
         setIsSubmitted(true);
@@ -214,147 +192,179 @@ const SignUp = () => {
     }
   };
 
+  /* ── Success Screen ──────────────────────────────────────────────────── */
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-primary/10 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-2xl border bg-card/80 backdrop-blur-sm">
-          <CardHeader className="text-center pb-6">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-green-600" />
-              </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center space-y-8">
+          {/* Animated success icon */}
+          <div className="relative mx-auto w-24 h-24">
+            <div className="absolute inset-0 rounded-full bg-green-100 animate-ping opacity-30" style={{ animationDuration: '2s' }} />
+            <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-xl shadow-green-500/25">
+              <Check className="w-12 h-12 text-white" strokeWidth={3} />
             </div>
-            <CardTitle className="text-2xl font-bold text-foreground">
+          </div>
+
+          <div className="space-y-3">
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
               Welcome to e-Results GH!
-            </CardTitle>
-            <p className="text-muted-foreground text-sm mt-2">
-              Your account has been created successfully.
+            </h1>
+            <p className="text-gray-500 text-base max-w-xs mx-auto">
+              Your school account has been created successfully.
             </p>
-          </CardHeader>
+          </div>
 
-          <CardContent className="p-6 pt-0">
-            <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                <p className="text-sm font-medium">Your login credentials:</p>
-                <p className="text-sm text-muted-foreground">
-                  ID: <strong>{formData.email || formData.phoneNumber}</strong>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {formData.email
-                    ? "Use your email or phone number and password to sign in."
-                    : "Use your phone number and password to sign in."}
-                </p>
-              </div>
-
-              <Button
-                className="w-full"
-                onClick={() => navigate("/login")}
-              >
-                Continue to Login
-              </Button>
-
-              <p className="text-xs text-muted-foreground text-center mt-4">
-                e-Results GH v 1.2.0 | PB Pagez LTD
+          {/* Credentials card */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-lg shadow-gray-200/50 text-left space-y-3">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Login Credentials</p>
+            <div className="space-y-1.5">
+              <p className="text-sm text-gray-600">
+                Login ID: <strong className="text-gray-900">{formData.email || formData.phoneNumber}</strong>
+              </p>
+              <p className="text-sm text-gray-500">
+                {formData.email
+                  ? "Use your email and password to sign in."
+                  : "Use your phone number and password to sign in."}
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          <button
+            onClick={() => navigate("/login")}
+            className="w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-bold py-4 px-8 rounded-xl text-base shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
+          >
+            Continue to Login
+            <ArrowRight className="w-5 h-5" />
+          </button>
+
+          <p className="text-xs text-gray-400">
+            e-Results GH | PB Pagez LTD
+          </p>
+        </div>
       </div>
     );
   }
 
+  /* ── Main Sign Up Screen ─────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-primary/10 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-2xl border bg-card/80 backdrop-blur-sm">
-        <CardHeader className="text-center pb-6">
-          <div className="flex justify-center mb-4">
-            <img src="/ERESULTS_LOGO.png" alt="e-Results GH Logo" className="w-20 h-20" />
-          </div>
-          <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">
-            Create Account
-          </CardTitle>
-          <p className="text-muted-foreground text-sm sm:text-base mt-2">
-            Sign up to start managing your school results
-          </p>
-        </CardHeader>
+    <div className="min-h-screen flex">
+      {/* Left Panel — Branding & Social Proof */}
+      <div className="hidden lg:flex lg:w-[45%] xl:w-[40%] relative bg-gradient-to-br from-[#1E3A8A] via-[#2563EB] to-[#1d4ed8] overflow-hidden">
+        {/* Decorative orbs */}
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px]" />
 
-        <CardContent className="p-6 pt-0">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Full Name */}
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name *</Label>
-              <div className="relative">
-                <User className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-between p-10 xl:p-16 w-full">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <img src="/ERESULTS_LOGO.png" alt="e-Results GH" className="w-10 h-10 rounded-full shadow-lg border-[1px] border-white" />
+            <span className="text-white/90 text-lg font-bold tracking-tight">e-Results GH</span>
+          </div>
+
+          {/* Hero Text */}
+          <div className="space-y-8 my-auto py-16">
+            <div className="space-y-5">
+              <h1 className="text-4xl xl:text-5xl font-extrabold text-white leading-[1.15] tracking-tight">
+                Start managing
+                <br />
+                your school results
+                <br />
+                <span className="text-blue-200">in minutes.</span>
+              </h1>
+              <p className="text-blue-200/80 text-lg max-w-sm leading-relaxed">
+                Join schools across Ghana using the most advanced grading and reporting engine built for GES standards.
+              </p>
+            </div>
+
+            {/* Value props */}
+            <div className="space-y-4 pt-4">
+              {[
+                { icon: Zap, text: "Set up your school in under 5 minutes" },
+                { icon: Shield, text: "Bank-grade security for all student data" },
+                { icon: GraduationCap, text: "BECE & SBA grading built-in" },
+              ].map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/15 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-blue-200" />
+                  </div>
+                  <span className="text-white/80 text-sm font-medium">{text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="w-7 h-7 rounded-full bg-white/20 border-2 border-blue-500 flex items-center justify-center text-[10px] font-bold text-white">
+                    {String.fromCharCode(64 + i)}
+                  </div>
+                ))}
+              </div>
+              <span className="text-blue-200/70 text-xs font-medium ml-1">Trusted by 50+ schools</span>
+            </div>
+            <p className="text-blue-300/40 text-xs">
+              14-day free trial. No credit card required.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel — Form */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-white to-slate-50/80">
+        <div className="w-full max-w-[440px]">
+          {/* Mobile logo */}
+          <div className="flex items-center gap-3 mb-10 lg:hidden">
+            <img src="/ERESULTS_LOGO.png" alt="e-Results GH" className="w-10 h-10 rounded-full shadow-lg" />
+            <span className="text-gray-900 text-lg font-bold tracking-tight">e-Results GH</span>
+          </div>
+
+          {/* Header */}
+          <div className="space-y-2 mb-10">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+              Create your account
+            </h2>
+            <p className="text-gray-500 text-base">
+              Get started with a free 14-day trial. No credit card needed.
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Row: Full Name + Phone */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Full Name */}
+              <div className="space-y-1.5">
+                <Label htmlFor="fullName" className="text-sm font-semibold text-gray-700">
+                  Full Name
+                </Label>
                 <Input
                   id="fullName"
                   type="text"
-                  placeholder="Enter your full name"
+                  placeholder="John Mensah"
                   value={formData.fullName}
                   onChange={(e) => handleInputChange("fullName", e.target.value)}
                   required
                   disabled={isLoading}
-                  className={`pl-10 h-12 ${errors.fullName ? "border-destructive" : ""}`}
+                  className={`h-12 rounded-xl bg-gray-50/80 border-gray-200 focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all ${errors.fullName ? "border-red-400 bg-red-50/50" : ""}`}
                 />
+                {errors.fullName && (
+                  <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.fullName}
+                  </p>
+                )}
               </div>
-              {errors.fullName && (
-                <p className="text-sm text-destructive flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.fullName}
-                </p>
-              )}
-            </div>
 
-            {/* School Name */}
-            <div className="space-y-2">
-              <Label htmlFor="schoolName">School Name *</Label>
-              <div className="relative">
-                <Building2 className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="schoolName"
-                  type="text"
-                  placeholder="Enter your school name"
-                  value={formData.schoolName}
-                  onChange={(e) => handleInputChange("schoolName", e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className={`pl-10 h-12 ${errors.schoolName ? "border-destructive" : ""}`}
-                />
-              </div>
-              {errors.schoolName && (
-                <p className="text-sm text-destructive flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.schoolName}
-                </p>
-              )}
-            </div>
-
-            {/* Email (Optional) */}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address (Optional)</Label>
-              <div className="relative">
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@school.com"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  disabled={isLoading}
-                  className={`h-12 ${errors.email ? "border-destructive" : ""}`}
-                />
-              </div>
-              {errors.email && (
-                <p className="text-sm text-destructive flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.email}
-                </p>
-              )}
-            </div>
-
-            {/* Phone Number */}
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number *</Label>
-              <div className="relative">
-                <Phone className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+              {/* Phone Number */}
+              <div className="space-y-1.5">
+                <Label htmlFor="phoneNumber" className="text-sm font-semibold text-gray-700">
+                  Phone Number
+                </Label>
                 <Input
                   id="phoneNumber"
                   type="tel"
@@ -363,125 +373,134 @@ const SignUp = () => {
                   onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
                   required
                   disabled={isLoading}
-                  className={`pl-10 h-12 ${errors.phoneNumber ? "border-destructive" : ""}`}
+                  className={`h-12 rounded-xl bg-gray-50/80 border-gray-200 focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all ${errors.phoneNumber ? "border-red-400 bg-red-50/50" : ""}`}
                 />
+                {errors.phoneNumber && (
+                  <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.phoneNumber}
+                  </p>
+                )}
               </div>
-              {errors.phoneNumber && (
-                <p className="text-sm text-destructive flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.phoneNumber}
+            </div>
+
+            {/* School Name */}
+            <div className="space-y-1.5">
+              <Label htmlFor="schoolName" className="text-sm font-semibold text-gray-700">
+                School Name
+              </Label>
+              <Input
+                id="schoolName"
+                type="text"
+                placeholder="Kokomlemle 2 Basic School"
+                value={formData.schoolName}
+                onChange={(e) => handleInputChange("schoolName", e.target.value)}
+                required
+                disabled={isLoading}
+                className={`h-12 rounded-xl bg-gray-50/80 border-gray-200 focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all ${errors.schoolName ? "border-red-400 bg-red-50/50" : ""}`}
+              />
+              {errors.schoolName && (
+                <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.schoolName}
+                </p>
+              )}
+            </div>
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
+                Email Address
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="admin@school.edu.gh"
+                value={formData.email}
+                onChange={(e) => handleInputChange("email", e.target.value)}
+                disabled={isLoading}
+                className={`h-12 rounded-xl bg-gray-50/80 border-gray-200 focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all ${errors.email ? "border-red-400 bg-red-50/50" : ""}`}
+              />
+              {errors.email && (
+                <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.email}
                 </p>
               )}
             </div>
 
             {/* Password */}
-            <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
+                Password
+              </Label>
               <div className="relative">
-                <Lock className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Create a password"
+                  placeholder="Min. 6 characters"
                   value={formData.password}
                   onChange={(e) => handleInputChange("password", e.target.value)}
                   required
                   disabled={isLoading}
-                  className={`pl-10 pr-12 h-12 ${errors.password ? "border-destructive" : ""}`}
+                  className={`h-12 pr-12 rounded-xl bg-gray-50/80 border-gray-200 focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all ${errors.password ? "border-red-400 bg-red-50/50" : ""}`}
                 />
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-0 top-0 h-full px-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
+                  tabIndex={-1}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </Button>
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
               {errors.password && (
-                <p className="text-sm text-destructive flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
+                <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                  <AlertCircle className="w-3 h-3" />
                   {errors.password}
                 </p>
               )}
             </div>
 
-            {/* Confirm Password */}
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password *</Label>
-              <div className="relative">
-                <Lock className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className={`pl-10 pr-12 h-12 ${errors.confirmPassword ? "border-destructive" : ""}`}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={isLoading}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
-
-            <Button
+            {/* Submit */}
+            <button
               type="submit"
-              className="w-full h-12 font-semibold shadow-lg transition-all duration-200"
               disabled={isLoading}
+              className="w-full h-13 bg-[#2563EB] hover:bg-[#1d4ed8] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl text-base shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   Creating Account...
                 </>
               ) : (
                 <>
-                  <UserPlus className="w-5 h-5 mr-2" />
-                  Sign Up
+                  Create Account
+                  <ArrowRight className="w-5 h-5" />
                 </>
               )}
-            </Button>
+            </button>
+
+            {/* Terms */}
+            <p className="text-xs text-gray-400 text-center leading-relaxed">
+              By creating an account, you agree to our{" "}
+              <a href="#" className="text-[#2563EB] hover:underline font-medium">Terms of Service</a>
+              {" "}and{" "}
+              <a href="#" className="text-[#2563EB] hover:underline font-medium">Privacy Policy</a>.
+            </p>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
+          {/* Footer Link */}
+          <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+            <p className="text-sm text-gray-500">
               Already have an account?{" "}
-              <Link to="/login" className="text-primary hover:underline font-medium">
+              <Link to="/login" className="text-[#2563EB] hover:underline font-bold transition-colors">
                 Sign In
               </Link>
             </p>
-            <p className="text-xs text-muted-foreground mt-4">
-              e-Results GH v {import.meta.env.VITE_APP_VERSION} | PB Pagez LTD
-            </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
