@@ -186,7 +186,7 @@ const Login = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-5" autoComplete="off">
             {/* Email */}
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
@@ -229,6 +229,7 @@ const Login = () => {
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   required
                   disabled={isLoading}
+                  autoComplete="new-password"
                   className={`h-12 pr-12 rounded-xl bg-gray-50/80 border-gray-200 focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all ${errors.password ? 'border-red-400 bg-red-50/50' : ''}`}
                 />
                 <button

@@ -333,7 +333,7 @@ const SignUp = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
             {/* Row: Full Name + Phone */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Full Name */}
@@ -442,6 +442,7 @@ const SignUp = () => {
                   onChange={(e) => handleInputChange("password", e.target.value)}
                   required
                   disabled={isLoading}
+                  autoComplete="new-password"
                   className={`h-12 pr-12 rounded-xl bg-gray-50/80 border-gray-200 focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all ${errors.password ? "border-red-400 bg-red-50/50" : ""}`}
                 />
                 <button
