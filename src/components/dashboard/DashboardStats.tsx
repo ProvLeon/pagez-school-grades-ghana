@@ -38,9 +38,9 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
           <div className="mt-4 flex items-end justify-between">
             <div className="min-h-[20px]">
               {stat.trend && (
-                <p className="flex items-center gap-1 text-xs font-medium">
-                  <span className={cn("flex items-center rounded-sm px-1.5 py-0.5", stat.trend.isPositive ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400")}>
-                    {stat.trend.isPositive ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
+                <p className="flex items-center gap-1 text-xs font-medium shadow-sm">
+                  <span className={cn("flex items-center rounded-md px-2 py-1", stat.trend.isPositive ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20" : "bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20")}>
+                    {stat.trend.isPositive ? <TrendingUp className="mr-1 h-3.5 w-3.5" /> : <TrendingDown className="mr-1 h-3.5 w-3.5" />}
                     {stat.trend.value}
                   </span>
                 </p>
@@ -50,13 +50,13 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
               )}
             </div>
 
-            {/* Stylized Mock Sparkline */}
-            <div className="h-6 w-16 opacity-40 mix-blend-multiply dark:mix-blend-lighten transition-opacity duration-300 group-hover:opacity-100">
-              <svg viewBox="0 0 100 30" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-full w-full">
+            {/* Premium Sparkline Accent */}
+            <div className="h-8 w-20 opacity-30 mix-blend-multiply dark:mix-blend-lighten transition-opacity duration-300 group-hover:opacity-100">
+              <svg viewBox="0 0 100 30" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-full w-full drop-shadow-sm">
                 <path 
                   d={index % 2 === 0 ? "M0 25C15 25 20 5 40 15C60 25 75 5 100 10" : "M0 15C20 25 30 5 50 15C70 25 80 5 100 10"} 
-                  stroke={index % 2 === 0 ? "#10b981" : "#3b82f6"} 
-                  strokeWidth="3" 
+                  stroke={stat.trend?.isPositive === false ? "#f43f5e" : (index % 2 === 0 ? "#10b981" : "#3b82f6")} 
+                  strokeWidth="3.5" 
                   strokeLinecap="round" 
                   strokeLinejoin="round" 
                 />

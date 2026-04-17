@@ -88,35 +88,6 @@ const HeroWelcome = ({ name, subtitle }: { name: string; subtitle: string }) => 
   );
 };
 
-// ─── Metric Tile (shared) ─────────────────────────────────────────────────────
-
-interface MetricTileProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  footnote?: string;
-  accentColor: string;
-  glowBg: string;
-}
-
-const MetricTile = ({ icon, label, value, footnote, accentColor, glowBg }: MetricTileProps) => (
-  <div className={`relative overflow-hidden rounded-2xl bg-white dark:bg-card border border-slate-100 dark:border-border shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] p-5 sm:p-6 flex flex-col justify-between group transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${accentColor}`}>
-    <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl transition-colors pointer-events-none ${glowBg}`} />
-    <div className="relative z-10">
-      <span className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-muted-foreground mb-1.5">
-        {icon}
-        {label}
-      </span>
-      <span className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none">
-        {value}
-      </span>
-      {footnote && (
-        <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-2">{footnote}</p>
-      )}
-    </div>
-  </div>
-);
-
 // ─── Teacher Dashboard ────────────────────────────────────────────────────────
 
 const TeacherDashboardContent = () => {
@@ -134,6 +105,33 @@ const TeacherDashboardContent = () => {
 
   const teacherName = teacherRecord?.full_name?.split(" ")[0] || "Teacher";
 
+  const stats = [
+    {
+      title: "Assigned Classes",
+      value: assignedClasses.length.toString(),
+      icon: GraduationCap,
+      description: "Classes you teach"
+    },
+    {
+      title: "Results Submitted",
+      value: totalResults.toString(),
+      icon: FileText,
+      description: "Total results entered"
+    },
+    {
+      title: "Students Graded",
+      value: uniqueStudents.toString(),
+      icon: Users,
+      description: "Unique students"
+    },
+    {
+      title: "This Year",
+      value: currentYearResults.toString(),
+      icon: TrendingUp,
+      description: academicYear
+    }
+  ];
+
   return (
     <div className="space-y-6">
       {/* Hero Welcome */}
@@ -142,41 +140,8 @@ const TeacherDashboardContent = () => {
         subtitle="Here's your operational dashboard. Manage your classes, view pending assignments, and submit grades."
       />
 
-      {/* Metric Tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <MetricTile
-          icon={<GraduationCap className="w-3.5 h-3.5 text-blue-500" />}
-          label="Assigned Classes"
-          value={assignedClasses.length.toString()}
-          footnote="Classes you teach"
-          accentColor="hover:border-blue-200 dark:hover:border-blue-500/30"
-          glowBg="bg-blue-50 dark:bg-blue-500/5 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/10"
-        />
-        <MetricTile
-          icon={<FileText className="w-3.5 h-3.5 text-emerald-500" />}
-          label="Results Submitted"
-          value={totalResults.toString()}
-          footnote="Total results entered"
-          accentColor="hover:border-emerald-200 dark:hover:border-emerald-500/30"
-          glowBg="bg-emerald-50 dark:bg-emerald-500/5 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/10"
-        />
-        <MetricTile
-          icon={<Users className="w-3.5 h-3.5 text-purple-500" />}
-          label="Students Graded"
-          value={uniqueStudents.toString()}
-          footnote="Unique students"
-          accentColor="hover:border-purple-200 dark:hover:border-purple-500/30"
-          glowBg="bg-purple-50 dark:bg-purple-500/5 group-hover:bg-purple-100 dark:group-hover:bg-purple-500/10"
-        />
-        <MetricTile
-          icon={<TrendingUp className="w-3.5 h-3.5 text-orange-500" />}
-          label="This Year"
-          value={currentYearResults.toString()}
-          footnote={academicYear}
-          accentColor="hover:border-orange-200 dark:hover:border-orange-500/30"
-          glowBg="bg-orange-50 dark:bg-orange-500/5 group-hover:bg-orange-100 dark:group-hover:bg-orange-500/10"
-        />
-      </div>
+      {/* Stats */}
+      <DashboardStats stats={stats} />
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
