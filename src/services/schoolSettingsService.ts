@@ -129,18 +129,30 @@ export const schoolSettingsService = {
       }
 
       // SYNCHRONIZATION FIX: Also update the root organizations table with the new school name
-      if (updates.school_name && existingSettings.organization_id) {
-        const { error: orgUpdateError } = await (supabase as any)
-          .from('organizations')
-          .update({
-            name: updates.school_name,
-            school_name: updates.school_name
-          })
-          .eq('id', existingSettings.organization_id);
+      const targetOrgId = organizationId || existingSettings.organization_id;
+      
+      try {
+        let orgUpdateQuery = (supabase as any).from('organizations').update({
+          name: updates.school_name,
+          school_name: updates.school_name
+        });
+
+        // Use the strict org ID if available, otherwise fallback to admin_id for legacy unlinked users
+        if (targetOrgId) {
+          orgUpdateQuery = orgUpdateQuery.eq('id', targetOrgId);
+        } else {
+          orgUpdateQuery = orgUpdateQuery.eq('admin_id', user.id);
+        }
+
+        const { error: orgUpdateError } = await orgUpdateQuery;
 
         if (orgUpdateError) {
           console.error('Failed to sync new school name to organizations table:', orgUpdateError);
+        } else {
+          console.log('Successfully synced organizations table with new school name (fallback mode enabled).');
         }
+      } catch (err) {
+        console.error('Error executing organization sync query:', err);
       }
 
       return data;
