@@ -100,77 +100,13 @@ const VideoTeaserSection = ({
         </div>
 
         {/* Video Teaser */}
-        <div className="mb-20">
+        <div className="mb-8 md:mb-12">
           <VideoTeaser
             videoUrl={resolvedVideoUrl}
             title="See e-Results GH in Action"
             description="Streamline your school's results management in minutes"
             dark={dark}
           />
-        </div>
-
-        {/* Feature highlights */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {features.map((feature) => {
-            const Icon = feature.icon;
-            return (
-              <div
-                key={feature.label}
-                className={cn(
-                  "flex flex-col items-center text-center p-8 rounded-2xl transition-all duration-300",
-                  dark
-                    ? "bg-slate-800/50 border border-slate-700/50 hover:border-blue-500/50 hover:bg-slate-800"
-                    : "bg-white/60 backdrop-blur-sm border border-white/80 shadow-sm hover:shadow-lg hover:border-blue-200"
-                )}
-              >
-                <div
-                  className={cn(
-                    "w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-colors",
-                    dark
-                      ? "bg-blue-500/20 text-blue-400"
-                      : "bg-blue-100 text-blue-600"
-                  )}
-                >
-                  <Icon className="w-7 h-7" />
-                </div>
-                <h3
-                  className={cn(
-                    "text-lg font-bold mb-2",
-                    dark ? "text-white" : "text-gray-900"
-                  )}
-                >
-                  {feature.label}
-                </h3>
-                <p
-                  className={cn(
-                    "text-sm leading-relaxed",
-                    dark ? "text-slate-400" : "text-gray-600"
-                  )}
-                >
-                  {feature.description}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Trust indicators */}
-        <div className="mt-16 pt-12 border-t border-slate-200/50 flex flex-col sm:flex-row items-center justify-center gap-8">
-          {[
-            "✓ No credit card required",
-            "✓ 14-day free trial",
-            "✓ Cancel anytime",
-          ].map((item) => (
-            <p
-              key={item}
-              className={cn(
-                "text-sm font-medium",
-                dark ? "text-slate-400" : "text-gray-600"
-              )}
-            >
-              {item}
-            </p>
-          ))}
         </div>
       </div>
     </section>
