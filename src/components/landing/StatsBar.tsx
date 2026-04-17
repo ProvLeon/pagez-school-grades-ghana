@@ -20,7 +20,7 @@ const StatsBar = () => {
                   src={imgUrl}
                   alt={label}
                   className="w-full h-full object-contain transition-all duration-500 ease-out 
-                  grayscale sepia hue-rotate-[185deg] saturate-[350%] brightness-75 contrast-125 opacity-70
+                  grayscale sepia hue-rotate-180 saturate-200 brightness-75 contrast-125 opacity-100
                   group-hover:grayscale-0 group-hover:sepia-0 group-hover:hue-rotate-0 group-hover:saturate-100 group-hover:brightness-100 group-hover:contrast-100 group-hover:opacity-100"
                 />
               </div>
