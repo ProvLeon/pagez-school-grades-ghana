@@ -88,7 +88,7 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
-      const email = formData.email.trim() || formatPhoneAsEmail(formData.phoneNumber);
+      const email = formData.email.trim();
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -226,12 +226,10 @@ const SignUp = () => {
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Login Credentials</p>
             <div className="space-y-1.5">
               <p className="text-sm text-gray-600">
-                Login ID: <strong className="text-gray-900">{formData.email || formData.phoneNumber}</strong>
+                Email: <strong className="text-gray-900">{formData.email}</strong>
               </p>
               <p className="text-sm text-gray-500">
-                {formData.email
-                  ? "Use your email and password to sign in."
-                  : "Use your phone number and password to sign in."}
+                Use your email and password to sign in.
               </p>
             </div>
           </div>
@@ -412,7 +410,7 @@ const SignUp = () => {
               )}
             </div>
 
-            {/* Email */}
+            {/* Email — Login credential */}
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
                 Email Address
@@ -423,9 +421,11 @@ const SignUp = () => {
                 placeholder="admin@school.edu.gh"
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
+                required
                 disabled={isLoading}
                 className={`h-12 rounded-xl bg-gray-50/80 border-gray-200 focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all ${errors.email ? "border-red-400 bg-red-50/50" : ""}`}
               />
+              <p className="text-xs text-gray-400">You'll use this email to sign in to your account.</p>
               {errors.email && (
                 <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
                   <AlertCircle className="w-3 h-3" />
