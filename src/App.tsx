@@ -238,9 +238,9 @@ const App = () => {
               </button>
             </div>
           )}
-          <ThemeProvider>
-            <AuthProvider>
-              <BrowserRouter>
+          <BrowserRouter>
+            <ThemeProvider>
+              <AuthProvider>
                 <WalkthroughProvider>
                   <WalkthroughOverlay />
                   <RouteAwareHelpButton />
@@ -478,9 +478,9 @@ const App = () => {
                     <Route path="*" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <NotFound />} />
                   </Routes>
                 </WalkthroughProvider>
-              </BrowserRouter>
-            </AuthProvider>
-          </ThemeProvider>
+              </AuthProvider>
+            </ThemeProvider>
+          </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

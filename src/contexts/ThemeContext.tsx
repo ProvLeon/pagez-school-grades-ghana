@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useLocation } from 'react-router-dom';
 
 interface ThemeContextType {
   isDarkMode: boolean;
@@ -94,15 +95,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const location = useLocation();
+
   // Handle dark mode
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
+    
+    // Define public/marketing routes that MUST remain in light mode
+    const publicRoutes = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/student-reports', '/no-organization'];
+    const isPublicRoute = publicRoutes.includes(location.pathname) || location.pathname.startsWith('/mock-results');
+
+    if (isPublicRoute) {
+      // Force remove dark class on marketing/auth pages
       document.documentElement.classList.remove('dark');
+    } else {
+      // Respect user preference on application pages
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
-  }, [isDarkMode]);
+  }, [isDarkMode, location.pathname]);
 
   const toggleDarkMode = () => {
     console.log("Toggling dark mode from:", isDarkMode, "to:", !isDarkMode);
