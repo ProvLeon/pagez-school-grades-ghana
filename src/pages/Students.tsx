@@ -16,6 +16,7 @@ import {
 import { useStudents } from "@/hooks/useStudents";
 import { useClasses } from "@/hooks/useClasses";
 import { format } from "date-fns";
+import LoadingComp from "@/components/ui/loading";
 
 const Students = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -56,17 +57,7 @@ const Students = () => {
   const filterClasses = ["all", ...uniqueClassNames];
 
   if (isLoadingStudents || isLoadingClasses) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header title="Students" subtitle="Manage student records and information" />
-        <div className="flex items-center justify-center h-[calc(100vh-80px)]">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-lg font-medium text-muted-foreground">Loading students...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingComp message="Loading Students" subtext="Fetching the student roster..." />;
   }
 
   return (

@@ -9,6 +9,7 @@ import { Plus, Search, Filter, LayoutGrid, List, Info, X } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
 import { useDepartments } from "@/hooks/useDepartments";
 import { AddClassDialog } from "@/components/AddClassDialog";
+import LoadingComp from "@/components/ui/loading";
 import { ClassesTable } from "@/components/ClassesTable";
 import { ClassesStats } from "@/components/ClassesStats";
 import { ClassesQuickActions } from "@/components/ClassesQuickActions";
@@ -49,17 +50,7 @@ const Classes = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header title="Manage Classes" subtitle="Organize and manage your school classes" />
-        <div className="flex items-center justify-center h-[calc(100vh-80px)]">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-lg font-medium text-muted-foreground">Loading classes...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingComp message="Loading Classes" subtext="Fetching your school's classes..." />;
   }
 
   if (error) {

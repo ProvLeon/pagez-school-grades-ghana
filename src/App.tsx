@@ -13,6 +13,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { SubscriptionOverlay } from "@/components/billing/SubscriptionOverlay";
 import { TrialBanner } from "@/components/billing/TrialBanner";
+import LoadingComp from "@/components/ui/loading";
 // TeacherProtectedRoute no longer needed - using unified role-based routes
 import { getUserOrganizationId } from "@/utils/organizationHelper";
 import { supabase } from "@/integrations/supabase/client";
@@ -156,11 +157,7 @@ const ProtectedAppRoute = ({
   }, [location.pathname]);
 
   if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <LoadingComp message="Loading Organization..." subtext="Please wait while we fetch your details" />;
   }
 
   return (

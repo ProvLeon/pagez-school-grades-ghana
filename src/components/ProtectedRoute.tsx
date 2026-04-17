@@ -4,6 +4,7 @@ import { AlertCircle, Shield } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import LoadingComp from "@/components/ui/loading";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -46,59 +47,7 @@ const ProtectedRoute = ({
 
   // Show loading while auth is initializing OR while profile is loading for authenticated users
   if (loading || (isAuthenticated && profileLoading)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="text-center space-y-6">
-          {/* Logo with circular pulse animation */}
-          <div className="relative flex justify-center">
-            {/* Outer pulse rings */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-28 h-28 rounded-full border-2 border-blue-400/30 animate-ping" style={{ animationDuration: '2s' }} />
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-32 h-32 rounded-full border border-blue-300/20 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
-            </div>
-
-            {/* Rotating ring around logo */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div
-                className="w-24 h-24 rounded-full border-2 border-transparent border-t-blue-500 border-r-blue-400 animate-spin"
-                style={{ animationDuration: '1.5s' }}
-              />
-            </div>
-
-            {/* Logo container */}
-            <div className="relative w-20 h-20 rounded-full overflow-hidden shadow-xl ring-4 ring-white dark:ring-gray-800 z-10">
-              <img
-                src="/ERESULTS_LOGO.png"
-                alt="PB Pagez"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
-
-          {/* Text content */}
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Authenticating
-              <span className="inline-flex ml-1">
-                <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
-                <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
-                <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
-              </span>
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Verifying your credentials
-            </p>
-          </div>
-
-          {/* Version badge */}
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
-            PB Pagez v{import.meta.env.VITE_APP_VERSION || "1.0.0"}
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingComp message="Authenticating" subtext="Verifying your credentials" />;
   }
 
   // Not authenticated - redirect to login

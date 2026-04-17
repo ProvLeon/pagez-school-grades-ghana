@@ -7,6 +7,7 @@ import { Eye, EyeOff, Lock, AlertCircle, CheckCircle, KeyRound } from "lucide-re
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import LoadingComp from "@/components/ui/loading";
 
 const ResetPassword = () => {
   const { toast } = useToast();
@@ -166,14 +167,7 @@ const ResetPassword = () => {
 
   // Loading state while checking for recovery session
   if (isValidRecovery === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-primary/10">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Verifying reset link...</p>
-        </div>
-      </div>
-    );
+    return <LoadingComp message="Verifying Link" subtext="Checking the validity of your reset link..." />;
   }
 
   // Invalid or expired recovery link

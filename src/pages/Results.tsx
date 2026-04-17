@@ -28,6 +28,7 @@ import { Plus, Search, Filter, Info, X, FileText, BarChart3, Eye, Download } fro
 import { useAuth } from "@/contexts/AuthContext";
 import { useCanAccessClass } from "@/hooks/useTeacherClassAccess";
 import { Skeleton } from "@/components/ui/skeleton";
+import LoadingComp from "@/components/ui/loading";
 
 const Results = () => {
   const navigate = useNavigate();
@@ -118,17 +119,7 @@ const Results = () => {
   const terms = ["first", "second", "third"];
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header title="Results" subtitle="Manage student academic results" />
-        <div className="flex items-center justify-center h-[calc(100vh-80px)]">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-lg font-medium text-muted-foreground">Loading results...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingComp message="Loading Results" subtext="Fetching the academic records..." />;
   }
 
   return (
