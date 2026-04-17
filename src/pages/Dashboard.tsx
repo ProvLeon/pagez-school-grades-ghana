@@ -289,6 +289,33 @@ const AdminDashboardContent = () => {
     return "Admin";
   })();
 
+  const stats = [
+    {
+      title: "Total Students",
+      value: activeStudents.toString(),
+      icon: Users,
+      description: `${students.length - activeStudents} inactive`
+    },
+    {
+      title: "Active Classes",
+      value: classes.length.toString(),
+      icon: GraduationCap,
+      description: `Across ${departments.length} departments`
+    },
+    {
+      title: "Teachers",
+      value: activeTeachers.toString(),
+      icon: UserCheck,
+      description: `${teachers.length} total registered`
+    },
+    {
+      title: "Results",
+      value: results.length.toString(),
+      icon: FileText,
+      description: `${studentsWithResults} students graded`
+    }
+  ];
+
   return (
     <div className="space-y-6">
       {/* Hero Welcome */}
@@ -297,41 +324,8 @@ const AdminDashboardContent = () => {
         subtitle="Here's a comprehensive overview of your school's academic operations and performance."
       />
 
-      {/* Metric Tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <MetricTile
-          icon={<Users className="w-3.5 h-3.5 text-blue-500" />}
-          label="Total Students"
-          value={activeStudents.toString()}
-          footnote={`${students.length - activeStudents} inactive`}
-          accentColor="hover:border-blue-200 dark:hover:border-blue-500/30"
-          glowBg="bg-blue-50 dark:bg-blue-500/5 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/10"
-        />
-        <MetricTile
-          icon={<GraduationCap className="w-3.5 h-3.5 text-emerald-500" />}
-          label="Active Classes"
-          value={classes.length.toString()}
-          footnote={`Across ${departments.length} departments`}
-          accentColor="hover:border-emerald-200 dark:hover:border-emerald-500/30"
-          glowBg="bg-emerald-50 dark:bg-emerald-500/5 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/10"
-        />
-        <MetricTile
-          icon={<UserCheck className="w-3.5 h-3.5 text-purple-500" />}
-          label="Teachers"
-          value={activeTeachers.toString()}
-          footnote={`${teachers.length} total registered`}
-          accentColor="hover:border-purple-200 dark:hover:border-purple-500/30"
-          glowBg="bg-purple-50 dark:bg-purple-500/5 group-hover:bg-purple-100 dark:group-hover:bg-purple-500/10"
-        />
-        <MetricTile
-          icon={<FileText className="w-3.5 h-3.5 text-orange-500" />}
-          label="Results"
-          value={results.length.toString()}
-          footnote={`${studentsWithResults} students graded`}
-          accentColor="hover:border-orange-200 dark:hover:border-orange-500/30"
-          glowBg="bg-orange-50 dark:bg-orange-500/5 group-hover:bg-orange-100 dark:group-hover:bg-orange-500/10"
-        />
-      </div>
+      {/* Stats */}
+      <DashboardStats stats={stats} />
 
       {/* Analytical Grid — Asymmetric Bento */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
