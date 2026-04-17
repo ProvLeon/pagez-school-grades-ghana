@@ -387,6 +387,16 @@ const SignUp = () => {
               </div>
             </div>
 
+            {/* Divider — separating personal from organization details */}
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-150" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-gradient-to-br from-white to-slate-50/80 px-3 text-[11px] font-medium text-gray-400 uppercase tracking-widest">School & Account</span>
+              </div>
+            </div>
+
             {/* School Name */}
             <div className="space-y-1.5">
               <Label htmlFor="schoolName" className="text-sm font-semibold text-gray-700">
