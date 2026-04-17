@@ -12,25 +12,29 @@ const PremiumImageMockup = ({ src, alt, align }: { src: string; alt: string; ali
 
     {/* Cinematic Mask Container */}
     <div
-      className="relative z-10 transition-transform duration-700 ease-out group-hover:-translate-y-4 group-hover:scale-[1]"
-      style={{
-        WebkitMaskImage: align === 'left'
-          ? 'linear-gradient(to right, black 40%, transparent 100%)'
-          : 'linear-gradient(to left, black 60%, transparent 100%)',
-        maskImage: align === 'left'
-          ? 'linear-gradient(to right, black 40%, transparent 100%)'
-          : 'linear-gradient(to left, black 60%, transparent 100%)',
-      }}
+      className="relative z-10 transition-transform duration-700 ease-out group-hover:-translate-y-4"
     >
+      {/* Masked image surface */}
       <div
-        className={`relative overflow-hidden rounded-2xl bg-white ring-1 ring-black/5 shadow-2xl
-        ${align === 'left' ? 'pl-2 pt-2 border-l border-t border-white/60' : 'pr-2 pt-2 border-r border-t border-white/60'}`}
+        style={{
+          WebkitMaskImage: align === 'left'
+            ? 'linear-gradient(to right, black 10%, transparent 100%)'
+            : 'linear-gradient(to left, black 60%, transparent 100%)',
+          maskImage: align === 'left'
+            ? 'linear-gradient(to right, black 40%, transparent 100%)'
+            : 'linear-gradient(to left, black 60%, transparent 100%)',
+        }}
       >
-        <img
-          src={src}
-          alt={alt}
-          className="w-full h-auto md:max-h-[500px] object-cover object-left-top rounded-xl shadow-sm "
-        />
+        <div
+          className={`relative overflow-hidden rounded-2xl bg-white shadow-[0_8px_40px_-8px_rgba(0,0,0,0.12)]
+          ${align === 'left' ? 'pl-2 pt-2 border-l border-t border-gray-200/40' : 'pr-2 pt-2 border-r border-t border-gray-200/40'}`}
+        >
+          <img
+            src={src}
+            alt={alt}
+            className="w-full h-auto md:max-h-[500px] object-cover object-left-top rounded-xl"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -53,7 +57,7 @@ const WhyChooseSection = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-16">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-100px" }}
@@ -62,7 +66,7 @@ const WhyChooseSection = () => {
           >
             Why Choose Us
           </motion.div>
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-100px" }}
@@ -71,7 +75,7 @@ const WhyChooseSection = () => {
           >
             Why Choose e-Results GH?
           </motion.h2>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-100px" }}
@@ -85,7 +89,7 @@ const WhyChooseSection = () => {
         {/* ── Feature A: Visual Left · Text Right ── */}
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20 mb-24">
           {/* Visual */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -60 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: false, margin: "-100px" }}
@@ -96,7 +100,7 @@ const WhyChooseSection = () => {
           </motion.div>
 
           {/* Text */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 60 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: false, margin: "-100px" }}
@@ -131,7 +135,7 @@ const WhyChooseSection = () => {
         {/* ── Feature B: Text Left · Visual Right ── */}
         <div className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
           {/* Visual */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 60 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: false, margin: "-100px" }}
@@ -142,7 +146,7 @@ const WhyChooseSection = () => {
           </motion.div>
 
           {/* Text */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -60 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: false, margin: "-100px" }}
