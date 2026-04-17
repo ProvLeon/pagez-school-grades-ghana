@@ -139,7 +139,13 @@ const ViewResult = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
           <Button
             variant="outline"
-            onClick={() => navigate('/results/manage-results')}
+            onClick={() => {
+              if (window.history.state && window.history.state.idx > 0) {
+                navigate(-1);
+              } else {
+                navigate('/results/manage-results');
+              }
+            }}
             className="rounded-xl border-slate-200 dark:border-border hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-medium text-slate-600 dark:text-slate-300"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

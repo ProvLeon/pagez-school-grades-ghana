@@ -5,7 +5,7 @@ import { useClasses } from "@/hooks/useClasses";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useTeachers } from "@/hooks/useTeachers";
 import { useReportCards } from "@/hooks/useReportCards";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -37,9 +37,18 @@ const ManageResults = () => {
     hasLoaded: teacherAccessLoaded,
     teacherId
   } = useCanAccessClass();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = parseInt(searchParams.get("page") || "1", 10);
+  
+  const setCurrentPage = (page: number) => {
+    setSearchParams(prev => {
+      prev.set("page", page.toString());
+      return prev;
+    });
+  };
+
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize, setPageSize] = useState("10");
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedResults, setSelectedResults] = useState<string[]>([]);
   const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, resultId: "", studentName: "" });
   const [bulkDeleteDialog, setBulkDeleteDialog] = useState({ isOpen: false, count: 0 });
@@ -164,7 +173,10 @@ const ManageResults = () => {
   const clearFilters = () => {
     setFilters({ class_id: "", department_id: "", academic_year: "", term: "", teacher_id: "" });
     setSearchTerm("");
-    setCurrentPage(1);
+    setSearchParams(prev => {
+      prev.delete("page");
+      return prev;
+    });
     setSelectedResults([]);
   };
 
