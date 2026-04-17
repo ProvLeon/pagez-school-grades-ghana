@@ -85,7 +85,7 @@ export const WalkthroughProvider: React.FC<WalkthroughProviderProps> = ({
       !loading &&
       isAuthenticated &&
       !hasCompletedWalkthrough() &&
-      location.pathname === "/" &&
+      (location.pathname === "/" || location.pathname === "/dashboard") &&
       steps.length > 0 &&
       !walkthroughAutoStarted
     ) {

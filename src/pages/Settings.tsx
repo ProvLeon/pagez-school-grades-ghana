@@ -32,6 +32,7 @@ import {
 import { SettingsLoadingState } from '@/components/settings/SettingsLoadingState';
 import { useSettingsForm } from '@/hooks/useSettingsForm';
 import { WalkthroughTrigger } from '@/components/walkthrough';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Suspense } from 'react';
 const SignatureUpload = React.lazy(() => import('@/components/SignatureUpload'));
@@ -40,6 +41,7 @@ import { BillingAdminSettings } from '@/components/settings/BillingAdminSettings
 type SettingsTab = 'school' | 'branding' | 'billing';
 
 const Settings = () => {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [setupRequired, setSetupRequired] = useState(searchParams.get('setup') === 'required');
   const [activeTab, setActiveTab] = useState<SettingsTab>('school');
@@ -100,15 +102,18 @@ const Settings = () => {
       icon: Palette,
       description: 'Logo, signature & colors',
       complete: brandingComplete
-    },
-    {
+    }
+  ];
+
+  if (user?.email === 'admin@example.com') {
+    tabs.push({
       id: 'billing' as SettingsTab,
       label: 'Billing',
       icon: CreditCard,
       description: 'Billing & subscriptions',
       complete: true
-    },
-  ];
+    });
+  }
 
   if (loading) {
     return (
