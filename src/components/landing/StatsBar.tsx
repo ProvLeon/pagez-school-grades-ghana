@@ -19,17 +19,9 @@ const StatsBar = () => {
                 <img
                   src={imgUrl}
                   alt={label}
-                  className="w-full h-full object-contain filter grayscale sepia brightness-90 hue-rotate-[#1a56db] opacity-70 transition-all duration-500 ease-out 
-                  group-hover:grayscale-0 group-hover:sepia-0 group-hover:brightness-100 group-hover:hue-rotate-0 group-hover:saturate-110 group-hover:opacity-100"
-                  style={{
-                    // Fallback explicit filter chain for the precise blue tint
-                    filter: "grayscale(100%) sepia(100%) hue-rotate(185deg) saturate(350%) brightness(0.8) contrast(1.1)",
-                  }}
-                  // Using an inline script to remove the static style on hover via Tailwind
-                  onMouseEnter={(e) => (e.currentTarget.style.filter = "none")}
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.filter = "grayscale(100%) sepia(100%) hue-rotate(185deg) saturate(350%) brightness(0.8) contrast(1.1)")
-                  }
+                  className="w-full h-full object-contain transition-all duration-500 ease-out 
+                  grayscale sepia hue-rotate-[185deg] saturate-[350%] brightness-75 contrast-125 opacity-70
+                  group-hover:grayscale-0 group-hover:sepia-0 group-hover:hue-rotate-0 group-hover:saturate-100 group-hover:brightness-100 group-hover:contrast-100 group-hover:opacity-100"
                 />
               </div>
               <span className="text-sm font-bold text-gray-600 transition-colors duration-300 group-hover:text-blue-700 whitespace-nowrap tracking-tight">
