@@ -8,9 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Users } from "lucide-react";
 
 const GENDER_COLORS = {
-  male: 'hsl(var(--primary))',
-  female: 'hsl(var(--secondary))',
-  unknown: 'hsl(var(--muted-foreground))',
+  male: '#3B82F6',   // Crisp blue
+  female: '#A855F7', // Bright purple
+  unknown: '#94A3B8',
 };
 
 export const PerformanceOverview = () => {
@@ -142,9 +142,13 @@ export const PerformanceOverview = () => {
                   />
                   <Bar
                     dataKey="performance"
-                    fill="hsl(var(--primary))"
-                    radius={[4, 4, 0, 0]}
+                    fill="#3B82F6"
+                    radius={[6, 6, 0, 0]}
                     maxBarSize={50}
+                    isAnimationActive={true}
+                    animationDuration={1500}
+                    animationEasing="ease-out"
+                    animationBegin={200}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -189,6 +193,10 @@ export const PerformanceOverview = () => {
                     dataKey="value"
                     nameKey="name"
                     stroke="none"
+                    isAnimationActive={true}
+                    animationDuration={1500}
+                    animationEasing="ease-out"
+                    animationBegin={200}
                     label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
                       const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                       const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));

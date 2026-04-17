@@ -51,10 +51,19 @@ const MobileResultsView = ({ results, selectedResults, onSelectResult, onView, o
             onCheckedChange={(checked) => onSelectResult(result.id, checked as boolean)}
             className="mt-1"
           />
-          <div className="flex-1 space-y-1">
-            <p className="font-semibold">{result.student?.full_name || 'Unknown'}</p>
-            <p className="text-sm text-muted-foreground">{result.student?.student_id}</p>
-            <p className="text-xs text-muted-foreground">{result.class?.name} &bull; {result.term} Term {result.academic_year}</p>
+          <div className="flex items-center gap-3 flex-1 overflow-hidden">
+            <div className="shrink-0 w-12 h-12 rounded-full overflow-hidden bg-indigo-50 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
+              {result.student?.photo_url ? (
+                <img src={result.student.photo_url} alt={result.student.full_name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-indigo-600 font-bold text-lg uppercase">{result.student?.full_name?.charAt(0) || '?'}</span>
+              )}
+            </div>
+            <div className="flex-1 space-y-1 truncate">
+              <p className="font-semibold truncate">{result.student?.full_name || 'Unknown'}</p>
+              <p className="text-sm text-muted-foreground truncate">{result.student?.student_id}</p>
+              <p className="text-xs text-muted-foreground truncate">{result.class?.name} &bull; {result.term} Term {result.academic_year}</p>
+            </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -92,8 +101,19 @@ const DesktopResultsView = ({ results, selectedResults, isAllSelected, isIndeter
             <TableRow key={result.id}>
               <TableCell><Checkbox checked={selectedResults.includes(result.id)} onCheckedChange={(checked) => onSelectResult(result.id, checked as boolean)} /></TableCell>
               <TableCell>
-                <div className="font-medium">{result.student?.full_name || 'Unknown'}</div>
-                <div className="text-sm text-muted-foreground">{result.student?.student_id}</div>
+                <div className="flex items-center gap-3">
+                  <div className="shrink-0 w-10 h-10 rounded-full overflow-hidden bg-indigo-50 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
+                    {result.student?.photo_url ? (
+                      <img src={result.student.photo_url} alt={result.student.full_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-indigo-600 font-bold uppercase">{result.student?.full_name?.charAt(0) || '?'}</span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-medium">{result.student?.full_name || 'Unknown'}</div>
+                    <div className="text-sm text-muted-foreground">{result.student?.student_id}</div>
+                  </div>
+                </div>
               </TableCell>
               <TableCell>
                 <div>{result.class?.name}</div>
