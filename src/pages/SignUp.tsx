@@ -174,13 +174,19 @@ const SignUp = () => {
           description: "Your account has been created successfully!",
         });
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error("Sign up error:", err);
 
       let errorMessage = "Failed to create account. Please try again.";
-      const errorObj = err as { message?: string };
-      if (errorObj.message?.includes("already registered")) {
-        errorMessage = "An account with this phone number already exists.";
+      
+      // Handle the new Supabase error signatures for duplicates
+      if (
+        err.message?.toLowerCase().includes("already registered") || 
+        err.message?.toLowerCase().includes("user already exists") ||
+        err.status === 422 || 
+        err.code === "user_already_exists"
+      ) {
+        errorMessage = "An account with this email or phone number already exists.";
       }
 
       toast({
