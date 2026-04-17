@@ -17,7 +17,7 @@ export function QuickActions() {
       <div className="mb-4 flex items-center justify-between border-b border-slate-100 dark:border-border pb-3">
         <h3 className="text-sm font-bold text-slate-800 dark:text-card-foreground uppercase tracking-wider">Quick Actions</h3>
       </div>
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-4 gap-2">
         {actions.map((action, index) => (
           <button
             key={index}

@@ -333,9 +333,6 @@ const AdminDashboardContent = () => {
         />
       </div>
 
-      {/* Quick Actions — Compact horizontal row */}
-      <QuickActions />
-
       {/* Analytical Grid — Asymmetric Bento */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column: Charts */}
@@ -343,8 +340,9 @@ const AdminDashboardContent = () => {
           <PerformanceOverview />
         </div>
 
-        {/* Right Column: Activity + Events */}
+        {/* Right Column: Quick Actions + Activity + Events */}
         <div className="xl:col-span-1 space-y-6">
+          <QuickActions />
           <RecentActivity notifications={notifications} />
           <UpcomingEvents />
         </div>
