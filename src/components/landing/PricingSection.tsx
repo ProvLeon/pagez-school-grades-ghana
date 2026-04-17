@@ -76,7 +76,7 @@ const PricingSection = () => {
 
               <div className="relative z-10 w-full">
                 {/* Badge */}
-                <span className="inline-block py-1.5 px-5 rounded-full bg-blue-50 text-[#2563EB] font-bold text-xs tracking-wide uppercase mb-8 border border-blue-100">
+                <span className="inline-block py-1.5 px-5 rounded-full bg-blue-50 text-primary font-bold text-xs tracking-wide uppercase mb-8 border border-blue-100">
                   Annual Plan
                 </span>
 
