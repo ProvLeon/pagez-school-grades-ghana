@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const features = [
   "All core modules included",
@@ -23,24 +24,48 @@ const PricingSection = () => {
 
         {/* Section Header */}
         <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border border-blue-200 bg-blue-50 text-blue-700 mb-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, margin: "-50px" }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border border-blue-200 bg-blue-50 text-blue-700 mb-4"
+          >
             Pricing
-          </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
+          </motion.div>
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, margin: "-50px" }}
+            transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+            className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight"
+          >
             Simple, Transparent Pricing
-          </h2>
-          <p className="mt-4 text-base text-gray-500 max-w-xl mx-auto leading-relaxed">
+          </motion.h2>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, margin: "-50px" }}
+            transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+            className="mt-4 text-base text-gray-500 max-w-xl mx-auto leading-relaxed"
+          >
             One plan. One price. Full access. Pay only for the students you
             register — billed annually.
-          </p>
+          </motion.p>
         </div>
 
         {/* Single Pricing Card */}
-        <div className="relative max-w-xl mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: 30 }}
+          whileInView={{ opacity: 1, scale: 1, y: 0 }}
+          viewport={{ once: false, margin: "-50px" }}
+          transition={{ duration: 0.6, ease: [0.21, 0.47, 0.32, 0.98] }}
+          className="relative max-w-xl mx-auto"
+        >
           {/* Glow ring */}
           <div className="absolute -inset-1 bg-gradient-to-b from-blue-500/20 via-blue-500/5 to-transparent rounded-[32px] blur-sm pointer-events-none" />
 
-          <div className="relative bg-white border-2 border-[#2563EB] rounded-3xl p-8 md:p-12 shadow-2xl shadow-blue-500/10 text-center overflow-hidden">
+          <div className="relative bg-white border-2 border-[#2563EB] rounded-3xl p-8 md:p-12 shadow-2xl shadow-blue-500/10 text-center overflow-hidden transition-all duration-300 hover:shadow-blue-500/25">
             {/* Ambient glow */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/40 rounded-full blur-[80px] pointer-events-none" />
 
@@ -67,18 +92,37 @@ const PricingSection = () => {
               </p>
 
               {/* Feature list */}
-              <div className="grid sm:grid-cols-2 gap-y-3.5 gap-x-8 max-w-md mx-auto mb-10 text-left">
+              <motion.div 
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: false }}
+                variants={{
+                  hidden: { opacity: 0 },
+                  visible: {
+                    opacity: 1,
+                    transition: { staggerChildren: 0.05, delayChildren: 0.3 },
+                  },
+                }}
+                className="grid sm:grid-cols-2 gap-y-3.5 gap-x-8 max-w-md mx-auto mb-10 text-left"
+              >
                 {features.map((f) => (
-                  <div key={f} className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <motion.div 
+                    key={f} 
+                    variants={{
+                      hidden: { opacity: 0, x: -10 },
+                      visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+                    }}
+                    className="flex items-center gap-2.5"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 transition-transform duration-300 hover:scale-110 hover:bg-blue-200">
                       <Check className="w-3 h-3 text-[#2563EB]" />
                     </div>
                     <span className="text-sm font-medium text-gray-700">
                       {f}
                     </span>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
 
               {/* CTA */}
               <button
@@ -94,7 +138,7 @@ const PricingSection = () => {
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Footer notes */}
         <div className="mt-10 text-center space-y-3">
