@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useSchoolSettings } from '@/hooks/useSchoolSettings';
 import { hexToHsl, hslToHex } from '@/utils/colorUtils';
@@ -26,6 +26,7 @@ export const useSettingsForm = () => {
     logo_url: null as string | null,
     headteacher_signature_url: null as string | null
   });
+  const [savedSnapshot, setSavedSnapshot] = useState<typeof formData | null>(null);
 
   // Color picker state
   const [colorHue, setColorHue] = useState(348);
@@ -54,7 +55,7 @@ export const useSettingsForm = () => {
   useEffect(() => {
     if (settings) {
       console.log('Loading settings into form:', settings);
-      setFormData({
+      const loaded = {
         school_name: settings.school_name || '',
         location: settings.location || '',
         address_1: settings.address_1 || '',
@@ -63,8 +64,10 @@ export const useSettingsForm = () => {
         headteacher_name: settings.headteacher_name || '',
         primary_color: settings.primary_color || '#e11d48',
         logo_url: settings.logo_url || null,
-        headteacher_signature_url: settings.headteacher_signature_url || null
-      });
+        headteacher_signature_url: settings.headteacher_signature_url || null,
+      };
+      setFormData(loaded);
+      setSavedSnapshot(loaded);
 
       // Convert hex to HSL for color picker
       if (settings.primary_color) {
@@ -116,6 +119,7 @@ export const useSettingsForm = () => {
         title: "Logo Updated",
         description: logoUrl ? "School logo has been saved" : "School logo has been removed",
       });
+      setSavedSnapshot(prev => prev ? { ...prev, logo_url: logoUrl } : prev);
     } catch (error) {
       console.error('Error auto-saving logo:', error);
       toast({
@@ -138,6 +142,7 @@ export const useSettingsForm = () => {
         title: "Signature Updated",
         description: signatureUrl ? "Headteacher signature has been saved" : "Signature has been removed",
       });
+      setSavedSnapshot(prev => prev ? { ...prev, headteacher_signature_url: signatureUrl } : prev);
     } catch (error) {
       console.error('Error auto-saving signature:', error);
       toast({
@@ -187,6 +192,7 @@ export const useSettingsForm = () => {
         title: "Settings Updated",
         description: "School settings have been saved successfully",
       });
+      setSavedSnapshot({ ...formData });
     } catch (error) {
       console.error('Error saving settings:', error);
       const errorMessage = error instanceof Error ? error.message : "Failed to save settings. Please try again.";
@@ -200,9 +206,15 @@ export const useSettingsForm = () => {
     }
   }, [formData, updateSettings, toast]);
 
+  const isDirty = useMemo(
+    () => savedSnapshot !== null && JSON.stringify(formData) !== JSON.stringify(savedSnapshot),
+    [formData, savedSnapshot]
+  );
+
   return {
     loading,
     saving,
+    isDirty,
     formData,
     colorHue,
     colorSaturation,

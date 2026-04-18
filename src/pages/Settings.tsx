@@ -58,6 +58,7 @@ const Settings = () => {
   const {
     loading,
     saving,
+    isDirty,
     formData,
     colorHue,
     colorSaturation,
@@ -458,45 +459,47 @@ const Settings = () => {
               </div>
             )}
 
-            {/* Action Bar */}
-            <Card className="shadow-sm border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className={cn(
-                      "w-4 h-4",
-                      schoolInfoComplete && brandingComplete ? "text-green-500" : "text-muted-foreground/50"
-                    )} />
-                    <span>
-                      {schoolInfoComplete && brandingComplete
-                        ? "All sections complete"
-                        : "Complete required fields to save"}
-                    </span>
+            {/* Action Bar — only shown when there are unsaved changes outside the billing tab */}
+            {activeTab !== 'billing' && isDirty && (
+              <Card className="shadow-sm border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className={cn(
+                        "w-4 h-4",
+                        schoolInfoComplete && brandingComplete ? "text-green-500" : "text-muted-foreground/50"
+                      )} />
+                      <span>
+                        {schoolInfoComplete && brandingComplete
+                          ? "All sections complete"
+                          : "Complete required fields to save"}
+                      </span>
+                    </div>
+                    <Button
+                      onClick={async () => {
+                        await handleSaveSettings();
+                        clearSetupRequired();
+                      }}
+                      disabled={saving || !formData.school_name}
+                      size="lg"
+                      className="gap-2 min-w-[140px]"
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Save Settings
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <Button
-                    onClick={async () => {
-                      await handleSaveSettings();
-                      clearSetupRequired();
-                    }}
-                    disabled={saving || !formData.school_name}
-                    size="lg"
-                    className="gap-2 min-w-[140px]"
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        Save Settings
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
