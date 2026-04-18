@@ -41,7 +41,7 @@ import { BillingAdminSettings } from '@/components/settings/BillingAdminSettings
 type SettingsTab = 'school' | 'branding' | 'billing';
 
 const Settings = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [setupRequired, setSetupRequired] = useState(searchParams.get('setup') === 'required');
   const [activeTab, setActiveTab] = useState<SettingsTab>('school');
@@ -105,12 +105,12 @@ const Settings = () => {
     }
   ];
 
-  if (user?.email === 'admin@example.com') {
+  if (isAdmin) {
     tabs.push({
       id: 'billing' as SettingsTab,
       label: 'Billing',
       icon: CreditCard,
-      description: 'Billing & subscriptions',
+      description: 'Subscription & billing',
       complete: true
     });
   }
@@ -162,7 +162,7 @@ const Settings = () => {
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <nav className="space-y-1">
+                <nav data-tour="settings-nav" className="space-y-1">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
@@ -205,7 +205,7 @@ const Settings = () => {
                 <Separator className="my-4" />
 
                 {/* Walkthrough Trigger */}
-                <div className="space-y-3">
+                <div data-tour="settings-restart-tour" className="space-y-3">
                   <WalkthroughTrigger variant="button" />
                 </div>
               </CardContent>
@@ -213,7 +213,7 @@ const Settings = () => {
           </aside>
 
           {/* Main Content Area */}
-          <div className="flex-1 space-y-6">
+          <div data-tour="settings-content" className="flex-1 space-y-6">
             {/* School Information Tab */}
             {activeTab === 'school' && (
               <div className="space-y-6 animate-fade-in">

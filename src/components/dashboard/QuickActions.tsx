@@ -13,7 +13,7 @@ export function QuickActions() {
   ];
 
   return (
-    <div className="rounded-2xl bg-white dark:bg-card p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 dark:border-border">
+    <div data-tour="dashboard-quick-actions" className="rounded-2xl bg-white dark:bg-card p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 dark:border-border">
       <div className="mb-4 flex items-center gap-2 border-b border-slate-100 dark:border-border pb-3">
         <Zap className="h-5 w-5 text-amber-500 dark:text-amber-400" />
         <h3 className="text-lg font-bold text-slate-900 dark:text-card-foreground">Quick Actions</h3>

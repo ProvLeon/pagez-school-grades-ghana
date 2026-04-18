@@ -54,7 +54,7 @@ const HeroWelcome = ({ name, subtitle }: { name: string; subtitle: string }) => 
   const currentDate = format(new Date(), "EEEE, MMMM d, yyyy");
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-gradient-to-br dark:from-slate-900 dark:via-[#0f172a] dark:to-[#1e3a8a] border border-slate-100 dark:border-transparent p-7 sm:p-8 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] dark:shadow-xl dark:shadow-blue-900/10">
+    <div data-tour="dashboard-welcome" className="relative overflow-hidden rounded-2xl bg-white dark:bg-gradient-to-br dark:from-slate-900 dark:via-[#0f172a] dark:to-[#1e3a8a] border border-slate-100 dark:border-transparent p-7 sm:p-8 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] dark:shadow-xl dark:shadow-blue-900/10">
       {/* Ambient glow blobs */}
       <div className="absolute -right-16 -top-16 w-56 h-56 bg-indigo-50 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -left-12 -bottom-12 w-40 h-40 bg-blue-50 dark:bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />

@@ -90,13 +90,13 @@ export const PerformanceOverview = () => {
   const isLoading = isLoadingStudents || isLoadingClasses || isLoadingResults;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div data-tour="dashboard-performance" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-card p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 dark:border-border flex flex-col">
-          <div className="mb-5 flex items-center gap-2 border-b border-slate-100 dark:border-border pb-3">
-            <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-card-foreground">Class Performance Overview</h3>
-          </div>
-          <div className="flex-1">
+        <div className="mb-5 flex items-center gap-2 border-b border-slate-100 dark:border-border pb-3">
+          <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h3 className="text-lg font-bold text-slate-900 dark:text-card-foreground">Class Performance Overview</h3>
+        </div>
+        <div className="flex-1">
           {isLoading ? (
             <div className="h-80 flex items-center justify-center">
               <Skeleton className="w-full h-64" />
@@ -159,15 +159,15 @@ export const PerformanceOverview = () => {
               Based on {results.length} result{results.length !== 1 ? 's' : ''} across {classPerformanceData.length} class{classPerformanceData.length !== 1 ? 'es' : ''}
             </p>
           )}
-          </div>
+        </div>
       </div>
 
       <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-card p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 dark:border-border flex flex-col">
-          <div className="mb-5 flex items-center gap-2 border-b border-slate-100 dark:border-border pb-3">
-            <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-card-foreground">Student Gender Distribution</h3>
-          </div>
-          <div className="flex-1">
+        <div className="mb-5 flex items-center gap-2 border-b border-slate-100 dark:border-border pb-3">
+          <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <h3 className="text-lg font-bold text-slate-900 dark:text-card-foreground">Student Gender Distribution</h3>
+        </div>
+        <div className="flex-1">
           {isLoadingStudents ? (
             <div className="h-80 flex items-center justify-center">
               <Skeleton className="w-48 h-48 rounded-full" />
@@ -252,7 +252,7 @@ export const PerformanceOverview = () => {
               Total: {students.length} student{students.length !== 1 ? 's' : ''}
             </p>
           )}
-          </div>
+        </div>
       </div>
     </div>
   );

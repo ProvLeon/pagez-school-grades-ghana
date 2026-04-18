@@ -85,7 +85,7 @@ export const WalkthroughProvider: React.FC<WalkthroughProviderProps> = ({
       !loading &&
       isAuthenticated &&
       !hasCompletedWalkthrough() &&
-      (location.pathname === "/" || location.pathname === "/dashboard") &&
+      location.pathname === "/dashboard" &&
       steps.length > 0 &&
       !walkthroughAutoStarted
     ) {
@@ -180,8 +180,8 @@ export const WalkthroughProvider: React.FC<WalkthroughProviderProps> = ({
     setCurrentStepIndex(0);
     setIsPaused(false);
     // Navigate to dashboard first
-    if (location.pathname !== "/") {
-      navigate("/");
+    if (location.pathname !== "/dashboard") {
+      navigate("/dashboard");
     }
     // Start after a small delay
     setTimeout(() => {
