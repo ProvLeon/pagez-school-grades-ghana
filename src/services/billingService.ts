@@ -1,6 +1,15 @@
 import { supabase } from '@/integrations/supabase/client';
 import { OrganizationBilling } from '@/types/billing';
 
+// ─── Billing Constants ─────────────────────────────────────────────────────────
+export const TRIAL_SEAT_CAP = 10;
+export const PER_SEAT_RATE = 2.00;   // GHS per student per year
+export const MINIMUM_ANNUAL_FEE = 200;  // GHS — minimum regardless of seat count
+
+export function calcAnnualFee(seats: number): number {
+  return Math.max(MINIMUM_ANNUAL_FEE, Math.round(seats * PER_SEAT_RATE * 100) / 100);
+}
+
 export const billingService = {
   async fetchBillingDetails(): Promise<OrganizationBilling | null> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -97,7 +106,31 @@ export const billingService = {
     });
   },
 
-  async initializePayment(email: string, amountGHS: number, organizationId: string, reference: string, onSuccess: () => void) {
+  async updateDeclaredSeats(orgId: string, seats: number): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({ declared_seat_count: seats })
+        .eq('id', orgId);
+      if (error) {
+        console.error('Error updating declared seats:', error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Failed to update declared seats:', err);
+      return false;
+    }
+  },
+
+  async initializePayment(
+    email: string,
+    amountGHS: number,
+    organizationId: string,
+    reference: string,
+    onSuccess: () => void,
+    seatCount?: number,
+  ) {
     try {
       const PaystackPop = await this.loadPaystack();
 
@@ -118,14 +151,19 @@ export const billingService = {
         currency: "GHS",
         ref: reference,
         metadata: {
-          organization_id: organizationId, // For the webhook to know which tenant to upgrade
+          organization_id: organizationId,
           custom_fields: [
             {
               display_name: "Organization ID",
               variable_name: "organization_id",
-              value: organizationId
-            }
-          ]
+              value: organizationId,
+            },
+            ...(seatCount !== undefined ? [{
+              display_name: "Seat Count",
+              variable_name: "seat_count",
+              value: String(seatCount),
+            }] : []),
+          ],
         },
         callback: function (response: any) {
           console.log("Paystack payment success. Reference:", response.reference);

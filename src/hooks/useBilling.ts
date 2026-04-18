@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { billingService } from '@/services/billingService';
+import { billingService, TRIAL_SEAT_CAP, calcAnnualFee } from '@/services/billingService';
 import { OrganizationBilling } from '@/types/billing';
 import { useToast } from './use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,12 +44,32 @@ export const useBilling = () => {
     }
   }, [user]);
 
-  const initiatePayment = async (amountGHS: number) => {
+  // ─── Seat Cap Logic ──────────────────────────────────────────────────────────
+  // During trial: hard cap of 10 students regardless of declared_seat_count.
+  // After subscribing: cap is the declared_seat_count the school paid for.
+  const effectiveSeatCap: number =
+    billing?.subscription_status === 'trial'
+      ? TRIAL_SEAT_CAP
+      : (billing?.declared_seat_count ?? TRIAL_SEAT_CAP);
+
+  const isSeatCapReached = studentCount >= effectiveSeatCap;
+  const isSeatWarning = !isSeatCapReached && studentCount >= Math.floor(effectiveSeatCap * 0.8);
+
+  // ─── Payment ──────────────────────────────────────────────────────────────────
+  /**
+   * Launch the Paystack checkout.
+   *
+   * @param seatCount   Number of seats the school is paying for.
+   *                    If omitted, falls back to `declared_seat_count`.
+   * @param amountGHS   Override the calculated fee (optional — normally derived
+   *                    from seatCount via calcAnnualFee).
+   */
+  const initiatePayment = async (seatCount?: number, amountGHS?: number) => {
     if (!billing || !user) {
       toast({
         title: "Error",
-        description: "Cannot initiate payment. Missing user or organization info.",
-        variant: "destructive"
+        description: "Cannot initiate payment. Missing user or organisation info.",
+        variant: "destructive",
       });
       return;
     }
@@ -57,30 +77,52 @@ export const useBilling = () => {
     if (!billing.billing_enabled) {
       toast({
         title: "Billing Disabled",
-        description: "Billing has been disabled for this organization by the administrator.",
-        variant: "destructive"
+        description: "Billing has been disabled for this organisation by the administrator.",
+        variant: "destructive",
       });
       return;
     }
 
+    // Resolve seats to charge for
+    const seats = seatCount ?? billing.declared_seat_count;
+    const fee = amountGHS ?? calcAnnualFee(seats);
+
+    // Persist the declared seat count BEFORE opening Paystack so the webhook
+    // can read the correct value if it fires before the frontend updates.
+    if (seatCount !== undefined && seatCount !== billing.declared_seat_count) {
+      await billingService.updateDeclaredSeats(billing.id, seats);
+      // Optimistically update local state so the UI reflects the new cap immediately
+      setBilling(prev =>
+        prev ? { ...prev, declared_seat_count: seats } : null
+      );
+    }
+
     const reference = `REF_${Date.now()}_${billing.id.substring(0, 8)}`;
 
-    await billingService.initializePayment(user.email || 'admin@school.com', amountGHS, billing.id, reference, () => {
-      toast({
-        title: "Payment Successful",
-        description: "Your payment was processed. Your account status should update shortly."
-      });
-      // Optimistically reload billing
-      setTimeout(fetchBilling, 2000); // Small delay to allow webhook processing
-    });
+    await billingService.initializePayment(
+      user.email ?? 'admin@school.com',
+      fee,
+      billing.id,
+      reference,
+      () => {
+        toast({
+          title: "Payment Successful",
+          description: "Your payment was processed. Your account status will update shortly.",
+        });
+        // Small delay to allow the webhook to fire before we re-fetch
+        setTimeout(fetchBilling, 2500);
+      },
+      seats,
+    );
   };
 
+  // ─── Admin toggle ────────────────────────────────────────────────────────────
   const toggleBillingEnabled = async (enabled: boolean) => {
     if (!billing) {
       toast({
         title: "Error",
-        description: "Cannot toggle billing without organization info.",
-        variant: "destructive"
+        description: "Cannot toggle billing without organisation info.",
+        variant: "destructive",
       });
       return;
     }
@@ -88,23 +130,20 @@ export const useBilling = () => {
     try {
       setTogglingBilling(true);
 
-      // Try using the RPC function first
       const success = await billingService.toggleBillingEnabled(billing.id, enabled);
 
       if (success) {
-        // Update local state
         setBilling(prev => prev ? { ...prev, billing_enabled: enabled } : null);
         toast({
           title: "Success",
-          description: `Billing has been ${enabled ? 'enabled' : 'disabled'} for your organization.`
+          description: `Billing has been ${enabled ? 'enabled' : 'disabled'} for your organisation.`,
         });
-        // Refresh to get latest data
         await fetchBilling();
       } else {
         toast({
           title: "Error",
           description: "Failed to update billing status. Please try again.",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     } catch (err) {
@@ -112,7 +151,7 @@ export const useBilling = () => {
       toast({
         title: "Error",
         description: "An unexpected error occurred while updating billing status.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setTogglingBilling(false);
@@ -127,6 +166,9 @@ export const useBilling = () => {
     refreshBilling: fetchBilling,
     initiatePayment,
     toggleBillingEnabled,
-    isBillingEnabled: billing?.billing_enabled ?? true
+    isBillingEnabled: billing?.billing_enabled ?? true,
+    effectiveSeatCap,
+    isSeatCapReached,
+    isSeatWarning,
   };
 };
