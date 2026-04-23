@@ -5,13 +5,14 @@ import { Eye, EyeOff, AlertCircle, ArrowRight, Shield, BarChart3, FileText } fro
 import { authService, LoginCredentials } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link, useNavigate } from "react-router-dom";
 import AuthPanelDecoration from "@/components/auth/AuthPanelDecoration";
 import LoadingComp from "@/components/ui/loading";
 
 const Login = () => {
   const { isAuthenticated, loading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState<LoginCredentials>({
     email: "",
@@ -146,7 +147,7 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-white to-slate-50/80">
         <div className="w-full max-w-[440px]">
           {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-10 lg:hidden">
+          <div className="flex items-center gap-3 mb-10 lg:hidden cursor-pointer" onClick={() => navigate("/")}>
             <img src="/ERESULTS_LOGO.png" alt="e-Results GH" className="w-10 h-10 rounded-full border-white border-[1px] shadow-lg" />
             <span className="text-gray-900 text-lg font-bold tracking-tight">e-Results GH</span>
           </div>

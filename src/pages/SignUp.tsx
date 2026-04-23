@@ -321,7 +321,7 @@ const SignUp = () => {
       <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-white to-slate-50/80">
         <div className="w-full max-w-[440px]">
           {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-10 lg:hidden">
+          <div className="flex items-center gap-3 mb-10 lg:hidden" onClick={() => navigate("/")}>
             <img src="/ERESULTS_LOGO.png" alt="e-Results GH" className="w-10 h-10 rounded-full shadow-lg" />
             <span className="text-gray-900 text-lg font-bold tracking-tight">e-Results GH</span>
           </div>

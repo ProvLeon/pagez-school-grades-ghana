@@ -18,13 +18,16 @@ const LandingFooter = () => {
               <span className="text-lg font-bold">e-Results GH</span>
             </div>
             <p className="text-sm text-white/50 leading-relaxed max-w-[280px]">
-              The advanced academic reporting platform trusted by 50+ schools across Ghana to deliver accurate, professional results.
+              The advanced academic reporting platform trusted by schools across Ghana to deliver accurate, professional results.
             </p>
             <div className="flex gap-4 pt-2">
               {[
-                { name: "Facebook", href: "#" },
-                { name: "Twitter", href: "#" },
-                { name: "LinkedIn", href: "#" },
+                { name: "Facebook", href: "https://web.facebook.com/pbpagez" },
+                { name: "Twitter", href: "https://x.com/pbpagez_ltd" },
+                { name: "LinkedIn", href: "https://www.linkedin.com/company/pb-pagez-limited/" },
+                { name: "TikTok", href: "https://www.tiktok.com/@pbpagez_ltd" },
+                { name: "Threads", href: "https://www.threads.com/@Pbpagez_ltd" },
+                { name: "Telegram", href: "https://t.me/pbpagez_gh" }
               ].map((social) => (
                 <a
                   key={social.name}
@@ -136,7 +139,7 @@ const LandingFooter = () => {
               </li>
               <li className="flex items-center gap-2.5 text-white/50">
                 <Phone className="w-4 h-4 flex-shrink-0 text-[#2563EB]" />
-                <span>+233 XXX XXX XXXX</span>
+                <span>+233 248 639 158</span>
               </li>
               <li className="flex items-start gap-2.5 text-white/50">
                 <MapPin className="w-4 h-4 flex-shrink-0 text-[#2563EB] mt-0.5" />
