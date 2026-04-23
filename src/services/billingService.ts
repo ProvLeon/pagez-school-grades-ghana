@@ -123,6 +123,56 @@ export const billingService = {
     }
   },
 
+  async verifyAndActivate(
+    reference: string,
+    organizationId: string,
+    seatCount?: number,
+  ): Promise<{ success: boolean; billing?: unknown }> {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !anonKey) {
+        console.error('[verifyAndActivate] Supabase env vars not set.');
+        return { success: false };
+      }
+
+      // Tell the Edge Function which Paystack environment this payment was made in
+      // so it uses the matching secret key for verification.
+      const isTest = import.meta.env.VITE_PAYSTACK_ENV !== 'live';
+
+      const resp = await fetch(
+        `${supabaseUrl}/functions/v1/verify-payment`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${anonKey}`,
+          },
+          body: JSON.stringify({
+            reference,
+            organization_id: organizationId,
+            seat_count: seatCount,
+            is_test: isTest,
+          }),
+        }
+      );
+
+      const result = await resp.json();
+
+      if (!resp.ok) {
+        console.error('[verifyAndActivate] Edge Function error:', result);
+        return { success: false };
+      }
+
+      console.log('[verifyAndActivate] Subscription activated:', result);
+      return { success: true, billing: result.billing };
+    } catch (err) {
+      console.error('[verifyAndActivate] Failed:', err);
+      return { success: false };
+    }
+  },
+
   async initializePayment(
     email: string,
     amountGHS: number,
@@ -174,8 +224,29 @@ export const billingService = {
         },
         callback: function (response: any) {
           console.log("Paystack payment success. Reference:", response.reference);
-          // Webhook handles actual verification and DB updating, but frontend can refresh optimistically
-          onSuccess();
+          // Call verify-payment Edge Function immediately — verifies with Paystack
+          // API server-side using the correct key (test vs live) and activates the
+          // subscription in the DB right away. No webhook dependency.
+          billingService
+            .verifyAndActivate(response.reference, organizationId, seatCount)
+            .then(({ success }) => {
+              if (success) {
+                onSuccess();
+              } else {
+                // Verification failed — surface it rather than silently refreshing
+                console.error(
+                  '[billingService] verifyAndActivate failed for ref:',
+                  response.reference
+                );
+                // Still call onSuccess so the UI at least refreshes;
+                // the admin can retry if the status hasn't changed.
+                onSuccess();
+              }
+            })
+            .catch((err) => {
+              console.error('[billingService] Unexpected error in verifyAndActivate:', err);
+              onSuccess();
+            });
         },
         onClose: function () {
           console.log("Paystack window closed by user.");

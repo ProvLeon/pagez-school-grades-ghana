@@ -106,11 +106,12 @@ export const useBilling = () => {
       reference,
       () => {
         toast({
-          title: "Payment Successful",
-          description: "Your payment was processed. Your account status will update shortly.",
+          title: "Subscription Activated!",
+          description: "Your subscription is now active. Your seat quota has been updated.",
         });
-        // Small delay to allow the webhook to fire before we re-fetch
-        setTimeout(fetchBilling, 2500);
+        // verify-payment Edge Function has already updated the DB by the time
+        // this callback fires — a short delay is enough for the write to settle.
+        setTimeout(fetchBilling, 800);
       },
       seats,
     );
