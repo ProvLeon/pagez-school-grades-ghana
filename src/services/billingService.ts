@@ -136,10 +136,17 @@ export const billingService = {
 
       // Paystack amount is always the lowest currency unit (pesewas)
       const amountInPesewas = amountGHS * 100;
-      const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+      const isLive = import.meta.env.VITE_PAYSTACK_ENV === 'live';
+      const publicKey = isLive
+        ? import.meta.env.VITE_PAYSTACK_PUBLIC_KEY_LIVE
+        : import.meta.env.VITE_PAYSTACK_PUBLIC_KEY_TEST;
 
       if (!publicKey) {
-        console.error("VITE_PAYSTACK_PUBLIC_KEY is not set.");
+        console.error(
+          isLive
+            ? "VITE_PAYSTACK_PUBLIC_KEY_LIVE is not set."
+            : "VITE_PAYSTACK_PUBLIC_KEY_TEST is not set."
+        );
         alert("Payment configuration error. Please contact support.");
         return;
       }

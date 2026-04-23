@@ -36,7 +36,7 @@ serve(async (req) => {
       ["sign", "verify"]
     );
     const signatureBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(textBody));
-    
+
     // Convert Buffer to Hex String
     const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
       .map(b => b.toString(16).padStart(2, '0'))
@@ -53,7 +53,7 @@ serve(async (req) => {
     // We only care about charge.success for upgrades
     if (event.event === "charge.success") {
       const { reference, amount, metadata, channel } = event.data;
-      
+
       // Expected from Frontend: The organization's UUID must be passed in custom_fields / metadata
       const organizationId = metadata?.organization_id;
 
@@ -65,7 +65,7 @@ serve(async (req) => {
       // Initialize Supabase Admin Client to bypass RLS
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      
+
       const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
         auth: { autoRefreshToken: false, persistSession: false },
       });
@@ -105,12 +105,25 @@ serve(async (req) => {
       const currentYear = new Date().getFullYear();
       const endOfYear = new Date(`${currentYear}-12-31T23:59:59Z`).toISOString();
 
+      // Extract seat_count from metadata custom_fields if provided
+      const seatCountField = metadata?.custom_fields?.find(
+        (f: { variable_name: string; value: string }) => f.variable_name === "seat_count"
+      );
+      const seatCount = seatCountField ? parseInt(seatCountField.value, 10) : null;
+
+      const updatePayload: Record<string, unknown> = {
+        subscription_status: "active",
+        current_subscription_ends_at: endOfYear,
+      };
+
+      // Persist the declared_seat_count the school paid for so the cap is enforced correctly
+      if (seatCount && !isNaN(seatCount) && seatCount > 0) {
+        updatePayload.declared_seat_count = seatCount;
+      }
+
       const { error: upgradeError } = await adminClient
         .from("organizations")
-        .update({
-          subscription_status: "active",
-          current_subscription_ends_at: endOfYear
-        })
+        .update(updatePayload)
         .eq("id", organizationId);
 
       if (upgradeError) {
@@ -118,7 +131,11 @@ serve(async (req) => {
         throw upgradeError;
       }
 
-      console.log(`[SUCCESS] Upgraded Organization ${organizationId} to Active. Paid: GHS ${amountGHS}`);
+      console.log(
+        `[SUCCESS] Upgraded Organization ${organizationId} to Active.` +
+        ` Paid: GHS ${amountGHS}` +
+        (seatCount ? ` | Seats: ${seatCount}` : "")
+      );
     }
 
     return new Response(JSON.stringify({ received: true }), {
