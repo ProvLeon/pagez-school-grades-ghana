@@ -96,6 +96,57 @@ const PublicMockResults = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedResult, setSelectedResult] = useState<MockResult | null>(null);
 
+  // ── No session link — show a helpful landing state ───────────────────
+  if (!sessionId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
+        <div className="max-w-md w-full space-y-4">
+          <div className="text-center space-y-3">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+              <GraduationCap className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              Mock Exam Results
+            </h1>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Mock exam results are accessed via a unique link shared by your school administrator after results are published.
+            </p>
+          </div>
+
+          <Card className="border border-border shadow-sm">
+            <CardContent className="pt-6 pb-6 space-y-4">
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+                <BookOpen className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                <div className="text-sm text-blue-800 leading-relaxed">
+                  <p className="font-semibold mb-0.5">How to access your results</p>
+                  <ol className="space-y-1 list-decimal list-inside text-blue-700">
+                    <li>Contact your school administrator</li>
+                    <li>Ask for the mock results link for your class</li>
+                    <li>Open the link on any device to view results</li>
+                  </ol>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/50 border border-border">
+                <AlertCircle className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Results are only visible once your school has published them. Each mock exam session has its own unique link.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <p className="text-center text-xs text-muted-foreground">
+            Looking for end-of-term reports?{" "}
+            <a href="/student-reports" className="text-primary font-semibold hover:underline">
+              View Term Reports
+            </a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Fetch session info
   const { data: session, isLoading: sessionLoading, error: sessionError } = useQuery({
     queryKey: ['public-mock-session', sessionId],

@@ -252,6 +252,7 @@ const App = () => {
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/student-reports" element={<PublicReports />} />
+                    <Route path="/mock-results" element={<PublicMockResults />} />
                     <Route path="/mock-results/:sessionId" element={<PublicMockResults />} />
 
                     {/* No Organization Route - Protected but no sidebar layout */}

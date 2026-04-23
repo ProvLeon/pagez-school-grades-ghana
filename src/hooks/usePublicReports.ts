@@ -83,9 +83,9 @@ export const usePublicReportGeneration = () => {
 
       const pdfBlob = await ReportCardService.generatePDF(reportData);
       const filename = `${reportData.student.full_name}_Report_${reportData.academic.term}_${reportData.academic.academic_year}.pdf`;
-      
+
       ReportCardService.downloadPDF(pdfBlob, filename);
-      
+
       toast({
         title: "Report Downloaded",
         description: `Report card has been downloaded successfully`,
@@ -123,7 +123,9 @@ export const usePublicSearchData = () => {
     },
   });
 
-  const academicYears = Array.from(new Set(classes.map(c => c.academic_year))).sort().reverse();
+  const academicYears = Array.from(
+    new Set(classes.map(c => c.academic_year).filter((y): y is string => !!y && y.trim() !== ''))
+  ).sort().reverse();
   const terms = ['first', 'second', 'third'];
 
   return {

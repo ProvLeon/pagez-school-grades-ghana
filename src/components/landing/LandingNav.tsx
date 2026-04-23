@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Menu, X } from "lucide-react";
+import { BookOpen, Menu, X, FileText, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -8,6 +8,11 @@ const navLinks = [
   { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
+];
+
+const reportLinks = [
+  { label: "Term Reports", href: "/student-reports", icon: FileText },
+  { label: "Mock Results", href: "/mock-results", icon: GraduationCap },
 ];
 
 const LandingNav = () => {
@@ -26,6 +31,8 @@ const LandingNav = () => {
     if (href.startsWith("#")) {
       const el = document.querySelector(href);
       if (el) el.scrollIntoView({ behavior: "smooth" });
+    } else {
+      navigate(href);
     }
   };
 
@@ -70,6 +77,23 @@ const LandingNav = () => {
               >
                 {link.label}
                 <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-[#2563EB] rounded-full transition-all duration-300 group-hover:w-full" />
+              </a>
+            ))}
+
+            {/* Divider */}
+            <span className="w-px h-4 bg-gray-200 shrink-0" />
+
+            {/* Report Links */}
+            {reportLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={(e) => { e.preventDefault(); handleNavClick(link.href); }}
+                className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors relative group"
+              >
+                <link.icon className="w-3.5 h-3.5 shrink-0" />
+                {link.label}
+                <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-blue-500 rounded-full transition-all duration-300 group-hover:w-full" />
               </a>
             ))}
           </nav>
@@ -119,6 +143,25 @@ const LandingNav = () => {
               {link.label}
             </a>
           ))}
+
+          {/* Report Links — for students & parents */}
+          <div className="pt-2 mt-1 border-t border-gray-100">
+            <p className="px-3 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              For Students & Parents
+            </p>
+            {reportLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={(e) => { e.preventDefault(); handleNavClick(link.href); }}
+                className="flex items-center gap-2.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-2.5 rounded-lg transition-all"
+              >
+                <link.icon className="w-4 h-4 shrink-0" />
+                {link.label}
+              </a>
+            ))}
+          </div>
+
           <div className="pt-3 mt-2 border-t border-gray-100 flex flex-col gap-2">
             <button
               onClick={() => { navigate("/login"); setMobileOpen(false); }}
