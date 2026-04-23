@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import {
@@ -8,18 +8,16 @@ import {
   FileText,
   Award,
   TrendingUp,
-  Users,
-  BookOpen,
-  ChevronDown,
-  ChevronUp,
   Calendar,
   Shield,
   Lock,
   CheckCircle2,
   XCircle,
   Clock,
-  BarChart3,
   ChevronRight,
+  BookOpen,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -41,9 +39,7 @@ interface MockResult {
   student_id: string;
   session_id: string;
   total_score: number | null;
-  class_id: string | null;
   position: number | null;
-  created_at: string;
   student: {
     id: string;
     full_name: string;
@@ -71,9 +67,11 @@ const initials = (name: string) =>
     .map((w) => w[0].toUpperCase())
     .join('');
 
-const getGradeFromAggregate = (aggregate: number, examType: 'bece' | 'wassce') => {
-  const maxAggregate = examType === 'bece' ? 30 : 36;
-  const isPassing = aggregate <= maxAggregate;
+const getGradeFromAggregate = (
+  aggregate: number,
+  examType: 'bece' | 'wassce'
+) => {
+  const isPassing = examType === 'bece' ? aggregate <= 30 : aggregate <= 36;
   let grade = 'F';
   if (examType === 'bece') {
     if (aggregate <= 12) grade = 'A';
@@ -117,40 +115,12 @@ const Wave = () => (
   >
     <div
       className="absolute bottom-0 left-1/2 -translate-x-1/2 bg-gray-50"
-      style={{ width: '110%', height: '100%', borderRadius: '50% 50% 0 0 / 100% 100% 0 0' }}
+      style={{
+        width: '110%',
+        height: '100%',
+        borderRadius: '50% 50% 0 0 / 100% 100% 0 0',
+      }}
     />
-  </div>
-);
-
-// ─── Metric tile (matches ViewResult style) ───────────────────────────────────
-const MetricTile = ({
-  icon: Icon,
-  label,
-  value,
-  unit,
-  accent,
-}: {
-  icon: React.FC<{ className?: string }>;
-  label: string;
-  value: string | number;
-  unit?: string;
-  accent: string;
-}) => (
-  <div
-    className={cn(
-      'relative overflow-hidden rounded-2xl bg-white border shadow-[0_2px_10px_-3px_rgba(6,81,237,0.08)] p-4 flex flex-col justify-center group transition-all duration-300',
-      accent,
-    )}
-  >
-    <div className="absolute -right-5 -top-5 w-20 h-20 rounded-full blur-2xl opacity-60 bg-current" />
-    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
-      <Icon className="w-3.5 h-3.5" />
-      {label}
-    </span>
-    <span className="text-2xl font-black text-gray-800 tracking-tight leading-none">
-      {value}
-      {unit && <span className="text-base text-gray-400 font-bold ml-0.5">{unit}</span>}
-    </span>
   </div>
 );
 
@@ -166,23 +136,31 @@ const PageHeader = ({
 }) => (
   <header
     className="relative"
-    style={{ background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 55%, #3B82F6 100%)' }}
+    style={{
+      background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 55%, #3B82F6 100%)',
+    }}
   >
-    {/* dot grid */}
     <div
       className="absolute inset-0 opacity-[0.07]"
-      style={{ backgroundImage: 'radial-gradient(circle,#fff 1px,transparent 1px)', backgroundSize: '20px 20px' }}
+      style={{
+        backgroundImage: 'radial-gradient(circle,#fff 1px,transparent 1px)',
+        backgroundSize: '20px 20px',
+      }}
     />
-    {/* glow blobs */}
     <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-blue-400/20 blur-3xl pointer-events-none" />
     <div className="absolute top-20 -left-10 w-48 h-48 rounded-full bg-indigo-600/20 blur-2xl pointer-events-none" />
 
     <div className="relative z-10">
-      {/* nav row */}
-      <div className="max-w-5xl mx-auto px-5 pt-5 flex items-center justify-between">
+      <div className="max-w-lg mx-auto px-5 pt-5 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5">
-          <img src="/ERESULTS_LOGO.png" alt="e-Results GH" className="w-8 h-8 rounded-full border border-white/30 shadow-md" />
-          <span className="text-white font-bold text-[15px] tracking-tight">e-Results GH</span>
+          <img
+            src="/ERESULTS_LOGO.png"
+            alt="e-Results GH"
+            className="w-8 h-8 rounded-full border border-white/30 shadow-md"
+          />
+          <span className="text-white font-bold text-[15px] tracking-tight">
+            e-Results GH
+          </span>
         </Link>
         <Link
           to="/student-reports"
@@ -194,8 +172,7 @@ const PageHeader = ({
         </Link>
       </div>
 
-      {/* hero */}
-      <div className="max-w-5xl mx-auto px-5 pt-7 pb-20">
+      <div className="max-w-lg mx-auto px-5 pt-7 pb-20">
         <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full px-3.5 py-1.5 mb-4">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
           <span className="text-[11px] font-semibold text-blue-100 tracking-wide uppercase">
@@ -205,22 +182,24 @@ const PageHeader = ({
         <h1 className="text-[26px] sm:text-[32px] font-extrabold text-white leading-[1.15] tracking-tight mb-2">
           {title}
         </h1>
-        <p className="text-blue-200/90 text-[13px] leading-relaxed max-w-lg mb-5">{subtitle}</p>
-
-        {/* trust badges */}
+        <p className="text-blue-200/90 text-[13px] leading-relaxed max-w-lg mb-5">
+          {subtitle}
+        </p>
         <div className="flex items-center gap-4 flex-wrap">
           {[
             { icon: Shield, text: 'Secured portal' },
             { icon: GraduationCap, text: 'Official records' },
             { icon: Lock, text: 'School-verified' },
           ].map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-center gap-1.5 text-[11px] text-blue-200/80 font-medium">
+            <div
+              key={text}
+              className="flex items-center gap-1.5 text-[11px] text-blue-200/80 font-medium"
+            >
               <Icon className="w-3.5 h-3.5" />
               {text}
             </div>
           ))}
         </div>
-
         {children}
       </div>
 
@@ -229,14 +208,44 @@ const PageHeader = ({
   </header>
 );
 
+// ─── Page footer ──────────────────────────────────────────────────────────────
+const PageFooter = () => (
+  <div className="text-center pt-4 pb-8 space-y-1.5">
+    <div className="flex items-center justify-center gap-2">
+      <img
+        src="/ERESULTS_LOGO.png"
+        alt="e-Results GH"
+        className="w-5 h-5 rounded-full opacity-50"
+      />
+      <p className="text-[11px] text-gray-400 font-semibold">
+        e-Results GH &nbsp;·&nbsp; PB Pagez LTD
+      </p>
+    </div>
+    <p className="text-[11px] text-gray-300 leading-relaxed max-w-xs mx-auto">
+      Results published and managed exclusively by your school. This portal
+      does not store personal data.
+    </p>
+  </div>
+);
+
 // ─── Main component ───────────────────────────────────────────────────────────
 const PublicMockResults = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // ── ALL HOOKS HOISTED ABOVE EVERY EARLY RETURN ─────────────────────────────
-  const { data: session, isLoading: sessionLoading, error: sessionError } = useQuery({
+  // Controlled input vs submitted value — two separate pieces of state
+  // so the query only fires on explicit submit, not on every keystroke.
+  const [inputValue, setInputValue] = useState('');
+  const [submittedId, setSubmittedId] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // ── ALL HOOKS ABOVE EVERY EARLY RETURN ─────────────────────────────────────
+
+  // 1. Fetch session metadata
+  const {
+    data: session,
+    isLoading: sessionLoading,
+    error: sessionError,
+  } = useQuery({
     queryKey: ['public-mock-session', sessionId],
     enabled: !!sessionId,
     retry: false,
@@ -252,55 +261,85 @@ const PublicMockResults = () => {
     },
   });
 
-  const examType: 'bece' | 'wassce' = useMemo(() => {
+  const examType: 'bece' | 'wassce' = (() => {
     if (!session) return 'bece';
     const name = session.name.toLowerCase();
-    if (name.includes('wassce') || name.includes('shs') || name.includes('senior')) return 'wassce';
-    return 'bece';
-  }, [session]);
+    return name.includes('wassce') || name.includes('shs') || name.includes('senior')
+      ? 'wassce'
+      : 'bece';
+  })();
 
-  const { data: results = [], isLoading: resultsLoading } = useQuery({
-    queryKey: ['public-mock-results', sessionId],
-    enabled: !!sessionId && session?.is_published === true,
-    queryFn: async (): Promise<MockResult[]> => {
-      if (!sessionId) return [];
+  // 2. Targeted per-student query — only runs after the user submits their ID
+  const {
+    data: foundResult,
+    isLoading: searching,
+    error: searchError,
+  } = useQuery({
+    queryKey: ['public-mock-student-result', sessionId, submittedId],
+    enabled: !!sessionId && !!submittedId && session?.is_published === true,
+    retry: false,
+    queryFn: async (): Promise<MockResult | null> => {
+      if (!sessionId || !submittedId) return null;
+
+      // Step 1 — resolve the student row by their human-readable student_id
+      const { data: studentRow, error: studentErr } = await supabase
+        .from('students')
+        .select('id')
+        .ilike('student_id', submittedId.trim())
+        .maybeSingle();
+
+      if (studentErr || !studentRow) return null;
+
+      // Step 2 — find their result in this specific session
       const { data, error } = await supabase
         .from('mock_exam_results')
         .select(`
-          id, student_id, session_id, total_score, class_id, position, created_at,
-          student:students(id, full_name, student_id, no_on_roll, class:classes(id, name)),
+          id, student_id, session_id, total_score, position,
+          student:students(id, full_name, student_id, no_on_roll,
+            class:classes(id, name)),
           subject_marks:mock_exam_subject_marks(
-            id, subject_id, total_score, grade, subject:subjects(id, name)
+            id, subject_id, total_score, grade,
+            subject:subjects(id, name)
           )
         `)
         .eq('session_id', sessionId)
-        .order('total_score', { ascending: false });
-      if (error) throw error;
-      return (data || []).map((r) => {
-        const sd = r.student as unknown;
-        let studentObj: MockResult['student'] = null;
-        if (sd) {
-          const s = (Array.isArray(sd) ? sd[0] : sd) as Record<string, unknown>;
-          if (s) {
-            const cd = s.class;
-            const classObj = Array.isArray(cd) && cd.length > 0
-              ? (cd[0] as { id: string; name: string })
-              : (cd as { id: string; name: string } | null);
-            studentObj = {
-              id: s.id as string,
-              full_name: s.full_name as string,
-              student_id: s.student_id as string,
-              no_on_roll: s.no_on_roll as string | null,
-              class: classObj,
-            };
-          }
+        .eq('student_id', studentRow.id)
+        .maybeSingle();
+
+      if (error || !data) return null;
+
+      // Normalise nested relations that Supabase may return as arrays
+      const raw = data as Record<string, unknown>;
+      const sd = raw.student;
+      let studentObj: MockResult['student'] = null;
+      if (sd) {
+        const s = (Array.isArray(sd) ? sd[0] : sd) as Record<string, unknown>;
+        if (s) {
+          const cd = s.class;
+          const classObj = (
+            Array.isArray(cd) && cd.length > 0
+              ? cd[0]
+              : cd
+          ) as { id: string; name: string } | null;
+          studentObj = {
+            id: s.id as string,
+            full_name: s.full_name as string,
+            student_id: s.student_id as string,
+            no_on_roll: s.no_on_roll as string | null,
+            class: classObj,
+          };
         }
-        const processedMarks = (r.subject_marks || []).map((mark: Record<string, unknown>) => {
+      }
+
+      const processedMarks = ((raw.subject_marks as Record<string, unknown>[]) || []).map(
+        (mark) => {
           const subjectData = mark.subject;
           let subjectObj: { id: string; name: string } | null = null;
           if (subjectData) {
-            if (Array.isArray(subjectData) && subjectData.length > 0) subjectObj = subjectData[0] as { id: string; name: string };
-            else if (typeof subjectData === 'object') subjectObj = subjectData as { id: string; name: string };
+            if (Array.isArray(subjectData) && subjectData.length > 0)
+              subjectObj = subjectData[0] as { id: string; name: string };
+            else if (typeof subjectData === 'object')
+              subjectObj = subjectData as { id: string; name: string };
           }
           return {
             id: mark.id as string,
@@ -309,48 +348,47 @@ const PublicMockResults = () => {
             grade: mark.grade as string | null,
             subject: subjectObj,
           };
-        });
-        return { ...r, student: studentObj, subject_marks: processedMarks } as MockResult;
-      });
+        }
+      );
+
+      return {
+        ...(raw as Omit<MockResult, 'student' | 'subject_marks'>),
+        student: studentObj,
+        subject_marks: processedMarks,
+      } as MockResult;
     },
   });
 
-  const filteredResults = useMemo(() => {
-    if (!searchTerm.trim()) return results;
-    const q = searchTerm.toLowerCase().trim();
-    return results.filter((r) =>
-      (r.student?.full_name?.toLowerCase() || '').includes(q) ||
-      (r.student?.student_id?.toLowerCase() || '').includes(q) ||
-      (r.student?.no_on_roll?.toLowerCase() || '').includes(q)
-    );
-  }, [results, searchTerm]);
+  // ── Handlers ────────────────────────────────────────────────────────────────
+  const handleSearch = () => {
+    if (!inputValue.trim()) return;
+    setSubmittedId(inputValue.trim().toUpperCase());
+    setHasSearched(true);
+  };
 
-  const totalStudents = results.length;
-  const avgScore = totalStudents > 0
-    ? Math.round(results.reduce((s, r) => s + (r.total_score || 0), 0) / totalStudents)
-    : 0;
-  const avgAggregate = totalStudents > 0
-    ? (results.reduce((s, r) => s + (r.position || 54), 0) / totalStudents).toFixed(1)
-    : '-';
-  const passRate = totalStudents > 0
-    ? Math.round((results.filter((r) => {
-      const agg = r.position || 54;
-      return examType === 'bece' ? agg <= 30 : agg <= 36;
-    }).length / totalStudents) * 100)
-    : 0;
+  const handleClear = () => {
+    setInputValue('');
+    setSubmittedId('');
+    setHasSearched(false);
+  };
 
-  // ── No session link ────────────────────────────────────────────────────────
+  // ── EARLY RETURNS (all hooks already called above) ──────────────────────────
+
+  // No session ID in URL
   if (!sessionId) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <PageHeader
-          title={<>Find Your<br /><span className="text-blue-200">Mock Results</span></>}
-          subtitle="Mock exam results are shared via a unique link from your school administrator once results are published."
+          title={
+            <>
+              Find Your<br />
+              <span className="text-blue-200">Mock Results</span>
+            </>
+          }
+          subtitle="Mock exam results are accessed via a unique link shared by your school administrator once results are published."
         />
-
         <main className="flex-1 px-4 sm:px-5 pb-10">
           <div className="max-w-md mx-auto space-y-4 pt-4">
-            {/* How-to card */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -358,14 +396,18 @@ const PublicMockResults = () => {
               className="bg-white rounded-2xl border border-gray-100 shadow-[0_4px_24px_rgba(0,0,0,0.07)] overflow-hidden"
             >
               <div className="px-5 pt-5 pb-2 border-b border-gray-100">
-                <p className="text-[13px] font-bold text-gray-900">How to access your results</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">Your school administrator shares a direct link</p>
+                <p className="text-[13px] font-bold text-gray-900">
+                  How to access your results
+                </p>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Your school administrator shares a direct link
+                </p>
               </div>
               <div className="px-5 py-4 space-y-3">
                 {[
                   { n: 1, text: 'Contact your school administrator or class teacher' },
                   { n: 2, text: 'Ask for the mock results link for your exam session' },
-                  { n: 3, text: 'Open the link on any device — no login required' },
+                  { n: 3, text: 'Open the link and enter your Student ID to view your result' },
                 ].map(({ n, text }) => (
                   <div key={n} className="flex items-start gap-3">
                     <div className="w-6 h-6 rounded-full bg-[#2563EB] text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
@@ -377,7 +419,6 @@ const PublicMockResults = () => {
               </div>
             </motion.div>
 
-            {/* Info note */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -386,62 +427,62 @@ const PublicMockResults = () => {
             >
               <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
               <p className="text-[12px] text-blue-800 leading-relaxed">
-                Results are only visible once your school has published them. Each mock exam
-                session has its own unique link.
+                Results are only visible once your school has published them.
+                Each mock exam session has its own unique link.
               </p>
             </motion.div>
 
-            {/* Cross-link */}
             <p className="text-center text-[12px] text-gray-500 pb-4">
               Looking for end-of-term reports?{' '}
-              <Link to="/student-reports" className="text-[#2563EB] font-bold hover:underline">
+              <Link
+                to="/student-reports"
+                className="text-[#2563EB] font-bold hover:underline"
+              >
                 View Term Reports →
               </Link>
             </p>
 
-            {/* Footer */}
-            <div className="text-center pt-2 pb-6 space-y-1">
-              <div className="flex items-center justify-center gap-2">
-                <img src="/ERESULTS_LOGO.png" alt="e-Results GH" className="w-5 h-5 rounded-full opacity-50" />
-                <p className="text-[11px] text-gray-400 font-semibold">e-Results GH · PB Pagez LTD</p>
-              </div>
-              <p className="text-[11px] text-gray-300">Published exclusively by your school.</p>
-            </div>
+            <PageFooter />
           </div>
         </main>
       </div>
     );
   }
 
-  // ── Loading ────────────────────────────────────────────────────────────────
+  // Session loading
   if (sessionLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <PageHeader
-          title={<>Mock Exam<br /><span className="text-blue-200">Results</span></>}
-          subtitle="Loading exam session information…"
+          title={
+            <>
+              Mock Exam<br />
+              <span className="text-blue-200">Results</span>
+            </>
+          }
+          subtitle="Loading exam session…"
         />
         <main className="flex-1 px-4 sm:px-5 pb-10">
-          <div className="max-w-5xl mx-auto pt-6 space-y-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {[1, 2, 3, 4].map((i) => <Skel key={i} className="h-24 rounded-2xl" />)}
-            </div>
+          <div className="max-w-md mx-auto pt-6 space-y-4">
+            <Skel className="h-48 rounded-2xl" />
             <Skel className="h-14 rounded-2xl" />
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => <Skel key={i} className="h-16 rounded-2xl" />)}
-            </div>
           </div>
         </main>
       </div>
     );
   }
 
-  // ── Session not found ──────────────────────────────────────────────────────
+  // Session not found or error
   if (sessionError || !session) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <PageHeader
-          title={<>Session<br /><span className="text-blue-200">Not Found</span></>}
+          title={
+            <>
+              Session<br />
+              <span className="text-blue-200">Not Found</span>
+            </>
+          }
           subtitle="The mock exam session you're looking for doesn't exist or has been removed."
         />
         <main className="flex-1 px-4 sm:px-5 pb-10">
@@ -456,10 +497,12 @@ const PublicMockResults = () => {
                   <XCircle className="w-7 h-7 text-red-500" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900 text-[16px]">Session Not Found</p>
+                  <p className="font-bold text-gray-900 text-[16px]">
+                    Session Not Found
+                  </p>
                   <p className="text-[13px] text-gray-500 mt-1.5 leading-relaxed max-w-xs">
-                    This link may be invalid or the exam session may have been removed. Please
-                    contact your school administrator for the correct link.
+                    This link may be invalid or the exam session may have been
+                    removed. Please contact your school for the correct link.
                   </p>
                 </div>
                 <Link
@@ -470,18 +513,19 @@ const PublicMockResults = () => {
                 </Link>
               </div>
             </motion.div>
+            <PageFooter />
           </div>
         </main>
       </div>
     );
   }
 
-  // ── Not published ──────────────────────────────────────────────────────────
+  // Session not published yet
   if (!session.is_published) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <PageHeader
-          title={<>{session.name}<br /><span className="text-blue-200">Not Yet Published</span></>}
+          title={<>{session.name}</>}
           subtitle="Results for this mock exam session have not been published yet."
         />
         <main className="flex-1 px-4 sm:px-5 pb-10">
@@ -496,10 +540,12 @@ const PublicMockResults = () => {
                   <Clock className="w-7 h-7 text-amber-500" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900 text-[16px]">Results Pending Publication</p>
+                  <p className="font-bold text-gray-900 text-[16px]">
+                    Results Pending Publication
+                  </p>
                   <p className="text-[13px] text-gray-500 mt-1.5 leading-relaxed max-w-xs">
-                    Your school administrator has not yet published results for this session.
-                    Please check back later or contact your school.
+                    Your school administrator has not yet published results for
+                    this session. Please check back later or contact your school.
                   </p>
                 </div>
                 <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-full px-3 py-1.5 text-[12px] font-semibold text-amber-700">
@@ -508,362 +554,466 @@ const PublicMockResults = () => {
                 </div>
               </div>
             </motion.div>
+            <PageFooter />
           </div>
         </main>
       </div>
     );
   }
 
-  // ── Published results ──────────────────────────────────────────────────────
+  // ── Published session — show the lookup form ────────────────────────────────
+  const score = foundResult?.total_score ?? 0;
+  const aggregate = foundResult?.position ?? (examType === 'bece' ? 54 : 72);
+  const { grade, isPassing } = foundResult
+    ? getGradeFromAggregate(aggregate, examType)
+    : { grade: '', isPassing: false };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <PageHeader
         title={<>{session.name}</>}
-        subtitle={`${session.academic_year} · ${capitalize(session.term)} Term · ${getExamTypeName(examType)}`}
+        subtitle={`${session.academic_year} · ${capitalize(session.term)} Term · ${getExamTypeName(examType)} — Enter your Student ID to view your result.`}
       />
 
-      <main className="flex-1 px-4 sm:px-5 pb-12">
-        <div className="max-w-5xl mx-auto space-y-4 pt-4">
+      <main className="flex-1 px-4 sm:px-5 pb-10">
+        <div className="max-w-md mx-auto space-y-4 pt-4">
 
-          {/* ── Metric tiles ────────────────────────────────────────────────── */}
+          {/* ── Lookup card ──────────────────────────────────────────────── */}
           <motion.div
-            initial={{ opacity: 0, y: 14 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.07)] border border-gray-100/80 overflow-hidden"
           >
-            <MetricTile
-              icon={Users}
-              label="Total Students"
-              value={totalStudents}
-              accent="border-blue-100 hover:border-blue-200"
-            />
-            <MetricTile
-              icon={TrendingUp}
-              label="Avg Score"
-              value={avgScore}
-              unit="%"
-              accent="border-purple-100 hover:border-purple-200"
-            />
-            <MetricTile
-              icon={BarChart3}
-              label="Avg Aggregate"
-              value={avgAggregate}
-              accent="border-orange-100 hover:border-orange-200"
-            />
-            <MetricTile
-              icon={Award}
-              label="Pass Rate"
-              value={passRate}
-              unit="%"
-              accent="border-emerald-100 hover:border-emerald-200"
-            />
-          </motion.div>
-
-          {/* ── Search ──────────────────────────────────────────────────────── */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.1 }}
-            className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3"
-          >
-            <Search className="w-4 h-4 text-gray-400 shrink-0" />
-            <input
-              type="text"
-              placeholder="Search by student name, ID or roll number…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 text-[13px] text-gray-800 placeholder:text-gray-400 bg-transparent outline-none"
-            />
-            <AnimatePresence>
-              {searchTerm && (
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  onClick={() => setSearchTerm('')}
-                  className="text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors px-2 py-1 rounded-lg hover:bg-gray-100"
-                >
-                  Clear
-                </motion.button>
-              )}
-            </AnimatePresence>
-            {searchTerm && (
-              <span className="text-[11px] font-semibold text-gray-400 whitespace-nowrap">
-                {filteredResults.length} of {results.length}
-              </span>
-            )}
-          </motion.div>
-
-          {/* ── Results list ────────────────────────────────────────────────── */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.15 }}
-            className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
-          >
-            {/* Table header — desktop only */}
-            <div className="hidden sm:grid grid-cols-[40px_1fr_140px_90px_90px_80px] gap-3 px-5 py-3 border-b border-gray-100 bg-gray-50/60">
-              {['#', 'Student', 'Class', 'Avg Score', 'Aggregate', ''].map((h) => (
-                <p key={h} className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  {h}
-                </p>
-              ))}
+            {/* Card header */}
+            <div className="px-5 pt-5 pb-4 border-b border-gray-100">
+              <p className="text-[13px] font-bold text-gray-900">
+                Find Your Result
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Enter your Student ID exactly as given by your school
+              </p>
             </div>
 
-            {resultsLoading ? (
-              <div className="px-5 py-5 space-y-3">
-                {[1, 2, 3, 4].map((i) => <Skel key={i} className="h-14 rounded-xl" />)}
-              </div>
-            ) : filteredResults.length === 0 ? (
-              <div className="px-5 py-14 flex flex-col items-center gap-3 text-center">
-                <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-gray-400" />
-                </div>
-                <p className="text-[14px] font-semibold text-gray-700">
-                  {searchTerm ? 'No students match your search' : 'No results available'}
-                </p>
-                <p className="text-[12px] text-gray-400 max-w-xs leading-relaxed">
-                  {searchTerm
-                    ? 'Try searching with a different name or ID.'
-                    : 'Results for this session have not been entered yet.'}
-                </p>
-              </div>
-            ) : (
-              <div>
-                {filteredResults.map((result, index) => {
-                  const score = result.total_score ?? 0;
-                  const aggregate = result.position ?? (examType === 'bece' ? 54 : 72);
-                  const { grade, isPassing } = getGradeFromAggregate(aggregate, examType);
-                  const isExpanded = expandedId === result.id;
-
-                  return (
-                    <div key={result.id} className={cn('border-b border-gray-100 last:border-0')}>
-                      {/* Row */}
-                      <div
-                        className={cn(
-                          'grid grid-cols-[40px_1fr_auto] sm:grid-cols-[40px_1fr_140px_90px_90px_80px]',
-                          'gap-3 px-5 py-3.5 items-center cursor-pointer transition-colors',
-                          isExpanded ? 'bg-blue-50/50' : 'hover:bg-gray-50'
-                        )}
-                        onClick={() => setExpandedId(isExpanded ? null : result.id)}
+            <div className="px-5 pt-4 pb-5 space-y-3">
+              {/* Student ID input */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="student-id"
+                  className="text-[13px] font-semibold text-gray-700 flex items-center gap-1"
+                >
+                  Student ID
+                  <span className="text-[#2563EB]">*</span>
+                </label>
+                <div className="relative">
+                  <Input
+                    id="student-id"
+                    type="text"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    placeholder="e.g., PI25W9K"
+                    value={inputValue}
+                    onChange={(e) =>
+                      setInputValue(e.target.value.toUpperCase())
+                    }
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    className={cn(
+                      'h-12 text-[15px] rounded-xl border-gray-200 bg-gray-50/60',
+                      'focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10',
+                      'transition-all font-mono tracking-widest pr-10',
+                      'placeholder:font-sans placeholder:tracking-normal placeholder:text-gray-400'
+                    )}
+                  />
+                  <AnimatePresence>
+                    {inputValue.trim() && (
+                      <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2"
                       >
-                        {/* Rank */}
-                        <div className="flex items-center justify-center">
-                          <span className={cn(
-                            'w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold',
-                            index === 0 ? 'bg-amber-100 text-amber-700' :
-                              index === 1 ? 'bg-gray-200 text-gray-700' :
-                                index === 2 ? 'bg-orange-100 text-orange-600' :
-                                  'bg-gray-100 text-gray-500'
-                          )}>
-                            {index + 1}
-                          </span>
-                        </div>
-
-                        {/* Student */}
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-[#2563EB]/10 flex items-center justify-center shrink-0">
-                              <span className="text-[10px] font-bold text-[#2563EB]">
-                                {initials(result.student?.full_name || '??')}
-                              </span>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-[13px] font-semibold text-gray-900 truncate">
-                                {result.student?.full_name || 'Unknown'}
-                              </p>
-                              <p className="text-[11px] text-gray-400">
-                                {result.student?.no_on_roll || result.student?.student_id || '—'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Class — desktop */}
-                        <p className="hidden sm:block text-[13px] text-gray-600 truncate">
-                          {result.student?.class?.name || '—'}
-                        </p>
-
-                        {/* Score — desktop */}
-                        <div className="hidden sm:flex items-center justify-center">
-                          <span className="text-[13px] font-bold text-gray-800">{score}%</span>
-                        </div>
-
-                        {/* Aggregate — desktop */}
-                        <div className="hidden sm:flex items-center justify-center">
-                          <span className={cn(
-                            'inline-flex items-center gap-1 text-[12px] font-bold px-2 py-0.5 rounded-full',
-                            isPassing ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                          )}>
-                            {isPassing ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                            {aggregate}
-                          </span>
-                        </div>
-
-                        {/* Expand toggle (both mobile and desktop) */}
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Grade badge — mobile summary */}
-                          <span className={cn(
-                            'sm:hidden inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full',
-                            gradeClasses(grade)
-                          )}>
-                            {grade}
-                          </span>
-                          <div className={cn(
-                            'w-7 h-7 rounded-lg flex items-center justify-center transition-colors',
-                            isExpanded ? 'bg-[#2563EB]/10 text-[#2563EB]' : 'bg-gray-100 text-gray-500'
-                          )}>
-                            {isExpanded
-                              ? <ChevronUp className="w-3.5 h-3.5" />
-                              : <ChevronDown className="w-3.5 h-3.5" />
-                            }
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Expanded detail panel */}
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.25, ease: 'easeOut' }}
-                            className="overflow-hidden border-t border-blue-100/60"
-                          >
-                            <div className="px-5 py-5 bg-blue-50/30 space-y-4">
-                              {/* Student summary */}
-                              <div className="flex items-center gap-3.5">
-                                <div
-                                  className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-extrabold text-[15px] shrink-0 shadow-sm"
-                                  style={{ background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)' }}
-                                >
-                                  {initials(result.student?.full_name || '??')}
-                                </div>
-                                <div>
-                                  <p className="font-bold text-gray-900 text-[15px]">
-                                    {result.student?.full_name}
-                                  </p>
-                                  <p className="text-[12px] text-gray-500">
-                                    {result.student?.class?.name} ·{' '}
-                                    {result.student?.no_on_roll || result.student?.student_id}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Mini metric tiles */}
-                              <div className="grid grid-cols-3 gap-2.5">
-                                <div className="bg-white rounded-xl border border-gray-100 px-3 py-3 text-center shadow-sm">
-                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Avg Score</p>
-                                  <p className="text-[20px] font-black text-gray-800">{score}<span className="text-[12px] text-gray-400 ml-0.5">%</span></p>
-                                </div>
-                                <div className="bg-white rounded-xl border border-gray-100 px-3 py-3 text-center shadow-sm">
-                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Aggregate</p>
-                                  <p className={cn('text-[20px] font-black', isPassing ? 'text-emerald-600' : 'text-red-600')}>{aggregate}</p>
-                                </div>
-                                <div className="bg-white rounded-xl border border-gray-100 px-3 py-3 text-center shadow-sm">
-                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Grade</p>
-                                  <p className={cn('text-[20px] font-black', isPassing ? 'text-emerald-600' : 'text-red-600')}>{grade}</p>
-                                </div>
-                              </div>
-
-                              {/* Subject breakdown */}
-                              {result.subject_marks.length > 0 && (
-                                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-                                  <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/60">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                      Subject Breakdown
-                                    </p>
-                                  </div>
-                                  <div className="divide-y divide-gray-50">
-                                    {result.subject_marks.map((mark) => (
-                                      <div
-                                        key={mark.id}
-                                        className="flex items-center justify-between px-4 py-2.5"
-                                      >
-                                        <p className="text-[13px] text-gray-700 font-medium">
-                                          {mark.subject?.name || 'Unknown Subject'}
-                                        </p>
-                                        <div className="flex items-center gap-2.5">
-                                          <span className="text-[13px] font-bold text-gray-800">
-                                            {mark.total_score ?? '—'}%
-                                          </span>
-                                          <span className={cn(
-                                            'text-[11px] font-bold px-2 py-0.5 rounded-full',
-                                            gradeClasses(mark.grade)
-                                          )}>
-                                            {mark.grade || '—'}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Pass/fail verdict */}
-                              <div className={cn(
-                                'flex items-center gap-2.5 px-4 py-3 rounded-xl text-[13px] font-semibold',
-                                isPassing
-                                  ? 'bg-emerald-50 border border-emerald-100 text-emerald-800'
-                                  : 'bg-red-50 border border-red-100 text-red-800'
-                              )}>
-                                {isPassing
-                                  ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                                  : <XCircle className="w-4 h-4 text-red-500 shrink-0" />
-                                }
-                                {isPassing
-                                  ? `Passed — aggregate of ${aggregate} is within the ${examType.toUpperCase()} passing threshold.`
-                                  : `Not passed — aggregate of ${aggregate} exceeds the ${examType.toUpperCase()} passing threshold.`
-                                }
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  );
-                })}
+                        <CheckCircle2 className="w-[18px] h-[18px] text-[#2563EB]" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Your unique ID as given by your school — e.g. PI25W9K
+                </p>
               </div>
-            )}
+
+              {/* Action buttons */}
+              <div className="flex gap-2.5 pt-1">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleSearch}
+                  disabled={!inputValue.trim() || searching}
+                  className={cn(
+                    'flex-1 h-12 rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 transition-all duration-200',
+                    inputValue.trim() && !searching
+                      ? 'bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                  )}
+                >
+                  {searching ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Searching…
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4" />
+                      Find My Result
+                    </>
+                  )}
+                </motion.button>
+
+                <AnimatePresence>
+                  {(hasSearched || inputValue) && (
+                    <motion.button
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 'auto' }}
+                      exit={{ opacity: 0, width: 0 }}
+                      onClick={handleClear}
+                      className="h-12 px-4 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors flex items-center gap-1.5 whitespace-nowrap overflow-hidden"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Clear
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Progress bar — fills when input is present */}
+            <div className="h-1 bg-gray-100">
+              <motion.div
+                className="h-full bg-gradient-to-r from-[#2563EB] to-blue-400 rounded-full"
+                animate={{ width: inputValue.trim() ? '100%' : '0%' }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+              />
+            </div>
           </motion.div>
 
-          {/* ── Session info footer ──────────────────────────────────────────── */}
+          {/* ── Result states ────────────────────────────────────────────── */}
+          <AnimatePresence mode="wait">
+
+            {/* Searching skeleton */}
+            {searching && (
+              <motion.div
+                key="searching"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+              >
+                <div className="h-1 bg-gray-100">
+                  <motion.div
+                    className="h-full bg-[#2563EB]/30 rounded-full"
+                    animate={{ width: ['0%', '80%'] }}
+                    transition={{ duration: 1.5, ease: 'easeInOut' }}
+                  />
+                </div>
+                <div className="px-5 py-5 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-10 h-10 shrink-0">
+                      <div className="absolute inset-0 rounded-full border-[3px] border-blue-100" />
+                      <div className="absolute inset-0 rounded-full border-[3px] border-[#2563EB] border-t-transparent animate-spin" />
+                    </div>
+                    <div className="space-y-1.5 flex-1">
+                      <Skel className="h-3.5 w-40" />
+                      <Skel className="h-2.5 w-28" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <Skel className="h-16 rounded-xl" />
+                    <Skel className="h-16 rounded-xl" />
+                    <Skel className="h-16 rounded-xl" />
+                  </div>
+                  <Skel className="h-32 rounded-xl" />
+                </div>
+              </motion.div>
+            )}
+
+            {/* Search error */}
+            {searchError && !searching && (
+              <motion.div
+                key="search-error"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="bg-red-50 border border-red-200/60 rounded-2xl px-5 py-5 flex items-start gap-3.5"
+              >
+                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                </div>
+                <div>
+                  <p className="font-bold text-red-800 text-[14px]">
+                    Something went wrong
+                  </p>
+                  <p className="text-[12px] text-red-600/90 mt-1 leading-relaxed">
+                    We could not complete your search. Please check your
+                    connection and try again.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Not found */}
+            {hasSearched && !searching && !searchError && foundResult === null && (
+              <motion.div
+                key="not-found"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="bg-amber-50 border border-amber-200/60 rounded-2xl px-5 py-5 flex items-start gap-3.5"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                  <AlertCircle className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-amber-900 text-[14px]">
+                    No result found
+                  </p>
+                  <p className="text-[12px] text-amber-700/90 mt-1 leading-relaxed mb-3">
+                    We could not find a result for{' '}
+                    <span className="font-semibold font-mono">{submittedId}</span>{' '}
+                    in this session. Please verify:
+                  </p>
+                  <div className="space-y-1.5">
+                    {[
+                      'Your Student ID is exactly correct (case-sensitive)',
+                      'You are looking at the correct exam session',
+                      'Your school has entered your scores in the system',
+                    ].map((item) => (
+                      <div key={item} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                        <p className="text-[12px] text-amber-800">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── Found — student result card ────────────────────────────── */}
+            {foundResult && !searching && (
+              <motion.div
+                key="result"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="bg-white rounded-2xl border border-gray-100 shadow-[0_4px_24px_rgba(0,0,0,0.08)] overflow-hidden"
+              >
+                {/* Blue gradient student header */}
+                <div
+                  className="px-5 pt-5 pb-5 relative overflow-hidden"
+                  style={{
+                    background:
+                      'linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%)',
+                  }}
+                >
+                  <div
+                    className="absolute inset-0 opacity-[0.08]"
+                    style={{
+                      backgroundImage:
+                        'radial-gradient(circle, #fff 1px, transparent 1px)',
+                      backgroundSize: '16px 16px',
+                    }}
+                  />
+                  <div className="relative z-10 flex items-center gap-4">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{
+                        delay: 0.15,
+                        type: 'spring',
+                        stiffness: 260,
+                        damping: 20,
+                      }}
+                      className="w-14 h-14 rounded-2xl bg-white/20 border-2 border-white/30 flex items-center justify-center shrink-0 shadow-lg"
+                    >
+                      <span className="text-white font-extrabold text-lg tracking-tight leading-none">
+                        {initials(foundResult.student?.full_name ?? '??')}
+                      </span>
+                    </motion.div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.25, type: 'spring' }}
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-green-300 shrink-0" />
+                        </motion.div>
+                        <span className="text-[11px] font-semibold text-green-300 uppercase tracking-wide">
+                          Result verified
+                        </span>
+                      </div>
+                      <p className="text-white font-extrabold text-[18px] leading-tight truncate">
+                        {foundResult.student?.full_name}
+                      </p>
+                      <p className="text-blue-200 text-[12px] font-mono mt-0.5">
+                        {foundResult.student?.student_id}
+                        {foundResult.student?.class?.name
+                          ? ` · ${foundResult.student.class.name}`
+                          : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Session info strip */}
+                <div className="px-5 py-3 bg-gray-50/60 border-b border-gray-100 flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <p className="text-[12px] text-gray-500">
+                    <span className="font-semibold text-gray-700">
+                      {session.name}
+                    </span>{' '}
+                    · {session.academic_year} · {capitalize(session.term)} Term
+                  </p>
+                </div>
+
+                {/* Three metric tiles */}
+                <div className="px-5 py-4 grid grid-cols-3 gap-3 border-b border-gray-100">
+                  <div className="bg-white rounded-xl border border-gray-100 px-3 py-3 text-center shadow-sm">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                        Avg Score
+                      </p>
+                    </div>
+                    <p className="text-[22px] font-black text-gray-800 leading-none">
+                      {score}
+                      <span className="text-[12px] text-gray-400 ml-0.5">%</span>
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-gray-100 px-3 py-3 text-center shadow-sm">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Award className="w-3.5 h-3.5 text-purple-400" />
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                        Aggregate
+                      </p>
+                    </div>
+                    <p
+                      className={cn(
+                        'text-[22px] font-black leading-none',
+                        isPassing ? 'text-emerald-600' : 'text-red-600'
+                      )}
+                    >
+                      {aggregate}
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-gray-100 px-3 py-3 text-center shadow-sm">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                        Grade
+                      </p>
+                    </div>
+                    <p
+                      className={cn(
+                        'text-[22px] font-black leading-none',
+                        isPassing ? 'text-emerald-600' : 'text-red-600'
+                      )}
+                    >
+                      {grade}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Subject breakdown */}
+                {foundResult.subject_marks.length > 0 && (
+                  <div className="overflow-hidden border-b border-gray-100">
+                    <div className="px-5 py-2.5 bg-gray-50/60 border-b border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="w-3.5 h-3.5 text-gray-400" />
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                          Subject Breakdown
+                        </p>
+                      </div>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {foundResult.subject_marks.map((mark) => (
+                        <div
+                          key={mark.id}
+                          className="flex items-center justify-between px-5 py-2.5"
+                        >
+                          <p className="text-[13px] text-gray-700 font-medium">
+                            {mark.subject?.name || 'Unknown Subject'}
+                          </p>
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-[13px] font-bold text-gray-800">
+                              {mark.total_score ?? '—'}%
+                            </span>
+                            <span
+                              className={cn(
+                                'text-[11px] font-bold px-2 py-0.5 rounded-full',
+                                gradeClasses(mark.grade)
+                              )}
+                            >
+                              {mark.grade || '—'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pass / fail verdict */}
+                <div className="px-5 py-4">
+                  <div
+                    className={cn(
+                      'flex items-center gap-2.5 px-4 py-3 rounded-xl text-[13px] font-semibold',
+                      isPassing
+                        ? 'bg-emerald-50 border border-emerald-100 text-emerald-800'
+                        : 'bg-red-50 border border-red-100 text-red-800'
+                    )}
+                  >
+                    {isPassing ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    )}
+                    {isPassing
+                      ? `Passed — aggregate of ${aggregate} is within the ${examType.toUpperCase()} passing threshold.`
+                      : `Not passed — aggregate of ${aggregate} exceeds the ${examType.toUpperCase()} passing threshold.`}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ── Help card ────────────────────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-wrap items-center justify-between gap-3"
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex items-start gap-3.5"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-                <Calendar className="w-4 h-4 text-[#2563EB]" />
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-gray-800">{session.name}</p>
-                <p className="text-[11px] text-gray-400">
-                  {session.academic_year} · {capitalize(session.term)} Term · {getExamTypeName(examType)}
-                </p>
-              </div>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+              <BookOpen className="w-4 h-4 text-[#2563EB]" />
             </div>
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Published
-            </span>
+            <div>
+              <p className="text-[13px] font-bold text-gray-800 mb-0.5">
+                Can't find your result?
+              </p>
+              <p className="text-[12px] text-gray-500 leading-relaxed">
+                Make sure your Student ID is correct and your school has
+                entered your scores. Contact your{' '}
+                <span className="font-semibold text-gray-700">
+                  school administrator
+                </span>{' '}
+                if the problem persists.
+              </p>
+            </div>
           </motion.div>
 
-          {/* Footer */}
-          <div className="text-center pt-2 pb-4 space-y-1">
-            <div className="flex items-center justify-center gap-2">
-              <img src="/ERESULTS_LOGO.png" alt="e-Results GH" className="w-5 h-5 rounded-full opacity-50" />
-              <p className="text-[11px] text-gray-400 font-semibold">e-Results GH · PB Pagez LTD</p>
-            </div>
-            <p className="text-[11px] text-gray-300 max-w-xs mx-auto leading-relaxed">
-              Results published and managed exclusively by your school. This portal does not store personal data.
-            </p>
-          </div>
-
+          <PageFooter />
         </div>
       </main>
     </div>

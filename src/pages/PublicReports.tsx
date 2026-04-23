@@ -108,7 +108,6 @@ const PublicReports = () => {
   const [studentId, setStudentId] = useState('');
   const [academicYear, setAcademicYear] = useState('');
   const [term, setTerm] = useState('');
-  const [classId, setClassId] = useState('');
 
   const {
     result,
@@ -118,7 +117,7 @@ const PublicReports = () => {
     clearSearch,
   } = usePublicReportSearch();
   const { isGenerating, generatePublicReport } = usePublicReportGeneration();
-  const { classes, academicYears, terms } = usePublicSearchData();
+  const { academicYears, terms } = usePublicSearchData();
 
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -130,12 +129,11 @@ const PublicReports = () => {
     }
   }, [result, error]);
 
-  const filteredClasses = classes.filter((c) => c.academic_year === academicYear);
-  const isFormValid = studentId.trim() && academicYear && term && classId;
+  const isFormValid = studentId.trim() && academicYear && term;
 
   const handleSearch = () => {
     if (!isFormValid) return;
-    searchReport({ studentId: studentId.trim(), academicYear, term, classId });
+    searchReport({ studentId: studentId.trim(), academicYear, term });
   };
 
   const handleDownload = async () => {
@@ -146,16 +144,14 @@ const PublicReports = () => {
     setStudentId('');
     setAcademicYear('');
     setTerm('');
-    setClassId('');
     clearSearch();
   };
 
-  // Form completion progress (4 fields)
+  // Form completion progress (3 fields)
   const fieldsDone = [
     !!studentId.trim(),
     !!academicYear,
     !!term,
-    !!classId,
   ];
   const completedCount = fieldsDone.filter(Boolean).length;
 
@@ -277,7 +273,7 @@ const PublicReports = () => {
                   <CompletionDot key={i} done={done} />
                 ))}
                 <span className="text-[11px] text-gray-400 font-medium ml-1">
-                  {completedCount}/4
+                  {completedCount}/3
                 </span>
               </div>
             </div>
@@ -327,7 +323,6 @@ const PublicReports = () => {
                     value={academicYear}
                     onValueChange={(v) => {
                       setAcademicYear(v);
-                      setClassId('');
                     }}
                   >
                     <SelectTrigger className="h-12 rounded-xl border-gray-200 bg-gray-50/60 focus:border-[#2563EB] text-[13px]">
@@ -359,42 +354,7 @@ const PublicReports = () => {
                 </Field>
               </div>
 
-              {/* Class */}
-              <Field label="Class" required>
-                <Select
-                  value={classId}
-                  onValueChange={setClassId}
-                  disabled={!academicYear}
-                >
-                  <SelectTrigger
-                    className={cn(
-                      'h-12 rounded-xl border-gray-200 bg-gray-50/60 focus:border-[#2563EB] text-[13px] transition-all',
-                      !academicYear && 'opacity-50 cursor-not-allowed'
-                    )}
-                  >
-                    <SelectValue
-                      placeholder={
-                        academicYear
-                          ? 'Select your class'
-                          : 'Select academic year first'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredClasses.length === 0 ? (
-                      <div className="px-4 py-3 text-[13px] text-gray-400 text-center">
-                        No classes found for this year
-                      </div>
-                    ) : (
-                      filteredClasses.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </Field>
+
 
               {/* Action buttons */}
               <div className="flex gap-2.5 pt-1">
@@ -443,7 +403,7 @@ const PublicReports = () => {
             <div className="h-1 bg-gray-100">
               <motion.div
                 className="h-full bg-gradient-to-r from-[#2563EB] to-blue-400 rounded-full"
-                animate={{ width: `${(completedCount / 4) * 100}%` }}
+                animate={{ width: `${(completedCount / 3) * 100}%` }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
               />
             </div>
