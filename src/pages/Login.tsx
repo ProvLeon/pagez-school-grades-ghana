@@ -99,7 +99,7 @@ const Login = () => {
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-10 xl:p-16 w-full">
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" onClick={() => navigate("/")}>
             <img src="/ERESULTS_LOGO.png" alt="e-Results GH" className="w-10 h-10 rounded-full border-white border-[1px] shadow-lg" />
             <span className="text-white/90 text-lg font-bold tracking-tight">e-Results GH</span>
           </div>

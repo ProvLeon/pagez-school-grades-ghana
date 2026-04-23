@@ -29,6 +29,11 @@ import {
   Copy,
   ExternalLink,
   Check,
+  Globe,
+  Share2,
+  Eye,
+  EyeOff,
+  Link,
 } from "lucide-react";
 import {
   BarChart,
@@ -46,7 +51,7 @@ import { CreateMockSessionDialog } from "@/components/mock/CreateMockSessionDial
 import { AddScoresDialog } from "@/components/mock/AddScoresDialog";
 import { DeleteMockSessionDialog } from "@/components/mock/DeleteMockSessionDialog";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
-import { useMockExamSessions, useDeleteMockExamSession } from "@/hooks/useMockExams";
+import { useMockExamSessions, useDeleteMockExamSession, useTogglePublishSession } from "@/hooks/useMockExams";
 import { useMockExamResults, useDeleteAllMockResults, EnrichedMockExamResult } from "@/hooks/useMockExamResults";
 import {
   useMockExamDepartments,
@@ -199,6 +204,9 @@ export default function MockExams() {
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"results" | "analytics">("results");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showSharePanel, setShowSharePanel] = useState(false);
+
+  const togglePublish = useTogglePublishSession();
 
   // Results for selected session
   const {
@@ -1475,6 +1483,152 @@ export default function MockExams() {
                             Add Scores
                           </Button>
                         </AddScoresDialog>
+
+                        {/* Publish / Unpublish toggle */}
+                        {currentSession && (
+                          <Button
+                            variant={currentSession.is_published ? "outline" : "default"}
+                            size="sm"
+                            disabled={togglePublish.isPending}
+                            onClick={() =>
+                              togglePublish.mutate({
+                                id: currentSession.id,
+                                is_published: currentSession.is_published,
+                              })
+                            }
+                            className={cn(
+                              "gap-1.5",
+                              currentSession.is_published
+                                ? "border-green-200 text-green-700 hover:bg-green-50"
+                                : "bg-green-600 hover:bg-green-700 text-white border-0"
+                            )}
+                          >
+                            {togglePublish.isPending ? (
+                              <>
+                                <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                                {currentSession.is_published ? "Unpublishing…" : "Publishing…"}
+                              </>
+                            ) : currentSession.is_published ? (
+                              <>
+                                <EyeOff className="h-3.5 w-3.5" />
+                                Unpublish
+                              </>
+                            ) : (
+                              <>
+                                <Globe className="h-3.5 w-3.5" />
+                                Publish Results
+                              </>
+                            )}
+                          </Button>
+                        )}
+
+                        {/* Share public link */}
+                        {currentSession && (
+                          <div className="relative">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={!currentSession.is_published}
+                              onClick={() => setShowSharePanel((p) => !p)}
+                              title={
+                                currentSession.is_published
+                                  ? "Share public results link"
+                                  : "Publish the session first to share a link"
+                              }
+                              className={cn(
+                                "gap-1.5",
+                                currentSession.is_published
+                                  ? "border-blue-200 text-blue-700 hover:bg-blue-50"
+                                  : "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              <Share2 className="h-3.5 w-3.5" />
+                              Share Link
+                            </Button>
+
+                            {/* Share panel dropdown */}
+                            {showSharePanel && currentSession.is_published && (
+                              <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-white rounded-xl border border-gray-200 shadow-xl p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                      <Globe className="w-3.5 h-3.5 text-blue-600" />
+                                    </div>
+                                    <p className="text-[13px] font-bold text-gray-800">
+                                      Public Results Link
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => setShowSharePanel(false)}
+                                    className="text-gray-400 hover:text-gray-600 text-xs font-semibold"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+
+                                <p className="text-[11px] text-gray-500 leading-relaxed">
+                                  Anyone with this link can view published results for{" "}
+                                  <span className="font-semibold text-gray-700">
+                                    {currentSession.name}
+                                  </span>
+                                  . No login required.
+                                </p>
+
+                                {/* URL display */}
+                                <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg border border-gray-200">
+                                  <Link className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                  <p className="text-[11px] text-gray-600 truncate flex-1 font-mono">
+                                    {`${window.location.origin}/mock-results/${currentSession.id}`}
+                                  </p>
+                                </div>
+
+                                {/* Action buttons */}
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="flex-1 h-8 text-[12px] bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-1.5"
+                                    onClick={() => {
+                                      const url = `${window.location.origin}/mock-results/${currentSession.id}`;
+                                      navigator.clipboard.writeText(url);
+                                      setLinkCopied(true);
+                                      toast({
+                                        title: "Link copied!",
+                                        description: "Public results link copied to clipboard.",
+                                      });
+                                      setTimeout(() => setLinkCopied(false), 2000);
+                                    }}
+                                  >
+                                    {linkCopied ? (
+                                      <>
+                                        <Check className="w-3.5 h-3.5" />
+                                        Copied!
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="w-3.5 h-3.5" />
+                                        Copy Link
+                                      </>
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 text-[12px] gap-1.5 border-gray-200"
+                                    onClick={() => {
+                                      window.open(
+                                        `/mock-results/${currentSession.id}`,
+                                        "_blank"
+                                      );
+                                    }}
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    Preview
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -1775,53 +1929,53 @@ export default function MockExams() {
                                     );
                                   });
                                 })()}
-                                  {/* Total No. of Students row */ }
-                                  <tr className="bg-blue-100 font-semibold">
-                                    <td className="border px-3 py-2">Total No. of Students</td>
-                                    {Object.keys(stats.gradeBySubject).map((subject) => (
-                                      <td key={`total-${subject}`} className="border px-3 py-2 text-center">
-                                        {stats.totalStudents}
+                                {/* Total No. of Students row */}
+                                <tr className="bg-blue-100 font-semibold">
+                                  <td className="border px-3 py-2">Total No. of Students</td>
+                                  {Object.keys(stats.gradeBySubject).map((subject) => (
+                                    <td key={`total-${subject}`} className="border px-3 py-2 text-center">
+                                      {stats.totalStudents}
+                                    </td>
+                                  ))}
+                                </tr>
+                                {/* Best Grade row (lowest grade number with count > 0) */}
+                                <tr className="bg-blue-100 font-semibold">
+                                  <td className="border px-3 py-2">Best Grade</td>
+                                  {Object.keys(stats.gradeBySubject).map((subject) => {
+                                    // Find best grade (first one with count > 0 in sorted order)
+                                    const allGradesForSubject = Object.keys(stats.gradeBySubject[subject]).sort((a, b) => {
+                                      const aNum = parseInt(a);
+                                      const bNum = parseInt(b);
+                                      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+                                      return a.localeCompare(b);
+                                    });
+                                    const bestGrade = allGradesForSubject.find(g => (stats.gradeBySubject[subject][g] || 0) > 0);
+                                    return (
+                                      <td key={`best-${subject}`} className="border px-3 py-2 text-center">
+                                        {bestGrade || '-'}
                                       </td>
-                                    ))}
-                                  </tr>
-                                  {/* Best Grade row (lowest grade number with count > 0) */ }
-                                  <tr className="bg-blue-100 font-semibold">
-                                    <td className="border px-3 py-2">Best Grade</td>
-                                    {Object.keys(stats.gradeBySubject).map((subject) => {
-                                      // Find best grade (first one with count > 0 in sorted order)
-                                      const allGradesForSubject = Object.keys(stats.gradeBySubject[subject]).sort((a, b) => {
-                                        const aNum = parseInt(a);
-                                        const bNum = parseInt(b);
-                                        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-                                        return a.localeCompare(b);
-                                      });
-                                      const bestGrade = allGradesForSubject.find(g => (stats.gradeBySubject[subject][g] || 0) > 0);
-                                      return (
-                                        <td key={`best-${subject}`} className="border px-3 py-2 text-center">
-                                          {bestGrade || '-'}
-                                        </td>
-                                      );
-                                    })}
-                                  </tr>
-                                  {/* Worst Grade row (highest grade number with count > 0) */ }
-                                  <tr className="bg-blue-100 font-semibold">
-                                    <td className="border px-3 py-2">Worst Grade</td>
-                                    {Object.keys(stats.gradeBySubject).map((subject) => {
-                                      // Find worst grade (last one with count > 0 in sorted order)
-                                      const allGradesForSubject = Object.keys(stats.gradeBySubject[subject]).sort((a, b) => {
-                                        const aNum = parseInt(a);
-                                        const bNum = parseInt(b);
-                                        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-                                        return a.localeCompare(b);
-                                      }).reverse();
-                                      const worstGrade = allGradesForSubject.find(g => (stats.gradeBySubject[subject][g] || 0) > 0);
-                                      return (
-                                        <td key={`worst-${subject}`} className="border px-3 py-2 text-center">
-                                          {worstGrade || '-'}
-                                        </td>
-                                      );
-                                    })}
-                                  </tr>
+                                    );
+                                  })}
+                                </tr>
+                                {/* Worst Grade row (highest grade number with count > 0) */}
+                                <tr className="bg-blue-100 font-semibold">
+                                  <td className="border px-3 py-2">Worst Grade</td>
+                                  {Object.keys(stats.gradeBySubject).map((subject) => {
+                                    // Find worst grade (last one with count > 0 in sorted order)
+                                    const allGradesForSubject = Object.keys(stats.gradeBySubject[subject]).sort((a, b) => {
+                                      const aNum = parseInt(a);
+                                      const bNum = parseInt(b);
+                                      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+                                      return a.localeCompare(b);
+                                    }).reverse();
+                                    const worstGrade = allGradesForSubject.find(g => (stats.gradeBySubject[subject][g] || 0) > 0);
+                                    return (
+                                      <td key={`worst-${subject}`} className="border px-3 py-2 text-center">
+                                        {worstGrade || '-'}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
                               </tbody>
                             </table>
                           </div>
