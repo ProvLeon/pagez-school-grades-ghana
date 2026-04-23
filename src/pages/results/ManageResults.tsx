@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, BarChart3, Search, X, Users, Info, Loader2 } from "lucide-react";
+import { Plus, BarChart3, Search, X, Users, Info, Loader2, Globe } from "lucide-react";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import ManageResultsContent from "@/components/results/ManageResultsContent";
 import ManageResultsBulkActions from "@/components/results/ManageResultsBulkActions";
@@ -39,7 +39,7 @@ const ManageResults = () => {
   } = useCanAccessClass();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentPage = parseInt(searchParams.get("page") || "1", 10);
-  
+
   const setCurrentPage = (page: number) => {
     setSearchParams(prev => {
       prev.set("page", page.toString());
@@ -103,6 +103,32 @@ const ManageResults = () => {
     },
     onError: (error: Error) => {
       toast({ title: "Delete Failed", description: error.message || "Failed to delete result.", variant: "destructive" });
+    },
+  });
+
+  const bulkPublishMutation = useMutation({
+    mutationFn: async ({ ids, publish }: { ids: string[]; publish: boolean }) => {
+      const { error } = await supabase
+        .from('results')
+        .update({ is_public: publish } as any)
+        .in('id', ids);
+      if (error) throw error;
+      return { ids, publish };
+    },
+    onSuccess: ({ ids, publish }) => {
+      queryClient.invalidateQueries({ queryKey: ['results'] });
+      setSelectedResults([]);
+      toast({
+        title: publish ? 'Results Published' : 'Results Unpublished',
+        description: `${ids.length} result${ids.length !== 1 ? 's' : ''} ${publish ? 'are now publicly accessible via the student portal.' : 'have been made private.'}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Publish Failed',
+        description: error.message || 'Failed to update results. Please try again.',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -181,6 +207,20 @@ const ManageResults = () => {
   };
 
   // Bulk download function for selected results
+  const handleBulkPublish = (publish: boolean) => {
+    const ids = selectedResults.length > 0
+      ? selectedResults
+      : filteredResults.map(r => r.id);
+    if (ids.length === 0) return;
+    bulkPublishMutation.mutate({ ids, publish });
+  };
+
+  const handlePublishAll = () => {
+    const ids = filteredResults.map(r => r.id);
+    if (ids.length === 0) return;
+    bulkPublishMutation.mutate({ ids, publish: true });
+  };
+
   const handleBulkDownload = async () => {
     if (selectedResults.length === 0) return;
 
@@ -269,7 +309,27 @@ const ManageResults = () => {
                 <h1 className="text-2xl font-bold tracking-tight">Results</h1>
                 <p className="text-muted-foreground">Review, manage and track student academic performance.</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {isAdmin && filteredResults.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={handlePublishAll}
+                    disabled={bulkPublishMutation.isPending}
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                  >
+                    {bulkPublishMutation.isPending && !selectedResults.length ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Publishing…
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="w-4 h-4 mr-2" />
+                        Publish All ({filteredResults.length})
+                      </>
+                    )}
+                  </Button>
+                )}
                 <Button onClick={() => navigate('/results/add-results')}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Result
@@ -334,9 +394,11 @@ const ManageResults = () => {
                 selectedCount={selectedResults.length}
                 onBulkDelete={() => setBulkDeleteDialog({ isOpen: true, count: selectedResults.length })}
                 onBulkDownload={handleBulkDownload}
+                onBulkPublish={handleBulkPublish}
                 onClearSelection={() => setSelectedResults([])}
                 isDeleting={bulkDeleteMutation.isPending}
                 isDownloading={isDownloadingBulk || isGenerating}
+                isPublishing={bulkPublishMutation.isPending}
               />
             )}
 
