@@ -3,6 +3,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { ParsedResultData } from '@/hooks/useResultsExcelParser';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
+
+interface GradingScale {
+  id: string;
+  grade: string;
+  from_percentage: number;
+  to_percentage: number;
+  remark: string;
+}
 
 export interface BulkResultsImportResult {
   success: boolean;
@@ -38,6 +47,12 @@ export const useBulkResultsImport = () => {
       caTypeId?: string;
       onProgress?: (progress: BulkResultsImportProgress) => void;
     }): Promise<BulkResultsImportResult> => {
+      // Get organization context
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User is not associated with any organization');
+      }
+
       const result: BulkResultsImportResult = {
         success: false,
         totalProcessed: results.length,
@@ -74,6 +89,7 @@ export const useBulkResultsImport = () => {
         const { data: students, error: studentsError } = await supabase
           .from('students')
           .select('id, student_id, class_id')
+          .eq('organization_id', organizationId)
           .in('student_id', studentIds);
 
         if (studentsError) {
@@ -92,7 +108,8 @@ export const useBulkResultsImport = () => {
 
         const { data: subjects, error: subjectsError } = await supabase
           .from('subjects')
-          .select('id, name, code');
+          .select('id, name, code')
+          .eq('organization_id', organizationId);
 
         if (subjectsError) {
           throw new Error(`Failed to fetch subjects: ${subjectsError.message}`);
@@ -102,16 +119,108 @@ export const useBulkResultsImport = () => {
         const subjectByName = new Map(subjects?.map(s => [s.name.toLowerCase().trim(), s.id]) || []);
         const subjectByCode = new Map(subjects?.map(s => [s.code?.toLowerCase().trim(), s.id]) || []);
 
+        // Fetch grading scales for automatic remark generation
+        const { data: gradingScales, error: gradingScalesError } = await supabase
+          .from('grading_scales')
+          .select('id, grade, from_percentage, to_percentage, remark')
+          .eq('organization_id', organizationId)
+          .order('from_percentage', { ascending: false });
+
+        if (gradingScalesError) {
+          console.warn('Failed to fetch grading scales:', gradingScalesError.message);
+        }
+
+        // Fetch active grading settings to get attendance_for_term
+        // This is used to auto-fill days_school_opened when not provided in the template
+        const { data: gradingSettings } = await supabase
+          .from('grading_settings')
+          .select('attendance_for_term')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        const defaultDaysSchoolOpened = gradingSettings?.attendance_for_term || null;
+
+        // Fetch all CA types for this organization to support name-to-ID mapping
+        const { data: allCATypes, error: caTypesError } = await supabase
+          .from('ca_types')
+          .select('id, name, configuration');
+
+        if (caTypesError) {
+          console.warn('Failed to fetch CA types:', caTypesError.message);
+        }
+
+        // Create a mapping from CA type name to ID for flexible lookup
+        const caTypeByName = new Map((allCATypes || []).map(ca => [ca.name.toLowerCase().trim(), ca.id]));
+
+        // Helper function to find CA type with partial matching
+        const findCATypeByName = (name: string): string | undefined => {
+          const trimmedLowerName = name.toLowerCase().trim();
+
+          // First try exact match
+          if (caTypeByName.has(trimmedLowerName)) {
+            return caTypeByName.get(trimmedLowerName);
+          }
+
+          // Try partial match (e.g., "SBA 50/50" matches "50/50")
+          const availableTypes = allCATypes || [];
+          for (const caType of availableTypes) {
+            const caTypeLower = caType.name.toLowerCase();
+            // Check if the input contains the CA type name or vice versa
+            if (caTypeLower.includes(trimmedLowerName) || trimmedLowerName.includes(caTypeLower)) {
+              return caType.id;
+            }
+            // Check if any part matches (e.g., "50/50" from "SBA 50/50")
+            const parts = caType.name.split(/[\s\-/]+/).filter(p => p);
+            if (parts.some(part => trimmedLowerName.includes(part.toLowerCase()) || part.toLowerCase().includes(trimmedLowerName))) {
+              return caType.id;
+            }
+          }
+
+          return undefined;
+        };
+
+        // Helper function to get available CA types for error messages
+        const getAvailableCATypes = (): string => {
+          const types = (allCATypes || []).map(ca => `"${ca.name}"`).join(', ');
+          return types || 'None configured';
+        };
+
         // Get CA type configuration if provided
         let caConfiguration: Record<string, number> | null = null;
-        if (caTypeId) {
+        const resolvedCATypeId = caTypeId;
+
+        // If caTypeId not provided, results may have ca_type_name from template parser
+        // We'll handle name-to-ID resolution per row below
+
+        if (resolvedCATypeId) {
           const { data: caType } = await supabase
             .from('ca_types')
             .select('configuration')
-            .eq('id', caTypeId)
+            .eq('id', resolvedCATypeId)
             .single();
           caConfiguration = caType?.configuration as Record<string, number> | null;
         }
+
+        // Helper function to get remark based on score
+        const getRemarkForScore = (score: number): string => {
+          if (!gradingScales || gradingScales.length === 0) {
+            // Default remarks if no grading scales available
+            if (score >= 80) return 'Excellent';
+            if (score >= 70) return 'Very Good';
+            if (score >= 60) return 'Good';
+            if (score >= 50) return 'Credit';
+            if (score >= 40) return 'Pass';
+            return 'Fail';
+          }
+
+          for (const scale of gradingScales) {
+            if (score >= scale.from_percentage && score <= scale.to_percentage) {
+              return scale.remark || 'N/A';
+            }
+          }
+          return 'N/A';
+        };
 
         // Phase 4: Import results
         updateProgress({
@@ -140,6 +249,46 @@ export const useBulkResultsImport = () => {
               continue;
             }
 
+            // Resolve CA type ID - first from explicit caTypeId, then from ca_type_name in data
+            let rowCATypeId = resolvedCATypeId;
+            if (!rowCATypeId && resultData.ca_type_name) {
+              // Look up CA type ID by name from the template data using flexible matching
+              const lookedUpCATypeId = findCATypeByName(resultData.ca_type_name);
+              if (lookedUpCATypeId) {
+                rowCATypeId = lookedUpCATypeId;
+              } else {
+                result.failedCount++;
+                const availableTypes = getAvailableCATypes();
+                result.errors.push({
+                  row: processedCount,
+                  studentId: resultData.student_id,
+                  error: `CA Type "${resultData.ca_type_name}" not found. Available types: ${availableTypes}. Please use one of the configured assessment types.`
+                });
+                continue;
+              }
+            }
+
+            // Validate that we have a CA type ID before proceeding
+            if (!rowCATypeId) {
+              result.failedCount++;
+              const availableTypes = getAvailableCATypes();
+              result.errors.push({
+                row: processedCount,
+                studentId: resultData.student_id,
+                error: `Assessment Type (CA Type) is required. Please select an assessment type when importing or specify it in the Excel file. Available types: ${availableTypes}`
+              });
+              continue;
+            }
+
+            // Get CA configuration for this row (use prop-level config, or look up from allCATypes)
+            let rowCAConfig = caConfiguration;
+            if (!rowCAConfig && rowCATypeId && allCATypes) {
+              const caTypeObj = allCATypes.find(ca => ca.id === rowCATypeId);
+              if (caTypeObj?.configuration) {
+                rowCAConfig = caTypeObj.configuration as Record<string, number>;
+              }
+            }
+
             // Use student's class_id or provided classId
             const effectiveClassId = classId || studentInfo.class_id;
 
@@ -157,6 +306,7 @@ export const useBulkResultsImport = () => {
             const { data: existingResult } = await supabase
               .from('results')
               .select('id')
+              .eq('organization_id', organizationId)
               .eq('student_id', studentInfo.id)
               .eq('term', resultData.term)
               .eq('academic_year', resultData.academic_year)
@@ -170,8 +320,8 @@ export const useBulkResultsImport = () => {
                 .from('results')
                 .update({
                   class_id: effectiveClassId,
-                  ca_type_id: caTypeId || null,
-                  days_school_opened: resultData.days_school_opened || null,
+                  ca_type_id: rowCATypeId || null,
+                  days_school_opened: resultData.days_school_opened || defaultDaysSchoolOpened,
                   days_present: resultData.days_present || null,
                   days_absent: resultData.days_absent || null,
                   updated_at: new Date().toISOString()
@@ -198,10 +348,11 @@ export const useBulkResultsImport = () => {
                 .insert({
                   student_id: studentInfo.id,
                   class_id: effectiveClassId,
+                  organization_id: organizationId,
                   term: resultData.term,
                   academic_year: resultData.academic_year,
-                  ca_type_id: caTypeId || null,
-                  days_school_opened: resultData.days_school_opened || null,
+                  ca_type_id: rowCATypeId || null,
+                  days_school_opened: resultData.days_school_opened || defaultDaysSchoolOpened,
                   days_present: resultData.days_present || null,
                   days_absent: resultData.days_absent || null,
                   admin_approved: false,
@@ -253,26 +404,24 @@ export const useBulkResultsImport = () => {
                 continue;
               }
 
-              // Calculate total score based on CA configuration
+              // Calculate total score based on CA configuration (per-row)
               let totalScore = 0;
-              if (caConfiguration) {
-                const ca1Weight = caConfiguration.ca1 || caConfiguration.ca || 0;
-                const ca2Weight = caConfiguration.ca2 || 0;
-                const ca3Weight = caConfiguration.ca3 || 0;
-                const ca4Weight = caConfiguration.ca4 || 0;
-                const examWeight = caConfiguration.exam || 0;
+              if (rowCAConfig) {
+                const examWeight = rowCAConfig.exam || 0;
 
-                if (caConfiguration.ca) {
+                if (rowCAConfig.ca) {
                   // Simple CA/Exam split (e.g., 50/50)
+                  // Use the actual CA score provided, do not convert/scale
                   const caScore = subjectData.ca1_score || 0;
                   const examScore = subjectData.exam_score || 0;
-                  totalScore = Math.round((caScore * ca1Weight / 100) + (examScore * examWeight / 100));
+                  totalScore = Math.round(caScore + (examScore * examWeight / 100));
                 } else {
                   // Multiple CAs
-                  const ca1 = (subjectData.ca1_score || 0) * (ca1Weight / 100);
-                  const ca2 = (subjectData.ca2_score || 0) * (ca2Weight / 100);
-                  const ca3 = (subjectData.ca3_score || 0) * (ca3Weight / 100);
-                  const ca4 = (subjectData.ca4_score || 0) * (ca4Weight / 100);
+                  // Use the actual CAi score provided, do not convert/scale
+                  const ca1 = subjectData.ca1_score || 0;
+                  const ca2 = subjectData.ca2_score || 0;
+                  const ca3 = subjectData.ca3_score || 0;
+                  const ca4 = subjectData.ca4_score || 0;
                   const exam = (subjectData.exam_score || 0) * (examWeight / 100);
                   totalScore = Math.round(ca1 + ca2 + ca3 + ca4 + exam);
                 }
@@ -287,7 +436,10 @@ export const useBulkResultsImport = () => {
               }
 
               // Calculate grade based on total score
-              const grade = calculateGrade(totalScore);
+              const grade = calculateGrade(totalScore, gradingScales || undefined);
+
+              // Get automatic remark based on total score
+              const autoRemark = getRemarkForScore(totalScore);
 
               // Check if subject mark already exists
               const { data: existingMark } = await supabase
@@ -306,7 +458,8 @@ export const useBulkResultsImport = () => {
                 ca4_score: subjectData.ca4_score ?? null,
                 exam_score: subjectData.exam_score ?? null,
                 total_score: totalScore,
-                grade: grade
+                grade: grade,
+                subject_teacher_remarks: autoRemark
               };
 
               if (existingMark) {
@@ -378,9 +531,15 @@ export const useBulkResultsImport = () => {
           variant: 'default'
         });
       } else {
+        // Build a more descriptive error message showing the first few errors
+        const errorDetails = result.errors.slice(0, 3).map(e =>
+          `Row ${e.row}: ${e.error}`
+        ).join('; ');
+        const moreErrors = result.errors.length > 3 ? ` (+${result.errors.length - 3} more)` : '';
+
         toast({
           title: 'Import Failed',
-          description: `Failed to import results. ${result.errors.length} errors occurred.`,
+          description: errorDetails + moreErrors,
           variant: 'destructive'
         });
       }
@@ -407,14 +566,21 @@ export const useBulkResultsImport = () => {
 };
 
 // Helper function to calculate grade based on score
-function calculateGrade(score: number): string {
-  if (score >= 80) return 'A1';
-  if (score >= 70) return 'B2';
-  if (score >= 65) return 'B3';
-  if (score >= 60) return 'C4';
-  if (score >= 55) return 'C5';
-  if (score >= 50) return 'C6';
-  if (score >= 45) return 'D7';
-  if (score >= 40) return 'E8';
-  return 'F9';
+// Uses organization's grading scales if available, falls back to single-letter grades
+// matching the format used by display/PDF components
+function calculateGrade(score: number, gradingScales?: any[]): string {
+  if (gradingScales && gradingScales.length > 0) {
+    for (const scale of gradingScales) {
+      if (score >= scale.from_percentage && score <= scale.to_percentage) {
+        return scale.grade;
+      }
+    }
+  }
+  // Single-letter fallback matching SubjectsTableSection, reportCardService, exportService
+  if (score >= 80) return 'A';
+  if (score >= 70) return 'B';
+  if (score >= 60) return 'C';
+  if (score >= 50) return 'D';
+  if (score >= 40) return 'E';
+  return 'F';
 }

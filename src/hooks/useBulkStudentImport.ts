@@ -3,6 +3,43 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { ParsedStudentData } from '@/hooks/useExcelParser';
+import { isValidDate } from '@/utils/dateUtils';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
+
+// Type for student record to be inserted
+interface StudentRecord {
+  student_id: string;
+  full_name: string;
+  gender: 'male' | 'female';
+  academic_year: string;
+  has_left: boolean;
+  organization_id: string;
+  date_of_birth?: string;
+  class_id?: string;
+  department_id?: string;
+  email?: string;
+  guardian_name?: string;
+  guardian_phone?: string;
+  guardian_email?: string;
+  address?: string;
+}
+
+// Helper function to generate student ID - matching format with AddStudent
+// Format: {2 letter school initials}{2 digit year}{3 random alphanumeric} = 7 chars
+// Example: KA26VWD
+const generateStudentId = (schoolName: string = "School"): string => {
+  // Extract first two letters from school name, fallback to "SC"
+  const schoolInitials = schoolName
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .substring(0, 2)
+    .toUpperCase() || "SC";
+
+  const currentYear = new Date().getFullYear().toString().slice(-2);
+  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+  return `${schoolInitials}${currentYear}${random}`;
+};
 
 export interface BulkImportResult {
   success: boolean;
@@ -38,6 +75,12 @@ export const useBulkStudentImport = () => {
       departmentId?: string;
       onProgress?: (progress: BulkImportProgress) => void;
     }): Promise<BulkImportResult> => {
+      // Get user's organization for data isolation
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization. Cannot import students.');
+      }
+
       const result: BulkImportResult = {
         success: false,
         totalProcessed: students.length,
@@ -62,33 +105,68 @@ export const useBulkStudentImport = () => {
           message: 'Validating student data...'
         });
 
-        // Get existing classes and departments for name-to-ID mapping
+        // Get school settings for student ID generation (by organization_id)
+        const { data: schoolSettings } = await supabase
+          .from('school_settings')
+          .select('school_name')
+          .eq('organization_id', organizationId)
+          .maybeSingle();
+
+        const schoolName = schoolSettings?.school_name || "School";
+
+        // Get existing classes and departments for name-to-ID mapping (filtered by org)
         const { data: classes } = await supabase
           .from('classes')
-          .select('id, name');
+          .select('id, name')
+          .eq('organization_id', organizationId);
 
         const { data: departments } = await supabase
           .from('departments')
-          .select('id, name');
+          .select('id, name')
+          .eq('organization_id', organizationId);
 
         const classMap = new Map(classes?.map(c => [c.name.toLowerCase(), c.id]) || []);
         const departmentMap = new Map(departments?.map(d => [d.name.toLowerCase(), d.id]) || []);
 
-        // Phase 2: Check for duplicates
+        // Phase 2: Check for duplicates and generate IDs where needed
         updateProgress({
           current: 0,
           total: students.length,
           phase: 'checking-duplicates',
-          message: 'Checking for existing students...'
+          message: 'Checking for existing students and generating IDs...'
         });
 
-        const studentIds = students.map(s => s.student_id).filter(Boolean);
-        const { data: existingStudents } = await supabase
+        // Get all existing student IDs to check for duplicates (filtered by org)
+        // Fetched with higher limit to minimize false negatives on collision checks
+        const { data: allExistingStudents } = await supabase
           .from('students')
           .select('student_id')
-          .in('student_id', studentIds);
+          .eq('organization_id', organizationId)
+          .limit(5000);
 
-        const existingStudentIds = new Set(existingStudents?.map(s => s.student_id) || []);
+        const dbStudentIds = new Set(allExistingStudents?.map(s => s.student_id) || []);
+        const takenIds = new Set(dbStudentIds); // Will include new executions
+
+        // Auto-generate student IDs for records that don't have one
+        students.forEach((student, index) => {
+          // If ID provided by user, check if it exists in DB
+          if (student.student_id && student.student_id.trim()) {
+            // We'll check for duplicates during batch processing against dbStudentIds
+            // But valid to add to takenIds to avoid generating collisions with user-provided IDs
+            takenIds.add(student.student_id.trim());
+          } else {
+            // Generate ID
+            let newId = generateStudentId(schoolName);
+            let attempts = 0;
+            // Ensure uniqueness against DB and other new students
+            while (takenIds.has(newId) && attempts < 20) {
+              newId = generateStudentId(schoolName);
+              attempts++;
+            }
+            student.student_id = newId;
+            takenIds.add(newId);
+          }
+        });
 
         // Phase 3: Import students in batches
         updateProgress({
@@ -113,13 +191,14 @@ export const useBulkStudentImport = () => {
           for (const student of batch) {
             processedCount++;
 
-            // Skip duplicates
-            if (existingStudentIds.has(student.student_id)) {
+            // Strict Duplicate Check: Only flag if it exists in the DATABASE.
+            // (Use dbStudentIds, not takenIds which contains our just-generated IDs)
+            if (student.student_id && dbStudentIds.has(student.student_id)) {
               result.duplicateCount++;
               result.errors.push({
                 row: processedCount,
                 studentId: student.student_id,
-                error: `Student ID "${student.student_id}" already exists`
+                error: `Student ID "${student.student_id}" already exists in the database`
               });
               continue;
             }
@@ -145,17 +224,7 @@ export const useBulkStudentImport = () => {
               }
             }
 
-            // Validate required fields
-            if (!student.student_id?.trim()) {
-              result.failedCount++;
-              result.errors.push({
-                row: processedCount,
-                studentId: student.student_id || 'N/A',
-                error: 'Student ID is required'
-              });
-              continue;
-            }
-
+            // Validate required fields (student_id should be auto-generated by now)
             if (!student.full_name?.trim()) {
               result.failedCount++;
               result.errors.push({
@@ -166,40 +235,31 @@ export const useBulkStudentImport = () => {
               continue;
             }
 
-            // Prepare student data for insertion - matching seed.js format
-            const studentRecord: Record<string, any> = {
+            // Prepare student data for insertion
+            const studentRecord: StudentRecord = {
               student_id: student.student_id.trim(),
               full_name: student.full_name.trim(),
               gender: normalizeGender(student.gender) || 'male',
-              academic_year: student.academic_year?.trim() || '2024/2025',
-              has_left: false
+              academic_year: student.academic_year?.trim() || '2025/2026', // Default to current academic year
+              has_left: false,
+              organization_id: organizationId
             };
 
-            // Only add optional fields if they have values
-            if (student.date_of_birth) {
-              studentRecord.date_of_birth = student.date_of_birth;
+            // Only add optional fields if they have values and are valid
+            if (student.date_of_birth && student.date_of_birth.trim()) {
+              if (isValidDate(student.date_of_birth)) {
+                studentRecord.date_of_birth = student.date_of_birth;
+              } else {
+                console.warn(`Invalid date for student ${student.student_id}: ${student.date_of_birth}`);
+              }
             }
-            if (resolvedClassId) {
-              studentRecord.class_id = resolvedClassId;
-            }
-            if (resolvedDepartmentId) {
-              studentRecord.department_id = resolvedDepartmentId;
-            }
-            if (student.email?.trim()) {
-              studentRecord.email = student.email.trim();
-            }
-            if (student.guardian_name?.trim()) {
-              studentRecord.guardian_name = student.guardian_name.trim();
-            }
-            if (student.guardian_phone?.trim()) {
-              studentRecord.guardian_phone = student.guardian_phone.trim();
-            }
-            if (student.guardian_email?.trim()) {
-              studentRecord.guardian_email = student.guardian_email.trim();
-            }
-            if (student.address?.trim()) {
-              studentRecord.address = student.address.trim();
-            }
+            if (resolvedClassId) { studentRecord.class_id = resolvedClassId; }
+            if (resolvedDepartmentId) { studentRecord.department_id = resolvedDepartmentId; }
+            if (student.email?.trim()) { studentRecord.email = student.email.trim(); }
+            if (student.guardian_name?.trim()) { studentRecord.guardian_name = student.guardian_name.trim(); }
+            if (student.guardian_phone?.trim()) { studentRecord.guardian_phone = student.guardian_phone.trim(); }
+            if (student.guardian_email?.trim()) { studentRecord.guardian_email = student.guardian_email.trim(); }
+            if (student.address?.trim()) { studentRecord.address = student.address.trim(); }
 
             studentsToInsert.push(studentRecord);
           }
@@ -214,13 +274,8 @@ export const useBulkStudentImport = () => {
               .select('id, student_id');
 
             if (insertError) {
-              console.error('Supabase insert error:', {
-                message: insertError.message,
-                details: insertError.details,
-                hint: insertError.hint,
-                code: insertError.code,
-                fullError: JSON.stringify(insertError, null, 2)
-              });
+              console.error('Supabase insert error details:', insertError);
+
               // Handle batch error - mark all as failed
               studentsToInsert.forEach(s => {
                 result.failedCount++;
@@ -253,10 +308,10 @@ export const useBulkStudentImport = () => {
         });
 
         result.success = result.failedCount === 0 && result.successCount > 0;
-
         return result;
 
       } catch (error) {
+        console.error('Import execution error:', error);
         result.success = false;
         result.errors.push({
           row: 0,
@@ -281,9 +336,15 @@ export const useBulkStudentImport = () => {
           variant: 'default'
         });
       } else {
+        // Build a more descriptive error message showing the first few errors
+        const errorDetails = result.errors.slice(0, 3).map(e =>
+          `Row ${e.row}: ${e.error}`
+        ).join('; ');
+        const moreErrors = result.errors.length > 3 ? ` (+${result.errors.length - 3} more)` : '';
+
         toast({
           title: 'Import Failed',
-          description: `Failed to import students. ${result.errors.length} errors occurred.`,
+          description: errorDetails + moreErrors,
           variant: 'destructive'
         });
       }

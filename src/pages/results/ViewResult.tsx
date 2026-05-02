@@ -9,7 +9,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useOverallPosition } from "@/hooks/useOverallPosition";
 import { StudentInfoSection } from "@/components/results/StudentInfoSection";
 import { SubjectsTableSection } from "@/components/results/SubjectsTableSection";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { useSchoolSettings } from "@/hooks/useSchoolSettings";
 
 const ViewResult = () => {
   const { id } = useParams<{ id: string }>();
@@ -64,7 +65,9 @@ const ViewResult = () => {
     enabled: !!result
   });
 
-  if (isLoading) {
+  const { settings, loading: isSettingsLoading } = useSchoolSettings();
+
+  if (isLoading || isSettingsLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header title="View Result" subtitle="Loading student result..." />
@@ -125,99 +128,117 @@ const ViewResult = () => {
   const passPercentage = totalSubjects > 0 ? (passedSubjects / totalSubjects) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent pb-12">
       <Header
-        title="Student Result"
-        subtitle={`${result.student?.full_name} - ${result.term} Term ${result.academic_year}`}
+        title="Student Record Dossier"
+        subtitle={`${result.student?.full_name} — ${result.term} Term ${result.academic_year}`}
       />
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <main className="container mx-auto px-4 py-6 space-y-6 w-full">
+        {/* Actions Toolbar */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
           <Button
             variant="outline"
-            onClick={() => navigate('/results/manage-results')}
+            onClick={() => {
+              if (window.history.state && window.history.state.idx > 0) {
+                navigate(-1);
+              } else {
+                navigate('/results/manage-results');
+              }
+            }}
+            className="rounded-xl border-slate-200 dark:border-border hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-medium text-slate-600 dark:text-slate-300"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Results
           </Button>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate(`/results/edit/${id}`)}>
+
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/results/edit/${id}`)}
+              className="rounded-xl border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:hover:bg-slate-800 dark:text-slate-300 transition-all font-semibold flex-1 sm:flex-none"
+            >
               <Edit className="w-4 h-4 mr-2" />
-              Edit
+              Edit Result
             </Button>
-            <Button variant="outline" onClick={() => generateSingleReport(id!)} disabled={isGenerating}>
+            <Button
+              onClick={() => generateSingleReport(id!)}
+              disabled={isGenerating}
+              className="rounded-xl bg-[#2563EB] hover:bg-[#1d4ed8] text-white dark:bg-blue-600 dark:hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 flex-1 sm:flex-none font-semibold border-0"
+            >
               <Download className="w-4 h-4 mr-2" />
-              {isGenerating ? 'Generating...' : 'Download PDF'}
+              {isGenerating ? 'Generating PDF...' : 'Download PDF Report'}
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <Card className="lg:col-span-4">
-            <StudentInfoSection
-              studentName={result.student?.full_name}
-              className={result.class?.name}
-              academicYear={result.academic_year}
-              term={result.term}
-              noOnRoll={result.student?.no_on_roll}
-              date={new Date().toISOString().split('T')[0]}
-              overallPosition={positionData?.position}
-              nextTermBegins={result.next_term_begin}
-              isLoadingPosition={isLoadingPosition}
-            />
-          </Card>
-        </div>
+        <div className="space-y-6">
+          {/* Top Banner identity */}
+          <StudentInfoSection
+            studentName={result.student?.full_name}
+            photoUrl={result.student?.photo_url}
+            className={result.class?.name}
+            academicYear={result.academic_year}
+            term={result.term}
+            noOnRoll={result.student?.no_on_roll}
+            date={new Date().toISOString().split('T')[0]}
+            overallPosition={positionData?.position}
+            nextTermBegins={result.next_term_begin}
+            isLoadingPosition={isLoadingPosition}
+          />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{Math.round(averageScore)}%</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pass Rate</CardTitle>
-              <Award className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{Math.round(passPercentage)}%</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Excellent Grades</CardTitle>
-              <Award className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{excellentGrades}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Subjects</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalSubjects}</div>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Quick Metrics Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-card border border-slate-100 dark:border-border shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] p-5 flex flex-col justify-center group transition-all duration-300 hover:border-blue-200 dark:hover:border-blue-500/30">
+              <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 dark:bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-100 dark:group-hover:bg-blue-500/10 transition-colors" />
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-muted-foreground mb-1">
+                <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
+                Average Score
+              </span>
+              <span className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                {Math.round(averageScore)}<span className="text-xl text-slate-400 font-bold ml-0.5">%</span>
+              </span>
+            </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Subject Performance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SubjectsTableSection
-              subjectMarks={result.subject_marks || []}
-              caTypeConfig={result.ca_type?.configuration}
-            />
-          </CardContent>
-        </Card>
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-card border border-slate-100 dark:border-border shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] p-5 flex flex-col justify-center group transition-all duration-300 hover:border-emerald-200 dark:hover:border-emerald-500/30">
+              <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 dark:bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/10 transition-colors" />
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-muted-foreground mb-1">
+                <Award className="w-3.5 h-3.5 text-emerald-500" />
+                Pass Rate
+              </span>
+              <span className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                {Math.round(passPercentage)}<span className="text-xl text-slate-400 font-bold ml-0.5">%</span>
+              </span>
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-card border border-slate-100 dark:border-border shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] p-5 flex flex-col justify-center group transition-all duration-300 hover:border-purple-200 dark:hover:border-purple-500/30">
+              <div className="absolute -right-6 -top-6 w-24 h-24 bg-purple-50 dark:bg-purple-500/5 rounded-full blur-2xl group-hover:bg-purple-100 dark:group-hover:bg-purple-500/10 transition-colors" />
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-muted-foreground mb-1">
+                <Award className="w-3.5 h-3.5 text-purple-500" />
+                Excellence
+              </span>
+              <span className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                {excellentGrades} <span className="text-sm font-semibold text-slate-400 ml-1">('A' grades)</span>
+              </span>
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-card border border-slate-100 dark:border-border shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] p-5 flex flex-col justify-center group transition-all duration-300 hover:border-orange-200 dark:hover:border-orange-500/30">
+              <div className="absolute -right-6 -top-6 w-24 h-24 bg-orange-50 dark:bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-100 dark:group-hover:bg-orange-500/10 transition-colors" />
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-muted-foreground mb-1">
+                <Users className="w-3.5 h-3.5 text-orange-500" />
+                Subjects Taken
+              </span>
+              <span className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                {totalSubjects}
+              </span>
+            </div>
+          </div>
+
+          <SubjectsTableSection
+            subjectMarks={result.subject_marks || []}
+            caTypeConfig={result.ca_type?.configuration}
+          />
+        </div>
       </main>
     </div>
   );

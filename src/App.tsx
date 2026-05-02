@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -11,9 +11,17 @@ import { WalkthroughProvider } from "@/contexts/WalkthroughContext";
 import { WalkthroughOverlay, FloatingHelpButton } from "@/components/walkthrough";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { SubscriptionOverlay } from "@/components/billing/SubscriptionOverlay";
+import { TrialBanner } from "@/components/billing/TrialBanner";
+import LoadingComp from "@/components/ui/loading";
 // TeacherProtectedRoute no longer needed - using unified role-based routes
+import { getUserOrganizationId } from "@/utils/organizationHelper";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 
 // Pages
+import Index from "./pages/Index";
+import NoOrganization from "./pages/NoOrganization";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Classes from "./pages/Classes";
@@ -29,6 +37,9 @@ import NotFound from "./pages/NotFound";
 import PublicReports from "./pages/PublicReports";
 import PublicMockResults from "./pages/PublicMockResults";
 import MockExams from "./pages/MockExams";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import SignUp from "./pages/SignUp";
 
 // Subject pages
 import ManageSubjects from "./pages/subjects/ManageSubjects";
@@ -53,7 +64,6 @@ import ResultsAnalytics from "./pages/results/ResultsAnalytics";
 
 // Mock pages
 import AddMockScores from "./pages/mock/AddMockScores";
-import { useEffect, useState } from "react";
 
 // Create QueryClient with enhanced configuration
 const queryClient = new QueryClient({
@@ -92,26 +102,86 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
   </SidebarProvider>
 );
 
-// Protected route wrapper with layout
+// Protected route wrapper with layout and organization check
 const ProtectedAppRoute = ({
   children,
   requireAdmin = false
 }: {
   children: React.ReactNode;
   requireAdmin?: boolean;
-}) => (
-  <ProtectedRoute requireAdmin={requireAdmin}>
-    <AppLayout>
-      {children}
-    </AppLayout>
-  </ProtectedRoute>
-);
+}) => {
+  const [checking, setChecking] = useState(true);
+  const location = useLocation();
+
+  useEffect(() => {
+    const checkOrg = async () => {
+      // Skip check for settings page to avoid infinite loop for admins creating org
+      if (location.pathname === '/settings') {
+        setChecking(false);
+        return;
+      }
+
+      try {
+        const orgId = await getUserOrganizationId();
+
+        if (!orgId) {
+          // No organization found. Check user type.
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('user_type')
+              .eq('user_id', user.id)
+              .single();
+
+            if (profile?.user_type === 'admin') {
+              // Admin needs to create organization - redirect to settings
+              // Use window.location to ensure fresh state
+              window.location.href = '/settings?setup=required';
+              return;
+            } else {
+              // Other users cannot fix this themselves - redirect to no-org page
+              window.location.href = '/no-organization';
+              return;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error checking organization:', error);
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    checkOrg();
+  }, [location.pathname]);
+
+  if (checking) {
+    return <LoadingComp message="Loading Organization..." subtext="Please wait while we fetch your details" />;
+  }
+
+  return (
+    <ProtectedRoute requireAdmin={requireAdmin}>
+      <AppLayout>
+        <TrialBanner />
+        <SubscriptionOverlay />
+        {children}
+      </AppLayout>
+    </ProtectedRoute>
+  );
+};
 
 const ForceRedirect = ({ to }: { to: string }) => {
   useEffect(() => {
     window.location.replace(to);
   }, [to]);
   return null; // This component doesn't render anything itself
+};
+
+const RouteAwareHelpButton = () => {
+  const location = useLocation();
+  if (location.pathname === '/') return null;
+  return <FloatingHelpButton />;
 };
 
 const App = () => {
@@ -168,21 +238,36 @@ const App = () => {
               </button>
             </div>
           )}
-          <ThemeProvider>
-            <AuthProvider>
-              <BrowserRouter>
+          <BrowserRouter>
+            <ThemeProvider>
+              <AuthProvider>
                 <WalkthroughProvider>
                   <WalkthroughOverlay />
-                  <FloatingHelpButton />
+                  <RouteAwareHelpButton />
                   <Routes>
                     {/* Public Routes */}
-                    <Route path="/login" element={disableAuth ? <ForceRedirect to="/" /> : <Login />} />
+                    <Route path="/" element={<Index />} />
+                    <Route path="/login" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <Login />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/signup" element={<SignUp />} />
                     <Route path="/student-reports" element={<PublicReports />} />
+                    <Route path="/mock-results" element={<PublicMockResults />} />
                     <Route path="/mock-results/:sessionId" element={<PublicMockResults />} />
+
+                    {/* No Organization Route - Protected but no sidebar layout */}
+                    <Route
+                      path="/no-organization"
+                      element={
+                        <ProtectedRoute>
+                          <NoOrganization />
+                        </ProtectedRoute>
+                      }
+                    />
 
                     {/* Protected Routes */}
                     <Route
-                      path="/"
+                      path="/dashboard"
                       element={
                         <ProtectedAppRoute>
                           <Dashboard />
@@ -381,23 +466,22 @@ const App = () => {
                     />
 
                     {/* Legacy routes - redirect to unified routes */}
-                    <Route path="/teacher/dashboard" element={<Navigate to="/" replace />} />
-                    <Route path="/teacher-dashboard" element={<Navigate to="/" replace />} />
+                    <Route path="/teacher/dashboard" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/teacher-dashboard" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/teacher/results/add" element={<Navigate to="/results/add-results" replace />} />
                     <Route path="/teacher/results/manage" element={<Navigate to="/results/manage-results" replace />} />
                     <Route path="/teacher/manage-results" element={<Navigate to="/results/manage-results" replace />} />
 
                     {/* Redirects */}
-                    <Route path="/dashboard" element={<Navigate to="/" replace />} />
                     <Route path="/manage-profile" element={<Navigate to="/profile" replace />} />
 
                     {/* 404 - Keep this last */}
-                    <Route path="*" element={disableAuth ? <ForceRedirect to="/" /> : <NotFound />} />
+                    <Route path="*" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <NotFound />} />
                   </Routes>
                 </WalkthroughProvider>
-              </BrowserRouter>
-            </AuthProvider>
-          </ThemeProvider>
+              </AuthProvider>
+            </ThemeProvider>
+          </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

@@ -5,7 +5,7 @@ import { useClasses } from "@/hooks/useClasses";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useTeachers } from "@/hooks/useTeachers";
 import { useReportCards } from "@/hooks/useReportCards";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, BarChart3, Search, X, Users, Info } from "lucide-react";
+import { Plus, BarChart3, Search, X, Users, Info, Loader2, Globe } from "lucide-react";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import ManageResultsContent from "@/components/results/ManageResultsContent";
 import ManageResultsBulkActions from "@/components/results/ManageResultsBulkActions";
@@ -27,12 +27,28 @@ const ManageResults = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { generateSingleReport } = useReportCards();
+  const { generateSingleReport, isGenerating } = useReportCards();
+  const [isDownloadingBulk, setIsDownloadingBulk] = useState(false);
   const { isTeacher, isAdmin } = useAuth();
-  const { getAccessibleClassIds } = useCanAccessClass();
+  const {
+    getAccessibleClassIds,
+    getAssignedClasses,
+    isLoading: teacherAccessLoading,
+    hasLoaded: teacherAccessLoaded,
+    teacherId
+  } = useCanAccessClass();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = parseInt(searchParams.get("page") || "1", 10);
+
+  const setCurrentPage = (page: number) => {
+    setSearchParams(prev => {
+      prev.set("page", page.toString());
+      return prev;
+    });
+  };
+
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize, setPageSize] = useState("10");
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedResults, setSelectedResults] = useState<string[]>([]);
   const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, resultId: "", studentName: "" });
   const [bulkDeleteDialog, setBulkDeleteDialog] = useState({ isOpen: false, count: 0 });
@@ -50,10 +66,23 @@ const ManageResults = () => {
   const { data: teachers = [] } = useTeachers();
 
   // For teachers, only show their assigned classes
-  const accessibleClassIds = getAccessibleClassIds();
+  const accessibleClassIds = useMemo(() => {
+    if (isTeacher && teacherAccessLoaded) {
+      return getAccessibleClassIds();
+    }
+    return [];
+  }, [isTeacher, teacherAccessLoaded, getAccessibleClassIds]);
+
+  // Check if teacher record is missing (user_id not linked in teachers table)
+  const teacherRecordMissing = isTeacher && teacherAccessLoaded && !teacherId;
+
+  // Check if teacher has no assignments
+  const teacherHasNoAssignments = isTeacher && teacherAccessLoaded && !!teacherId && accessibleClassIds.length === 0;
+
   const classes = useMemo(() => {
     if (isAdmin) return allClasses;
-    if (isTeacher && accessibleClassIds.length > 0) {
+    if (isTeacher) {
+      // Teachers only see their assigned classes (empty if no assignments)
       return allClasses.filter(cls => accessibleClassIds.includes(cls.id));
     }
     return allClasses;
@@ -74,6 +103,32 @@ const ManageResults = () => {
     },
     onError: (error: Error) => {
       toast({ title: "Delete Failed", description: error.message || "Failed to delete result.", variant: "destructive" });
+    },
+  });
+
+  const bulkPublishMutation = useMutation({
+    mutationFn: async ({ ids, publish }: { ids: string[]; publish: boolean }) => {
+      const { error } = await supabase
+        .from('results')
+        .update({ is_public: publish } as any)
+        .in('id', ids);
+      if (error) throw error;
+      return { ids, publish };
+    },
+    onSuccess: ({ ids, publish }) => {
+      queryClient.invalidateQueries({ queryKey: ['results'] });
+      setSelectedResults([]);
+      toast({
+        title: publish ? 'Results Published' : 'Results Unpublished',
+        description: `${ids.length} result${ids.length !== 1 ? 's' : ''} ${publish ? 'are now publicly accessible via the student portal.' : 'have been made private.'}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Publish Failed',
+        description: error.message || 'Failed to update results. Please try again.',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -99,7 +154,8 @@ const ManageResults = () => {
   const filteredResults = useMemo(() => {
     return results.filter(result => {
       // For teachers, only show results for their assigned classes
-      if (isTeacher && !isAdmin && accessibleClassIds.length > 0) {
+      // If teacher has no assignments, they see nothing
+      if (isTeacher && !isAdmin) {
         if (!accessibleClassIds.includes(result.class_id)) {
           return false;
         }
@@ -143,8 +199,69 @@ const ManageResults = () => {
   const clearFilters = () => {
     setFilters({ class_id: "", department_id: "", academic_year: "", term: "", teacher_id: "" });
     setSearchTerm("");
-    setCurrentPage(1);
+    setSearchParams(prev => {
+      prev.delete("page");
+      return prev;
+    });
     setSelectedResults([]);
+  };
+
+  // Bulk download function for selected results
+  const handleBulkPublish = (publish: boolean) => {
+    const ids = selectedResults.length > 0
+      ? selectedResults
+      : filteredResults.map(r => r.id);
+    if (ids.length === 0) return;
+    bulkPublishMutation.mutate({ ids, publish });
+  };
+
+  const handlePublishAll = () => {
+    const ids = filteredResults.map(r => r.id);
+    if (ids.length === 0) return;
+    bulkPublishMutation.mutate({ ids, publish: true });
+  };
+
+  const handleBulkDownload = async () => {
+    if (selectedResults.length === 0) return;
+
+    setIsDownloadingBulk(true);
+    toast({
+      title: "Generating Reports",
+      description: `Starting download of ${selectedResults.length} report(s)...`,
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < selectedResults.length; i++) {
+      const resultId = selectedResults[i];
+      try {
+        await generateSingleReport(resultId);
+        successCount++;
+        // Small delay between downloads to prevent browser blocking
+        if (i < selectedResults.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
+      } catch (error) {
+        console.error(`Failed to download report for result ${resultId}:`, error);
+        failCount++;
+      }
+    }
+
+    setIsDownloadingBulk(false);
+
+    if (failCount === 0) {
+      toast({
+        title: "Download Complete",
+        description: `Successfully downloaded ${successCount} report(s).`,
+      });
+    } else {
+      toast({
+        title: "Download Partially Complete",
+        description: `Downloaded ${successCount} report(s). ${failCount} failed.`,
+        variant: "destructive",
+      });
+    }
   };
 
   const activeFilters = Object.values(filters).filter(Boolean).length + (searchTerm ? 1 : 0);
@@ -163,8 +280,18 @@ const ManageResults = () => {
       />
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Teacher info alert */}
-        {isTeacher && !isAdmin && (
+        {/* Teacher no assignments alert */}
+        {isTeacher && teacherAccessLoaded && (teacherRecordMissing || teacherHasNoAssignments) && (
+          <Alert variant="destructive">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              You don't have any class assignments yet. Please contact your administrator to be assigned to classes before you can view results.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Teacher info alert - only show when teacher has assignments */}
+        {isTeacher && !isAdmin && teacherAccessLoaded && accessibleClassIds.length > 0 && (
           <Alert className="bg-blue-50 border-blue-200">
             <Info className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-700">
@@ -173,142 +300,183 @@ const ManageResults = () => {
             </AlertDescription>
           </Alert>
         )}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Results</h1>
-            <p className="text-muted-foreground">Review, manage and track student academic performance.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={() => navigate('/results/add-results')}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Result
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/results/analytics')}>
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Analytics
-            </Button>
-          </div>
-        </div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row items-center gap-4">
-              <div className="relative w-full md:w-80">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search results..."
-                  className="pl-9 w-full"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+        {/* Only show main content if not in error state */}
+        {(!isTeacher || (teacherAccessLoaded && !teacherRecordMissing && !teacherHasNoAssignments)) && (
+          <>
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Results</h1>
+                <p className="text-muted-foreground">Review, manage and track student academic performance.</p>
               </div>
-              {/* Show class filter for admins OR teachers with multiple classes */}
-              {(isAdmin || (isTeacher && accessibleClassIds.length > 1)) && (
-                <div className="flex items-center gap-2">
-                  <Select value={filters.class_id} onValueChange={(value) => setFilters(prev => ({ ...prev, class_id: value }))}>
-                    <SelectTrigger className="w-full md:w-[180px]">
-                      <SelectValue placeholder="Filter by class" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Classes</SelectItem>
-                      {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  {/* Only show department filter for admins */}
-                  {isAdmin && (
-                    <Select value={filters.department_id} onValueChange={(value) => setFilters(prev => ({ ...prev, department_id: value }))}>
-                      <SelectTrigger className="w-full md:w-[180px]">
-                        <SelectValue placeholder="Filter by department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Departments</SelectItem>
-                        {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {activeFilters > 0 && (
-                    <Button variant="ghost" onClick={clearFilters}>
-                      <X className="w-4 h-4 mr-2" />
-                      Clear Filters
-                    </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {isAdmin && filteredResults.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={handlePublishAll}
+                    disabled={bulkPublishMutation.isPending}
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                  >
+                    {bulkPublishMutation.isPending && !selectedResults.length ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Publishing…
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="w-4 h-4 mr-2" />
+                        Publish All ({filteredResults.length})
+                      </>
+                    )}
+                  </Button>
+                )}
+                <Button onClick={() => navigate('/results/add-results')}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Result
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/results/analytics')}>
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Analytics
+                </Button>
+              </div>
+            </div>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                  <div className="relative w-full md:w-80">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search results..."
+                      className="pl-9 w-full"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  {/* Show class filter for admins OR teachers with multiple classes */}
+                  {(isAdmin || (isTeacher && accessibleClassIds.length > 1)) && (
+                    <div className="flex items-center gap-2">
+                      <Select value={filters.class_id} onValueChange={(value) => setFilters(prev => ({ ...prev, class_id: value }))}>
+                        <SelectTrigger className="w-full md:w-[180px]">
+                          <SelectValue placeholder="Filter by class" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Classes</SelectItem>
+                          {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      {/* Only show department filter for admins */}
+                      {isAdmin && (
+                        <Select value={filters.department_id} onValueChange={(value) => setFilters(prev => ({ ...prev, department_id: value }))}>
+                          <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder="Filter by department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Departments</SelectItem>
+                            {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {activeFilters > 0 && (
+                        <Button variant="ghost" onClick={clearFilters}>
+                          <X className="w-4 h-4 mr-2" />
+                          Clear Filters
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
-        {selectedResults.length > 0 && (
-          <ManageResultsBulkActions
-            selectedCount={selectedResults.length}
-            onBulkDelete={() => setBulkDeleteDialog({ isOpen: true, count: selectedResults.length })}
-            onBulkDownload={() => { }}
-            onClearSelection={() => setSelectedResults([])}
-            isDeleting={bulkDeleteMutation.isPending}
-          />
+            {selectedResults.length > 0 && (
+              <ManageResultsBulkActions
+                selectedCount={selectedResults.length}
+                onBulkDelete={() => setBulkDeleteDialog({ isOpen: true, count: selectedResults.length })}
+                onBulkDownload={handleBulkDownload}
+                onBulkPublish={handleBulkPublish}
+                onClearSelection={() => setSelectedResults([])}
+                isDeleting={bulkDeleteMutation.isPending}
+                isDownloading={isDownloadingBulk || isGenerating}
+                isPublishing={bulkPublishMutation.isPending}
+              />
+            )}
+
+            {isLoading || (isTeacher && !teacherAccessLoaded) ? (
+              <div className="border rounded-lg p-4 space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : currentResults.length === 0 ? (
+              <div className="text-center py-20">
+                <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">No results found</h3>
+                <p className="mt-2 text-sm text-muted-foreground">Get started by adding a new result.</p>
+                <Button className="mt-6" onClick={() => navigate('/results/add-results')}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Result
+                </Button>
+              </div>
+            ) : (
+              <ManageResultsContent
+                currentResults={currentResults}
+                totalEntries={totalEntries}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                activeFilterCount={activeFilters}
+                selectedResults={selectedResults}
+                isAllSelected={isAllSelected}
+                isIndeterminate={isIndeterminate}
+                onPageChange={setCurrentPage}
+                onEdit={(id) => navigate(`/results/edit/${id}`)}
+                onDelete={(id) => {
+                  const result = results.find(r => r.id === id);
+                  setDeleteDialog({ isOpen: true, resultId: id, studentName: result?.student?.full_name || '' });
+                }}
+                onView={(id) => navigate(`/results/view/${id}`)}
+                onDownload={(id) => generateSingleReport(id)}
+                onClearFilters={clearFilters}
+                onSelectAll={handleSelectAll}
+                onSelectResult={handleSelectResult}
+              />
+            )}
+          </>
         )}
 
-        {isLoading ? (
-          <div className="border rounded-lg p-4 space-y-4">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        ) : currentResults.length === 0 ? (
+        {/* Empty state for teachers with no assignments */}
+        {isTeacher && teacherAccessLoaded && (teacherRecordMissing || teacherHasNoAssignments) && (
           <div className="text-center py-20">
             <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">No results found</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Get started by adding a new result.</p>
-            <Button className="mt-6" onClick={() => navigate('/results/add-results')}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Result
-            </Button>
+            <h3 className="mt-4 text-lg font-semibold">No Class Assignments</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              You need to be assigned to at least one class to view results.<br />
+              Please contact your administrator.
+            </p>
           </div>
-        ) : (
-          <ManageResultsContent
-            currentResults={currentResults}
-            totalEntries={totalEntries}
-            startIndex={startIndex}
-            endIndex={endIndex}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            activeFilterCount={activeFilters}
-            selectedResults={selectedResults}
-            isAllSelected={isAllSelected}
-            isIndeterminate={isIndeterminate}
-            onPageChange={setCurrentPage}
-            onEdit={(id) => navigate(`/results/edit/${id}`)}
-            onDelete={(id) => {
-              const result = results.find(r => r.id === id);
-              setDeleteDialog({ isOpen: true, resultId: id, studentName: result?.student?.full_name || '' });
-            }}
-            onView={(id) => navigate(`/results/view/${id}`)}
-            onDownload={(id) => generateSingleReport(id)}
-            onClearFilters={clearFilters}
-            onSelectAll={handleSelectAll}
-            onSelectResult={handleSelectResult}
-          />
         )}
+
+        <DeleteConfirmationDialog
+          isOpen={deleteDialog.isOpen}
+          onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, isOpen: open }))}
+          onConfirm={confirmDelete}
+          title="Delete Result"
+          description={`Are you sure you want to delete the result for ${deleteDialog.studentName}?`}
+          isLoading={deleteResultMutation.isPending}
+        />
+
+        <DeleteConfirmationDialog
+          isOpen={bulkDeleteDialog.isOpen}
+          onOpenChange={(open) => setBulkDeleteDialog(prev => ({ ...prev, isOpen: open }))}
+          onConfirm={confirmBulkDelete}
+          title="Delete Selected Results"
+          description={`Are you sure you want to delete ${bulkDeleteDialog.count} selected results? This action cannot be undone.`}
+          isLoading={bulkDeleteMutation.isPending}
+        />
       </main>
-
-      <DeleteConfirmationDialog
-        isOpen={deleteDialog.isOpen}
-        onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, isOpen: open }))}
-        onConfirm={confirmDelete}
-        title="Delete Result"
-        description={`Are you sure you want to delete the result for ${deleteDialog.studentName}?`}
-        isLoading={deleteResultMutation.isPending}
-      />
-
-      <DeleteConfirmationDialog
-        isOpen={bulkDeleteDialog.isOpen}
-        onOpenChange={(open) => setBulkDeleteDialog(prev => ({ ...prev, isOpen: open }))}
-        onConfirm={confirmBulkDelete}
-        title="Delete Selected Results"
-        description={`Are you sure you want to delete ${bulkDeleteDialog.count} selected results? This action cannot be undone.`}
-        isLoading={bulkDeleteMutation.isPending}
-      />
     </div>
   );
 };

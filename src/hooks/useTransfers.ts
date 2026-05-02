@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getUserOrganizationId } from "@/utils/organizationHelper";
 
 export interface Transfer {
   id: string;
@@ -55,6 +56,12 @@ export const useTransfers = () => {
   return useQuery({
     queryKey: ['transfers'],
     queryFn: async () => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('transfers')
         .select(`
@@ -65,6 +72,7 @@ export const useTransfers = () => {
           requested_by_teacher:teachers!requested_by_teacher_id(id, full_name),
           approved_by_teacher:teachers!approved_by_teacher_id(id, full_name)
         `)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -83,7 +91,7 @@ export const useUpdateTransferStatus = () => {
 
   return useMutation({
     mutationFn: async ({ id, status, notes }: { id: string; status: string; notes?: string }) => {
-      const updateData: any = { 
+      const updateData: any = {
         status,
         updated_at: new Date().toISOString()
       };
@@ -115,10 +123,10 @@ export const useUpdateTransferStatus = () => {
       // If status is completed, actually move the student to the new class
       if (status === 'completed' && transferData.to_class_id && transferData.student_id) {
         console.log(`Moving student ${transferData.student_id} to class ${transferData.to_class_id}`);
-        
+
         const { error: studentUpdateError } = await supabase
           .from('students')
-          .update({ 
+          .update({
             class_id: transferData.to_class_id,
             updated_at: new Date().toISOString()
           })
@@ -136,7 +144,7 @@ export const useUpdateTransferStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classes'] });
-      
+
       if (data.status === 'completed') {
         toast({
           title: "Transfer Completed",
@@ -166,9 +174,14 @@ export const useCreateTransfer = () => {
 
   return useMutation({
     mutationFn: async (transferData: CreateTransferData) => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
       const { data, error } = await supabase
         .from('transfers')
-        .insert(transferData)
+        .insert({ ...transferData, organization_id: organizationId })
         .select()
         .single();
 
@@ -184,7 +197,7 @@ export const useCreateTransfer = () => {
     },
     onError: (error) => {
       toast({
-        title: "Error", 
+        title: "Error",
         description: "Failed to create transfer request",
         variant: "destructive",
       });

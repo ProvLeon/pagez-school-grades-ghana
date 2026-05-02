@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
+import { formatDate, formatPhoneNumber } from '@/utils/dateUtils';
 
 export interface ParsedStudentData {
   student_id: string;
@@ -65,7 +66,7 @@ export const useExcelParser = () => {
             const jsonData = XLSX.utils.sheet_to_json(worksheet, {
               header: 1,
               defval: ''
-            }) as any[][];
+            }) as Array<Array<string | number | undefined>>;
 
             if (jsonData.length < 2) {
               resolve({
@@ -79,7 +80,7 @@ export const useExcelParser = () => {
             }
 
             // Get header row and map column indices
-            const headers = jsonData[0].map((h: any) => String(h).toLowerCase().trim());
+            const headers = jsonData[0].map((h: string | number | undefined) => String(h).toLowerCase().trim());
             const dataRows = jsonData.slice(1);
 
             // Column mapping for different possible header names
@@ -98,8 +99,8 @@ export const useExcelParser = () => {
               academic_year: findColumnIndex(headers, ['academic_year', 'academic year', 'year'])
             };
 
-            // Check for required columns
-            const requiredColumns = ['student_id', 'full_name'];
+            // Check for required columns (student_id is auto-generated, so only full_name is required)
+            const requiredColumns = ['full_name'];
             const missingColumns = requiredColumns.filter(col => columnMap[col as keyof typeof columnMap] === -1);
 
             if (missingColumns.length > 0) {
@@ -116,7 +117,7 @@ export const useExcelParser = () => {
             const parsedData: ParsedStudentData[] = [];
             const errors: string[] = [];
 
-            dataRows.forEach((row: any[], index: number) => {
+            dataRows.forEach((row: Array<string | number | undefined>, index: number) => {
               const rowNumber = index + 2; // +2 because of header and 0-based index
 
               // Skip empty rows
@@ -129,7 +130,7 @@ export const useExcelParser = () => {
                   student_id: getCellValue(row, columnMap.student_id),
                   full_name: getCellValue(row, columnMap.full_name),
                   email: getCellValue(row, columnMap.email),
-                  date_of_birth: formatDate(getCellValue(row, columnMap.date_of_birth)),
+                  date_of_birth: formatDate(getCellValue(row, columnMap.date_of_birth) || ''),
                   gender: getCellValue(row, columnMap.gender),
                   class_id: getCellValue(row, columnMap.class_id),
                   department_id: getCellValue(row, columnMap.department_id),
@@ -140,12 +141,7 @@ export const useExcelParser = () => {
                   academic_year: getCellValue(row, columnMap.academic_year) || '2024/2025'
                 };
 
-                // Basic validation
-                if (!studentData.student_id?.trim()) {
-                  errors.push(`Row ${rowNumber}: Student ID is required`);
-                  return;
-                }
-
+                // Basic validation (student_id will be auto-generated if empty)
                 if (!studentData.full_name?.trim()) {
                   errors.push(`Row ${rowNumber}: Full name is required`);
                   return;
@@ -218,82 +214,9 @@ function findColumnIndex(headers: string[], possibleNames: string[]): number {
   return -1;
 }
 
-function getCellValue(row: any[], columnIndex: number): string {
+function getCellValue(row: Array<string | number | undefined>, columnIndex: number): string {
   if (columnIndex === -1 || !row[columnIndex]) return '';
   return String(row[columnIndex]).trim();
 }
 
-function formatPhoneNumber(phone: string): string {
-  if (!phone) return '';
-
-  // Remove all non-digits
-  const digits = phone.replace(/\D/g, '');
-
-  // Handle different formats
-  if (digits.length === 10 && digits.startsWith('0')) {
-    // 0XXXXXXXXX -> +233XXXXXXXXX
-    return '+233' + digits.substring(1);
-  } else if (digits.length === 12 && digits.startsWith('233')) {
-    // 233XXXXXXXXX -> +233XXXXXXXXX
-    return '+' + digits;
-  } else if (digits.length === 13 && digits.startsWith('233')) {
-    // Already in correct format
-    return '+' + digits;
-  }
-
-  return phone; // Return original if can't format
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '';
-
-  try {
-    // Handle DD/MM/YYYY format (common in Ghana/UK)
-    const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-    if (ddmmyyyyMatch) {
-      const day = ddmmyyyyMatch[1].padStart(2, '0');
-      const month = ddmmyyyyMatch[2].padStart(2, '0');
-      const year = ddmmyyyyMatch[3];
-      return `${year}-${month}-${day}`;
-    }
-
-    // Handle YYYY-MM-DD format (already correct)
-    const yyyymmddMatch = dateStr.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
-    if (yyyymmddMatch) {
-      const year = yyyymmddMatch[1];
-      const month = yyyymmddMatch[2].padStart(2, '0');
-      const day = yyyymmddMatch[3].padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
-
-    // Handle MM/DD/YYYY format (US format)
-    const mmddyyyyMatch = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-    if (mmddyyyyMatch) {
-      // Assume DD/MM/YYYY if day > 12, otherwise ambiguous - default to DD/MM/YYYY
-      const first = parseInt(mmddyyyyMatch[1], 10);
-      const second = parseInt(mmddyyyyMatch[2], 10);
-      const year = mmddyyyyMatch[3];
-
-      // If first number > 12, it must be a day (DD/MM/YYYY)
-      if (first > 12) {
-        const day = mmddyyyyMatch[1].padStart(2, '0');
-        const month = mmddyyyyMatch[2].padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      }
-      // Default to DD/MM/YYYY for ambiguous cases (Ghana uses this format)
-      const day = mmddyyyyMatch[1].padStart(2, '0');
-      const month = mmddyyyyMatch[2].padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
-
-    // Try standard Date parsing as last resort
-    const date = new Date(dateStr);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0]; // Return YYYY-MM-DD format
-    }
-  } catch (error) {
-    // If parsing fails, return original
-  }
-
-  return dateStr;
-}
+// Date and phone formatting moved to @/utils/dateUtils

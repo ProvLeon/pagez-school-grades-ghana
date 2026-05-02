@@ -31,7 +31,7 @@ export const useSubjectMarksByResult = (resultId: string) => {
           subject:subjects(*)
         `)
         .eq('result_id', resultId);
-      
+
       if (error) throw error;
       return data as SubjectMark[];
     },
@@ -109,20 +109,25 @@ export const useBulkUpdateSubjectMarks = () => {
         .from('subject_marks')
         .delete()
         .eq('result_id', resultId);
-      
+
       if (deleteError) throw deleteError;
 
-      // Then insert the new marks
+      // Then insert the new marks with result_id added to each mark
       if (marks.length > 0) {
+        const marksWithResultId = marks.map(mark => ({
+          ...mark,
+          result_id: resultId,
+        }));
+
         const { data, error } = await supabase
           .from('subject_marks')
-          .insert(marks)
+          .insert(marksWithResultId)
           .select();
 
         if (error) throw error;
         return data;
       }
-      
+
       return [];
     },
     onSuccess: () => {

@@ -1,11 +1,19 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, Class } from '@/lib/supabase';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 export const useClasses = (departmentId?: string) => {
   return useQuery({
     queryKey: ['classes', departmentId],
     queryFn: async () => {
+      // Get user's organization for data isolation
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [] as Class[];
+      }
+
+      // First, fetch all classes with their relations
       let query = supabase
         .from('classes')
         .select(`
@@ -13,16 +21,51 @@ export const useClasses = (departmentId?: string) => {
           department:departments(*),
           teacher:teachers(*)
         `)
+        .eq('organization_id', organizationId)
         .order('name');
 
       if (departmentId) {
         query = query.eq('department_id', departmentId);
       }
 
-      const { data, error } = await query;
+      const { data: classes, error: classesError } = await query;
 
-      if (error) throw error;
-      return data as Class[];
+      if (classesError) throw classesError;
+
+      if (!classes || classes.length === 0) {
+        return [] as Class[];
+      }
+
+      // Get student counts for all classes in a single query (with org isolation)
+      const { data: studentCounts, error: countError } = await supabase
+        .from('students')
+        .select('class_id')
+        .eq('organization_id', organizationId)
+        .not('class_id', 'is', null);
+
+      if (countError) {
+        console.error('Error fetching student counts:', countError);
+        // Return classes without counts if there's an error
+        return classes as Class[];
+      }
+
+      // Count students per class
+      const countsByClassId: Record<string, number> = {};
+      if (studentCounts) {
+        for (const student of studentCounts) {
+          if (student.class_id) {
+            countsByClassId[student.class_id] = (countsByClassId[student.class_id] || 0) + 1;
+          }
+        }
+      }
+
+      // Merge student counts into classes
+      const classesWithCounts = classes.map(cls => ({
+        ...cls,
+        student_count: countsByClassId[cls.id] || 0
+      }));
+
+      return classesWithCounts as Class[];
     },
   });
 };
@@ -37,9 +80,14 @@ export const useCreateClass = () => {
       academic_year: string;
       teacher_id?: string;
     }) => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User is not associated with any organization');
+      }
+
       const { data, error } = await supabase
         .from('classes')
-        .insert([classData])
+        .insert([{ ...classData, organization_id: organizationId }])
         .select()
         .single();
 
@@ -61,7 +109,7 @@ export const useUpdateClass = () => {
       name?: string;
       department_id?: string;
       academic_year?: string;
-      student_count?: number;
+      teacher_id?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('classes')

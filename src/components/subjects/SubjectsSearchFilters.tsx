@@ -19,6 +19,8 @@ export function SubjectsSearchFilters({
   onDepartmentChange,
 }: SubjectsSearchFiltersProps) {
   const { data: departments = [] } = useDepartments();
+  // Exclude SHS from department list
+  const filteredDepartments = departments.filter(d => d.name.toLowerCase() !== 'shs' && d.name.toLowerCase() !== 'senior high' && d.name.toLowerCase() !== 'senior high school');
 
   const hasActiveFilters = searchTerm || (departmentFilter && departmentFilter !== "all");
 
@@ -53,7 +55,7 @@ export function SubjectsSearchFilters({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
-                {departments.map((dept) => (
+                {filteredDepartments.map((dept) => (
                   <SelectItem key={dept.id} value={dept.id}>
                     {dept.name}
                   </SelectItem>

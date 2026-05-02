@@ -9,7 +9,6 @@ interface PublicReportSearchParams {
   studentId: string;
   academicYear: string;
   term: string;
-  classId: string;
 }
 
 export const usePublicReportSearch = () => {
@@ -43,7 +42,6 @@ export const usePublicReportSearch = () => {
         .eq('students.student_id', searchParams.studentId)
         .eq('academic_year', searchParams.academicYear)
         .eq('term', searchParams.term)
-        .eq('students.class_id', searchParams.classId)
         .maybeSingle();
 
       if (error) throw error;
@@ -52,7 +50,7 @@ export const usePublicReportSearch = () => {
     enabled: !!searchParams,
   });
 
-  const searchReport = (params: PublicReportSearchParams) => {
+  const searchReport = (params: Omit<PublicReportSearchParams, never>) => {
     setSearchParams(params);
   };
 
@@ -83,9 +81,9 @@ export const usePublicReportGeneration = () => {
 
       const pdfBlob = await ReportCardService.generatePDF(reportData);
       const filename = `${reportData.student.full_name}_Report_${reportData.academic.term}_${reportData.academic.academic_year}.pdf`;
-      
+
       ReportCardService.downloadPDF(pdfBlob, filename);
-      
+
       toast({
         title: "Report Downloaded",
         description: `Report card has been downloaded successfully`,
@@ -109,25 +107,34 @@ export const usePublicReportGeneration = () => {
 };
 
 export const usePublicSearchData = () => {
-  const { data: classes = [] } = useQuery({
-    queryKey: ['public-classes'],
+  // Fetch distinct academic years from published results only.
+  // We no longer expose the classes table publicly — it was returning
+  // classes from every organisation on the platform (multi-tenant leak).
+  const { data: publishedResults = [] } = useQuery({
+    queryKey: ['public-academic-years'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('classes')
-        .select('id, name, academic_year')
-        .order('academic_year', { ascending: false })
-        .order('name');
+        .from('results')
+        .select('academic_year')
+        .eq('is_public', true)
+        .not('academic_year', 'is', null);
 
       if (error) throw error;
-      return data;
+      return data as { academic_year: string }[];
     },
   });
 
-  const academicYears = Array.from(new Set(classes.map(c => c.academic_year))).sort().reverse();
+  const academicYears = Array.from(
+    new Set(
+      publishedResults
+        .map(r => r.academic_year)
+        .filter((y): y is string => !!y && y.trim() !== '')
+    )
+  ).sort().reverse();
+
   const terms = ['first', 'second', 'third'];
 
   return {
-    classes,
     academicYears,
     terms,
   };

@@ -58,6 +58,17 @@ const ManageProfile = () => {
     newPassword: ""
   });
 
+  // Update form data when teacherRecord loads
+  useEffect(() => {
+    if (isTeacher && teacherRecord) {
+      setFormData(prev => ({
+        ...prev,
+        fullName: teacherRecord.full_name || prev.fullName,
+        phoneNumber: teacherRecord.phone || prev.phoneNumber,
+      }));
+    }
+  }, [isTeacher, teacherRecord]);
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -280,7 +291,7 @@ const ManageProfile = () => {
           </Card>
 
           {/* Edit Profile Form */}
-          <Card className="border-border/50 shadow-sm">
+          <Card data-tour="profile-form" className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-2xl font-bold">Edit Profile</CardTitle>
               <p className="text-muted-foreground">Update your personal information</p>
@@ -349,7 +360,7 @@ const ManageProfile = () => {
           </Card>
 
           {/* Platform Tour Section */}
-          <div className="mt-6">
+          <div data-tour="profile-restart-tour" className="mt-6">
             <WalkthroughTrigger variant="card" />
           </div>
         </div>

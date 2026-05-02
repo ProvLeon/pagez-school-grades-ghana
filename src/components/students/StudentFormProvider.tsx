@@ -1,6 +1,7 @@
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { useSchoolSettings } from "@/hooks/useSchoolSettings";
+import { useGradingSettings } from "@/hooks/useGradingSettings";
 
 export interface StudentFormData {
   full_name: string;
@@ -40,14 +41,15 @@ interface StudentFormProviderProps {
 
 export const StudentFormProvider = ({ children }: StudentFormProviderProps) => {
   const { settings } = useSchoolSettings();
-  
+  const { data: gradingSettings } = useGradingSettings();
+
   const [formData, setFormData] = useState<StudentFormData>({
     full_name: "",
     gender: "male",
     date_of_birth: "",
     class_id: "",
     department_id: "",
-    academic_year: "2024/2025",
+    academic_year: "",
     auto_generate_id: true,
     student_id: "",
     photo_url: null,
@@ -56,6 +58,16 @@ export const StudentFormProvider = ({ children }: StudentFormProviderProps) => {
     guardian_email: "",
     address: "",
   });
+
+  // Update academic year from grading settings when loaded
+  useEffect(() => {
+    if (gradingSettings?.academic_year) {
+      setFormData(prev => ({
+        ...prev,
+        academic_year: gradingSettings.academic_year
+      }));
+    }
+  }, [gradingSettings?.academic_year]);
 
   const generateStudentId = () => {
     // Extract first two letters from school name, fallback to "SC" if no school name
@@ -66,7 +78,7 @@ export const StudentFormProvider = ({ children }: StudentFormProviderProps) => {
       .join('')
       .substring(0, 2)
       .toUpperCase() || "SC";
-    
+
     const currentYear = new Date().getFullYear().toString().slice(-2);
     const random = Math.random().toString(36).substring(2, 5).toUpperCase();
     return `${schoolInitials}${currentYear}${random}`;

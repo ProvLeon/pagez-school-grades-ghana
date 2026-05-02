@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 export interface GradingSettings {
   id: string;
@@ -141,13 +142,25 @@ export const useGradingSettings = () => {
   return useQuery({
     queryKey: ['grading-settings'],
     queryFn: async () => {
+      // Get user's organization for multi-tenant data isolation
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return null;
+      }
+
+      // Use .maybeSingle() instead of .single() to avoid HTTP 406 when 0 rows match
       const { data, error } = await supabase
         .from('grading_settings')
         .select('*')
         .eq('is_active', true)
-        .single();
+        .eq('organization_id', organizationId)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) {
+        console.error('Error fetching grading settings:', error);
+        throw error;
+      }
       return data as GradingSettings | null;
     },
     staleTime: Infinity,
@@ -158,7 +171,13 @@ export const useGradingScales = (department?: string, academicYear?: string, ter
   return useQuery({
     queryKey: ['grading-scales', department, academicYear, term],
     queryFn: async () => {
-      let query = supabase.from('grading_scales').select('*');
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
+      let query = supabase.from('grading_scales').select('*').eq('organization_id', organizationId);
 
       if (department) {
         const normalizedDept = normalizeDepartmentName(department);
@@ -189,11 +208,11 @@ export const useAssessmentConfig = (department?: string, academicYear?: string, 
         .eq('department', department)
         .eq('academic_year', academicYear)
         .eq('term', term)
-        .single();
+        .maybeSingle();
 
       console.log('Assessment config query result:', { data, error });
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
       return data as AssessmentConfig | null;
     },
     enabled: !!department && !!academicYear && !!term,
@@ -218,6 +237,8 @@ export const useCommentOptions = () => {
 };
 
 // Save grading settings - Fixed to handle unique constraint properly
+// DB constraint is UNIQUE(academic_year, term, organization_id) for multi-tenant support.
+// We use .maybeSingle() instead of .single() to avoid HTTP 406 on 0 rows.
 export const useSaveGradingSettings = () => {
   const queryClient = useQueryClient();
 
@@ -230,17 +251,30 @@ export const useSaveGradingSettings = () => {
         throw new Error('Academic year and term are required');
       }
 
+      // Get organization ID
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
       // Normalize term to lowercase (convert "First Term" -> "first", etc.)
       const normalizedTerm = normalizeTerm(settings.term);
       console.log(`Normalized term from "${settings.term}" to "${normalizedTerm}"`);
 
-      // Check if settings already exist for this academic year and term
-      const { data: existingSettings } = await supabase
+      // Check if settings already exist for this org + academic year + term
+      // Use .maybeSingle() to gracefully return null for 0 rows (instead of 406 error)
+      const { data: existingSettings, error: checkError } = await supabase
         .from('grading_settings')
         .select('id')
         .eq('academic_year', settings.academic_year)
         .eq('term', normalizedTerm)
-        .single();
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking existing grading settings:', checkError);
+        throw checkError;
+      }
 
       if (existingSettings) {
         // Update existing settings
@@ -250,7 +284,8 @@ export const useSaveGradingSettings = () => {
             ...settings,
             term: normalizedTerm,
             is_active: true,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            organization_id: organizationId
           })
           .eq('id', existingSettings.id)
           .select()
@@ -261,25 +296,28 @@ export const useSaveGradingSettings = () => {
           throw error;
         }
 
-        // Deactivate all other settings
+        // Deactivate all other settings for this org
         await supabase
           .from('grading_settings')
           .update({ is_active: false })
-          .neq('id', existingSettings.id);
+          .neq('id', existingSettings.id)
+          .eq('organization_id', organizationId);
 
         console.log('Grading settings updated successfully:', data);
         return data;
       } else {
-        // First deactivate any existing active settings
+        // No existing record — safe to insert
+        // First deactivate any existing active settings for this org
         await supabase
           .from('grading_settings')
           .update({ is_active: false })
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .eq('organization_id', organizationId);
 
         // Insert new settings
         const { data, error } = await supabase
           .from('grading_settings')
-          .insert([{ ...settings, term: normalizedTerm, is_active: true }])
+          .insert([{ ...settings, term: normalizedTerm, is_active: true, organization_id: organizationId }])
           .select()
           .single();
 
@@ -322,6 +360,12 @@ export const useSaveGradingScales = () => {
       }>;
     }) => {
       console.log('Attempting to save grading scales:', { department_id, department, academicYear, term, scalesCount: scales.length });
+
+      // Get organization ID
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
 
       // Validate inputs
       if (!department || !academicYear || !term) {
@@ -375,7 +419,8 @@ export const useSaveGradingScales = () => {
           .delete()
           .eq('academic_year', academicYear)
           .eq('term', normalizedTerm)
-          .eq('department_id', department_id);
+          .eq('department_id', department_id)
+          .eq('organization_id', organizationId);
 
         if (deleteByIdError) {
           console.error('Error deleting scales by department_id:', deleteByIdError);
@@ -389,7 +434,8 @@ export const useSaveGradingScales = () => {
         .delete()
         .eq('academic_year', academicYear)
         .eq('term', normalizedTerm)
-        .eq('department', normalizedDept);
+        .eq('department', normalizedDept)
+        .eq('organization_id', organizationId);
 
       if (deleteByNameError) {
         console.error('Error deleting scales by department name:', deleteByNameError);
@@ -402,7 +448,8 @@ export const useSaveGradingScales = () => {
         department: normalizedDept,
         department_id: department_id || null,
         academic_year: academicYear,
-        term: normalizedTerm
+        term: normalizedTerm,
+        organization_id: organizationId
       }));
 
       console.log('Inserting scales with normalized department:', scalesToInsert);
@@ -443,6 +490,12 @@ export const useSaveAssessmentConfig = () => {
     }) => {
       console.log('Attempting to save assessment config:', { department, academicYear, term, sbaType });
 
+      // Get organization ID
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
       // Validate inputs
       if (!department || !academicYear || !term || !sbaType) {
         throw new Error('All fields are required for assessment configuration');
@@ -480,7 +533,8 @@ export const useSaveAssessmentConfig = () => {
         .delete()
         .eq('department', normalizedDept)
         .eq('academic_year', academicYear)
-        .eq('term', normalizedTerm);
+        .eq('term', normalizedTerm)
+        .eq('organization_id', organizationId);
 
       if (deleteError) {
         console.error('Error deleting existing assessment config:', deleteError);
@@ -492,7 +546,8 @@ export const useSaveAssessmentConfig = () => {
         academic_year: academicYear,
         term: normalizedTerm,
         sba_type_name: sbaType,
-        configuration
+        configuration,
+        organization_id: organizationId
       };
 
       console.log('Inserting assessment config:', configData);

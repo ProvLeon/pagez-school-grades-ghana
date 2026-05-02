@@ -75,18 +75,18 @@ export const StudentDetailsDialog = ({ student, open, onOpenChange }: StudentDet
                     <span>{student.guardian_phone}</span>
                   </div>
                 )}
-                {student.guardian_email && (
+                {/*{student.guardian_email && (
                   <div className="flex items-center gap-2 text-sm">
                     <Mail className="w-4 h-4 text-gray-500" />
                     <span>{student.guardian_email}</span>
                   </div>
-                )}
-                {student.address && (
+                )}*/}
+                {/*{student.address && (
                   <div className="flex items-start gap-2 text-sm">
                     <MapPin className="w-4 h-4 text-gray-500 mt-0.5" />
                     <span>{student.address}</span>
                   </div>
-                )}
+                )}*/}
               </div>
             </div>
 
@@ -115,18 +115,18 @@ export const StudentDetailsDialog = ({ student, open, onOpenChange }: StudentDet
               <h4 className="font-semibold mb-3">Contact Information</h4>
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                 <div className="space-y-2">
-                  {student.email && (
+                  {/*{student.email && (
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="w-4 h-4 text-gray-500" />
                       <span>{student.email}</span>
                     </div>
-                  )}
-                  {student.phone && (
+                  )}*/}
+                  {/*{student.phone && (
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="w-4 h-4 text-gray-500" />
                       <span>{student.phone}</span>
                     </div>
-                  )}
+                  )}*/}
                 </div>
               </div>
             </div>

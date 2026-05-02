@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import LoadingComp from "@/components/ui/loading";
 
 interface TeacherProtectedRouteProps {
   children: React.ReactNode;
@@ -26,15 +27,10 @@ const TeacherProtectedRoute = ({ children }: TeacherProtectedRouteProps) => {
 
   // Show loading state while checking authentication or loading profile
   // This prevents showing "Access Denied" while the profile is still being fetched
+  // Show loading state while checking authentication or loading profile
+  // This prevents showing "Access Denied" while the profile is still being fetched
   if (loading || (isAuthenticated && profileLoading)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Verifying permissions...</p>
-        </div>
-      </div>
-    );
+    return <LoadingComp message="Verifying Permissions" subtext="Checking your access level..." />;
   }
 
   // Allow access for teachers and admins

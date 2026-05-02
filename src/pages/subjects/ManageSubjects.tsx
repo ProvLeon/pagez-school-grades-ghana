@@ -84,6 +84,8 @@ const ManageSubjects = () => {
   const [editingSubject, setEditingSubject] = useState<SubjectWithDepartment | null>(null);
   const [viewingSubject, setViewingSubject] = useState<SubjectWithDepartment | null>(null);
   const [deletingSubject, setDeletingSubject] = useState<SubjectWithDepartment | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     department_id: "",
   });
@@ -167,6 +169,35 @@ const ManageSubjects = () => {
         onSuccess: () => setDeletingSubject(null),
         onError: () => setDeletingSubject(null),
       });
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedSubjects.length > 0) {
+      setBulkDeleteIds(selectedSubjects);
+      setIsBulkDeleting(true);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    if (bulkDeleteIds.length === 0) return;
+
+    try {
+      // Delete each subject sequentially
+      for (const id of bulkDeleteIds) {
+        await new Promise<void>((resolve, reject) => {
+          deleteSubject.mutate(id, {
+            onSuccess: () => resolve(),
+            onError: () => reject(),
+          });
+        });
+      }
+      setSelectedSubjects([]);
+    } catch (error) {
+      console.error('Error deleting subjects:', error);
+    } finally {
+      setIsBulkDeleting(false);
+      setBulkDeleteIds([]);
     }
   };
 
@@ -334,13 +365,7 @@ const ManageSubjects = () => {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => {
-                      // Handle bulk delete
-                      if (selectedSubjects.length === 1) {
-                        const subject = subjects.find(s => s.id === selectedSubjects[0]);
-                        if (subject) setDeletingSubject(subject);
-                      }
-                    }}
+                    onClick={handleBulkDelete}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete Selected
@@ -502,6 +527,21 @@ const ManageSubjects = () => {
         onConfirm={confirmDelete}
         title="Delete Subject"
         description={`Are you sure you want to delete the "${deletingSubject?.name}" subject? This action cannot be undone.`}
+        isLoading={deleteSubject.isPending}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={isBulkDeleting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsBulkDeleting(false);
+            setBulkDeleteIds([]);
+          }
+        }}
+        onConfirm={confirmBulkDelete}
+        title="Delete Selected Subjects"
+        description={`Are you sure you want to delete ${bulkDeleteIds.length} selected subject${bulkDeleteIds.length > 1 ? 's' : ''}? This action cannot be undone.`}
         isLoading={deleteSubject.isPending}
       />
     </div>

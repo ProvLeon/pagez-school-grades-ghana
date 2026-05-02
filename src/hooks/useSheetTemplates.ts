@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getUserOrganizationId } from "@/utils/organizationHelper";
 
 export interface SheetTemplate {
   id: string;
@@ -32,9 +33,16 @@ export const useSheetTemplates = () => {
   return useQuery({
     queryKey: ['sheet-templates'],
     queryFn: async () => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('sheet_templates')
         .select('*')
+        .eq('organization_id', organizationId)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       
@@ -50,9 +58,14 @@ export const useCreateSheetTemplate = () => {
 
   return useMutation({
     mutationFn: async (template: CreateSheetTemplateInput) => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User is not associated with any organization');
+      }
+
       const { data, error } = await supabase
         .from('sheet_templates')
-        .insert(template)
+        .insert({ ...template, organization_id: organizationId })
         .select()
         .single();
       

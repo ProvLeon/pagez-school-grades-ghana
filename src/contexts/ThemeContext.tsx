@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { applyThemeColor } from '@/utils/themeUtils';
+import { useLocation } from 'react-router-dom';
 
 interface ThemeContextType {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
-  primaryColor: string | null;
+  primaryColor: string | null;  // Used for report sheets only, not main app theme
   isLoadingTheme: boolean;
 }
 
@@ -24,28 +24,44 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchPrimaryColor = async () => {
       try {
+        // Get current user first
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          console.error('Error getting current user:', userError);
+          // Use default color if user not authenticated
+          setPrimaryColor('#e11d48');
+          primaryColorRef.current = '#e11d48';
+          setIsLoadingTheme(false);
+          return;
+        }
+
+        // Fetch school_settings for current user
         const { data, error } = await supabase
           .from('school_settings')
           .select('primary_color')
-          .limit(1)
-          .single();
+          .eq('admin_id', user.id)
+          .maybeSingle();
 
-        if (error) {
+        if (error && error.code !== 'PGRST116') {
           console.error('Error fetching theme color:', error);
-          // Apply default color if fetch fails
-          applyThemeColor('#e11d48');
+          // Use default color for report sheets if fetch fails
+          setPrimaryColor('#e11d48');
+          primaryColorRef.current = '#e11d48';
         } else if (data?.primary_color) {
+          // Store the color for report sheet use only - don't apply to main app
           setPrimaryColor(data.primary_color);
           primaryColorRef.current = data.primary_color;
-          applyThemeColor(data.primary_color);
         } else {
-          // Apply default color if no settings found
-          applyThemeColor('#e11d48');
+          // Use default color for report sheets if no settings found
+          setPrimaryColor('#e11d48');
+          primaryColorRef.current = '#e11d48';
         }
       } catch (error) {
         console.error('Error fetching theme color:', error);
-        // Apply default color on error
-        applyThemeColor('#e11d48');
+        // Use default color for report sheets on error
+        setPrimaryColor('#e11d48');
+        primaryColorRef.current = '#e11d48';
       } finally {
         setIsLoadingTheme(false);
       }
@@ -66,9 +82,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         (payload) => {
           const newColor = payload.new?.primary_color;
           if (newColor && newColor !== primaryColorRef.current) {
+            // Store the color for report sheet use only - don't apply to main app
             setPrimaryColor(newColor);
             primaryColorRef.current = newColor;
-            applyThemeColor(newColor);
           }
         }
       )
@@ -79,15 +95,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const location = useLocation();
+
   // Handle dark mode
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
+    
+    // Define public/marketing routes that MUST remain in light mode
+    const publicRoutes = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/student-reports', '/no-organization'];
+    const isPublicRoute = publicRoutes.includes(location.pathname) || location.pathname.startsWith('/mock-results');
+
+    if (isPublicRoute) {
+      // Force remove dark class on marketing/auth pages
       document.documentElement.classList.remove('dark');
+    } else {
+      // Respect user preference on application pages
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
-  }, [isDarkMode]);
+  }, [isDarkMode, location.pathname]);
 
   const toggleDarkMode = () => {
     console.log("Toggling dark mode from:", isDarkMode, "to:", !isDarkMode);

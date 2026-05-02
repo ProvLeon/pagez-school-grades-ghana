@@ -2,13 +2,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Class } from "@/lib/supabase";
+import { useStudents } from "@/hooks/useStudents";
 
 interface ClassesStatsProps {
   classes: Class[];
 }
 
 export const ClassesStats = ({ classes }: ClassesStatsProps) => {
-  const totalStudents = classes.reduce((sum, cls) => sum + (cls.student_count || 0), 0);
+  const { data: students = [] } = useStudents({ has_left: false });
+
+  // Calculate actual student counts from students table
+  const totalStudents = students.filter(s => s.class_id).length;
   const averageStudents = classes.length > 0 ? Math.round(totalStudents / classes.length) : 0;
 
   return (

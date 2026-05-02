@@ -6,15 +6,20 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Calendar } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
 import { useDepartments } from "@/hooks/useDepartments";
+import { useGradingSettings } from "@/hooks/useGradingSettings";
 import { useStudentForm } from "./StudentFormProvider";
 
 export const StudentAcademicInfoSection = () => {
   const { formData, setFormData, generateStudentId } = useStudentForm();
   const { data: classes = [] } = useClasses();
   const { data: departments = [] } = useDepartments();
+  const { data: gradingSettings } = useGradingSettings();
+
+  // Get academic year from grading settings or use current formData
+  const academicYear = gradingSettings?.academic_year || formData.academic_year || "Not Set";
 
   return (
     <Card>
@@ -25,9 +30,9 @@ export const StudentAcademicInfoSection = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="department">Department *</Label>
-            <Select 
-              value={formData.department_id} 
-              onValueChange={(value) => setFormData({...formData, department_id: value, class_id: ""})}
+            <Select
+              value={formData.department_id}
+              onValueChange={(value) => setFormData({ ...formData, department_id: value, class_id: "" })}
               required
             >
               <SelectTrigger id="department"><SelectValue placeholder="Select Department" /></SelectTrigger>
@@ -38,12 +43,12 @@ export const StudentAcademicInfoSection = () => {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div>
             <Label htmlFor="class">Class *</Label>
-            <Select 
-              value={formData.class_id} 
-              onValueChange={(value) => setFormData({...formData, class_id: value})}
+            <Select
+              value={formData.class_id}
+              onValueChange={(value) => setFormData({ ...formData, class_id: value })}
               required
             >
               <SelectTrigger id="class"><SelectValue placeholder="Select Class" /></SelectTrigger>
@@ -58,9 +63,17 @@ export const StudentAcademicInfoSection = () => {
           </div>
         </div>
 
-        <Alert>
+        <Alert className="bg-muted/50">
+          <Calendar className="h-4 w-4" />
           <AlertTitle>Academic Year</AlertTitle>
-          <AlertDescription>{formData.academic_year}</AlertDescription>
+          <AlertDescription>
+            {academicYear}
+            {!gradingSettings?.academic_year && (
+              <span className="text-muted-foreground ml-2 text-xs">
+                (Set in Grading Settings)
+              </span>
+            )}
+          </AlertDescription>
         </Alert>
 
         <Card className="bg-muted/50">
@@ -70,21 +83,21 @@ export const StudentAcademicInfoSection = () => {
                 <Label htmlFor="autoGenerate" className="font-medium">Auto Generate Student ID</Label>
                 <p className="text-xs text-muted-foreground">Let the system create a unique ID.</p>
               </div>
-              <Switch 
-                id="autoGenerate" 
+              <Switch
+                id="autoGenerate"
                 checked={formData.auto_generate_id}
-                onCheckedChange={(checked) => setFormData({...formData, auto_generate_id: checked})}
+                onCheckedChange={(checked) => setFormData({ ...formData, auto_generate_id: checked })}
               />
             </div>
-            
+
             {!formData.auto_generate_id && (
               <div>
                 <Label htmlFor="manualStudentId">Student ID *</Label>
-                <Input 
+                <Input
                   id="manualStudentId"
-                  placeholder="Enter Student ID manually" 
+                  placeholder="Enter Student ID manually"
                   value={formData.student_id}
-                  onChange={(e) => setFormData({...formData, student_id: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
                   required
                 />
               </div>

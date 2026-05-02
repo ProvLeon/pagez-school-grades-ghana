@@ -63,71 +63,131 @@ export const SheetOperationsHistory = () => {
               <p className="text-muted-foreground">Your sheet operations will appear here once you perform an action.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Operation</TableHead>
-                    <TableHead>File Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Records</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {operations.map((op) => {
-                    const statusInfo = getStatusInfo(op.status);
-                    return (
-                      <TableRow key={op.id}>
-                        <TableCell>
-                          <p className="font-medium">{getOperationTypeDisplay(op.operation_type)}</p>
-                          <p className="text-xs text-muted-foreground">{op.id.slice(0, 8)}</p>
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">{op.file_name || 'N/A'}</TableCell>
-                        <TableCell>
-                          <Badge variant={statusInfo.variant as any}>
-                            <statusInfo.icon className={`w-4 h-4 mr-2 ${statusInfo.color} ${op.status === 'processing' ? 'animate-spin' : ''}`} />
-                            {statusInfo.text}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {op.processed_records || 0} / {op.total_records || 0}
-                          {op.failed_records > 0 && (
-                            <p className="text-xs text-destructive">{op.failed_records} failed</p>
-                          )}
-                        </TableCell>
-                        <TableCell>{format(new Date(op.created_at), 'MMM dd, yyyy HH:mm')}</TableCell>
-                        <TableCell className="text-right">
-                          <TooltipProvider>
-                            <div className="flex items-center justify-end gap-2">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>View Details</TooltipContent>
-                              </Tooltip>
-                              {op.status === 'completed' && op.file_path && (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Operation</TableHead>
+                      <TableHead className="whitespace-nowrap">File Name</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Records</TableHead>
+                      <TableHead className="whitespace-nowrap">Date</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {operations.map((op) => {
+                      const statusInfo = getStatusInfo(op.status);
+                      return (
+                        <TableRow key={op.id}>
+                          <TableCell>
+                            <p className="font-medium text-sm">{getOperationTypeDisplay(op.operation_type)}</p>
+                            <p className="text-xs text-muted-foreground">{op.id.slice(0, 8)}</p>
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">{op.file_name || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant={statusInfo.variant as any} className="whitespace-nowrap">
+                              <statusInfo.icon className={`w-3 h-3 mr-1 ${statusInfo.color} ${op.status === 'processing' ? 'animate-spin' : ''}`} />
+                              {statusInfo.text}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{op.processed_records || 0} / {op.total_records || 0}</span>
+                            {op.failed_records > 0 && (
+                              <p className="text-xs text-destructive">{op.failed_records} failed</p>
+                            )}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-sm">{format(new Date(op.created_at), 'MMM dd, yyyy HH:mm')}</TableCell>
+                          <TableCell className="text-right">
+                            <TooltipProvider>
+                              <div className="flex items-center justify-end gap-1">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                      <Download className="w-4 h-4" />
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <Eye className="w-4 h-4" />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent>Download File</TooltipContent>
+                                  <TooltipContent>View Details</TooltipContent>
                                 </Tooltip>
-                              )}
-                            </div>
-                          </TooltipProvider>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                                {op.status === 'completed' && op.file_path && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <Download className="w-4 h-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Download File</TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
+                            </TooltipProvider>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-3">
+                {operations.map((op) => {
+                  const statusInfo = getStatusInfo(op.status);
+                  return (
+                    <Card key={op.id} className="p-4">
+                      <div className="space-y-3">
+                        {/* Header with Operation Type and Status */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{getOperationTypeDisplay(op.operation_type)}</p>
+                            <p className="text-xs text-muted-foreground truncate">{op.file_name || 'N/A'}</p>
+                          </div>
+                          <Badge variant={statusInfo.variant as any} className="shrink-0">
+                            <statusInfo.icon className={`w-3 h-3 mr-1 ${statusInfo.color} ${op.status === 'processing' ? 'animate-spin' : ''}`} />
+                            {statusInfo.text}
+                          </Badge>
+                        </div>
+
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <p className="text-muted-foreground">Records</p>
+                            <p className="font-medium">{op.processed_records || 0} / {op.total_records || 0}</p>
+                            {op.failed_records > 0 && (
+                              <p className="text-destructive">{op.failed_records} failed</p>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Date</p>
+                            <p className="font-medium">{format(new Date(op.created_at), 'MMM dd, yyyy')}</p>
+                            <p className="text-muted-foreground">{format(new Date(op.created_at), 'HH:mm')}</p>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 pt-2 border-t">
+                          <Button variant="outline" size="sm" className="flex-1 gap-2">
+                            <Eye className="w-4 h-4" />
+                            View Details
+                          </Button>
+                          {op.status === 'completed' && op.file_path && (
+                            <Button variant="outline" size="sm" className="flex-1 gap-2">
+                              <Download className="w-4 h-4" />
+                              Download
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Operation ID */}
+                        <p className="text-xs text-muted-foreground">ID: {op.id.slice(0, 8)}</p>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

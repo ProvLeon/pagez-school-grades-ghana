@@ -4,6 +4,7 @@ import { useCreateResult, useUpdateResult } from "@/hooks/useResults";
 import { useBulkCreateSubjectMarks, useBulkUpdateSubjectMarks } from "@/hooks/useSubjectMarks";
 import { useAddResultsForm } from "@/contexts/AddResultsFormContext";
 import { Save, Loader2 } from "lucide-react";
+import { getUserOrganizationId } from "@/utils/organizationHelper";
 
 interface AddResultsActionsProps {
   isEditMode?: boolean;
@@ -34,9 +35,24 @@ const AddResultsActions = ({ isEditMode = false, resultId }: AddResultsActionsPr
       return;
     }
 
+    // Helper function to safely parse numeric values (preserves 0 as valid)
+    const parseScore = (value: any): number | null => {
+      if (value === undefined || value === null || value === '') return null;
+      const parsed = typeof value === 'number' ? value : parseFloat(value);
+      return isNaN(parsed) ? null : parsed;
+    };
+
     try {
+      // Get organization ID
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.error('User not associated with any organization');
+        return;
+      }
+
       // Map form data to result data for database
       const resultData = {
+        organization_id: organizationId,
         student_id: formData.student_id,
         class_id: formData.class_id,
         term: formData.term,
@@ -59,51 +75,77 @@ const AddResultsActions = ({ isEditMode = false, resultId }: AddResultsActionsPr
       };
 
       console.log('Submitting result data:', resultData);
+      console.log('Subject marks state before processing:', subjectMarks);
+      console.log('Subject marks entries:', Object.entries(subjectMarks));
 
       if (isEditMode && resultId) {
         // Update existing result
         await updateResult.mutateAsync({ id: resultId, data: resultData });
 
         // Update subject marks
+        const allMarksBeforeFilter = Object.entries(subjectMarks);
+        console.log('All marks before filter (edit mode):', allMarksBeforeFilter);
+
         const marksToUpdate = Object.entries(subjectMarks)
-          .filter(([, mark]) => mark.ca1_score !== undefined || mark.ca2_score !== undefined || mark.exam_score !== undefined)
+          .filter(([subjectId, mark]) => {
+            const hasScores = mark.ca1_score !== undefined || mark.ca2_score !== undefined || mark.exam_score !== undefined;
+            console.log(`Subject ${subjectId}: ca1=${mark.ca1_score}, ca2=${mark.ca2_score}, exam=${mark.exam_score}, passes filter: ${hasScores}`);
+            return hasScores;
+          })
           .map(([subjectId, mark]) => ({
             subject_id: subjectId,
-            ca1_score: mark.ca1_score !== undefined ? parseFloat(mark.ca1_score) || null : null,
-            ca2_score: mark.ca2_score !== undefined ? parseFloat(mark.ca2_score) || null : null,
-            ca3_score: mark.ca3_score !== undefined ? parseFloat(mark.ca3_score) || null : null,
-            ca4_score: mark.ca4_score !== undefined ? parseFloat(mark.ca4_score) || null : null,
-            exam_score: mark.exam_score !== undefined ? parseFloat(mark.exam_score) || null : null,
-            total_score: mark.total_score !== undefined ? parseFloat(mark.total_score) || null : null,
+            ca1_score: parseScore(mark.ca1_score),
+            ca2_score: parseScore(mark.ca2_score),
+            ca3_score: parseScore(mark.ca3_score),
+            ca4_score: parseScore(mark.ca4_score),
+            exam_score: parseScore(mark.exam_score),
+            total_score: parseScore(mark.total_score),
             grade: mark.grade || null,
-            position: mark.position !== undefined ? parseInt(mark.position, 10) || null : null,
+            position: mark.position !== undefined && mark.position !== null ? parseInt(mark.position, 10) : null,
           }));
 
+        console.log('Marks to update (after filter and map):', marksToUpdate);
+
         if (marksToUpdate.length > 0) {
+          console.log('Calling updateSubjectMarks with:', { resultId, marks: marksToUpdate });
           await updateSubjectMarks.mutateAsync({ resultId, marks: marksToUpdate });
+        } else {
+          console.warn('No marks to update - marksToUpdate array is empty!');
         }
       } else {
         // Create new result
         const result = await createResult.mutateAsync(resultData);
 
         // Create subject marks
+        const allMarksBeforeFilterCreate = Object.entries(subjectMarks);
+        console.log('All marks before filter (create mode):', allMarksBeforeFilterCreate);
+
         const marksToCreate = Object.entries(subjectMarks)
-          .filter(([, mark]) => mark.ca1_score !== undefined || mark.ca2_score !== undefined || mark.exam_score !== undefined)
+          .filter(([subjectId, mark]) => {
+            const hasScores = mark.ca1_score !== undefined || mark.ca2_score !== undefined || mark.exam_score !== undefined;
+            console.log(`Subject ${subjectId}: ca1=${mark.ca1_score}, ca2=${mark.ca2_score}, exam=${mark.exam_score}, passes filter: ${hasScores}`);
+            return hasScores;
+          })
           .map(([subjectId, mark]) => ({
             result_id: result.id,
             subject_id: subjectId,
-            ca1_score: mark.ca1_score !== undefined ? parseFloat(mark.ca1_score) || null : null,
-            ca2_score: mark.ca2_score !== undefined ? parseFloat(mark.ca2_score) || null : null,
-            ca3_score: mark.ca3_score !== undefined ? parseFloat(mark.ca3_score) || null : null,
-            ca4_score: mark.ca4_score !== undefined ? parseFloat(mark.ca4_score) || null : null,
-            exam_score: mark.exam_score !== undefined ? parseFloat(mark.exam_score) || null : null,
-            total_score: mark.total_score !== undefined ? parseFloat(mark.total_score) || null : null,
+            ca1_score: parseScore(mark.ca1_score),
+            ca2_score: parseScore(mark.ca2_score),
+            ca3_score: parseScore(mark.ca3_score),
+            ca4_score: parseScore(mark.ca4_score),
+            exam_score: parseScore(mark.exam_score),
+            total_score: parseScore(mark.total_score),
             grade: mark.grade || null,
-            position: mark.position !== undefined ? parseInt(mark.position, 10) || null : null,
+            position: mark.position !== undefined && mark.position !== null ? parseInt(mark.position, 10) : null,
           }));
 
+        console.log('Marks to create (after filter and map):', marksToCreate);
+
         if (marksToCreate.length > 0) {
+          console.log('Calling createSubjectMarks with:', marksToCreate);
           await createSubjectMarks.mutateAsync(marksToCreate);
+        } else {
+          console.warn('No marks to create - marksToCreate array is empty!');
         }
       }
 

@@ -16,6 +16,7 @@ import {
 import { useStudents } from "@/hooks/useStudents";
 import { useClasses } from "@/hooks/useClasses";
 import { format } from "date-fns";
+import LoadingComp from "@/components/ui/loading";
 
 const Students = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -29,12 +30,12 @@ const Students = () => {
   const filteredStudents = students.filter(student => {
     const studentName = student.full_name || "";
     const className = student.class?.name || "";
-    const studentEmail = student.email || "";
+    const studentId = student.student_id || "";
 
     const matchesSearch = !searchTerm ||
       studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       className.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      studentEmail.toLowerCase().includes(searchTerm.toLowerCase());
+      studentId.toLowerCase().includes(searchTerm.toLowerCase());
 
     const status = student.has_left ? "Inactive" : "Active";
     const matchesStatus = selectedStatus === "all" || status.toLowerCase() === selectedStatus.toLowerCase();
@@ -42,6 +43,7 @@ const Students = () => {
 
     return matchesSearch && matchesStatus && matchesClass;
   });
+
 
   const calculateAge = (dob?: string) => {
     if (!dob) return "N/A";
@@ -55,17 +57,7 @@ const Students = () => {
   const filterClasses = ["all", ...uniqueClassNames];
 
   if (isLoadingStudents || isLoadingClasses) {
-     return (
-      <div className="min-h-screen bg-background">
-        <Header title="Students" subtitle="Manage student records and information" />
-        <div className="flex items-center justify-center h-[calc(100vh-80px)]">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-lg font-medium text-muted-foreground">Loading students...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingComp message="Loading Students" subtext="Fetching the student roster..." />;
   }
 
   return (
@@ -95,20 +87,20 @@ const Students = () => {
             />
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto">
-             {/* Filter Dropdown could be improved here, but keeping consistent with previous UI for now */}
-             <div className="flex gap-2">
-               <select
-                  className="h-10 px-3 rounded-md border border-input bg-background text-sm"
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                >
-                  {filterClasses.map((cls) => (
-                    <option key={cls} value={cls}>
-                      {cls === "all" ? "All Classes" : cls}
-                    </option>
-                  ))}
-                </select>
-             </div>
+            {/* Filter Dropdown could be improved here, but keeping consistent with previous UI for now */}
+            <div className="flex gap-2">
+              <select
+                className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+              >
+                {filterClasses.map((cls) => (
+                  <option key={cls} value={cls}>
+                    {cls === "all" ? "All Classes" : cls}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <Button className="gap-2 w-full md:w-auto">
               <UserPlus className="w-4 h-4" />

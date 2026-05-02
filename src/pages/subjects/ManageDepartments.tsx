@@ -97,6 +97,8 @@ const ManageDepartments = () => {
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [viewingDepartment, setViewingDepartment] = useState<Department | null>(null);
   const [deletingDepartment, setDeletingDepartment] = useState<Department | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -171,6 +173,34 @@ const ManageDepartments = () => {
         onSuccess: () => setDeletingDepartment(null),
         onError: () => setDeletingDepartment(null),
       });
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedDepartments.length > 0) {
+      setBulkDeleteIds(selectedDepartments);
+      setIsBulkDeleting(true);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    if (bulkDeleteIds.length === 0) return;
+
+    try {
+      for (const id of bulkDeleteIds) {
+        await new Promise<void>((resolve, reject) => {
+          deleteDepartment.mutate(id, {
+            onSuccess: () => resolve(),
+            onError: () => reject(),
+          });
+        });
+      }
+      setSelectedDepartments([]);
+    } catch (error) {
+      console.error('Error deleting departments:', error);
+    } finally {
+      setIsBulkDeleting(false);
+      setBulkDeleteIds([]);
     }
   };
 
@@ -327,12 +357,7 @@ const ManageDepartments = () => {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => {
-                      if (selectedDepartments.length === 1) {
-                        const dept = departments.find(d => d.id === selectedDepartments[0]);
-                        if (dept) setDeletingDepartment(dept);
-                      }
-                    }}
+                    onClick={handleBulkDelete}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete Selected
@@ -511,6 +536,21 @@ const ManageDepartments = () => {
         onConfirm={confirmDelete}
         title="Delete Department"
         description={`Are you sure you want to delete the "${deletingDepartment?.name}" department? This will affect all associated subjects and classes. This action cannot be undone.`}
+        isLoading={deleteDepartment.isPending}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={isBulkDeleting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsBulkDeleting(false);
+            setBulkDeleteIds([]);
+          }
+        }}
+        onConfirm={confirmBulkDelete}
+        title="Delete Selected Departments"
+        description={`Are you sure you want to delete ${bulkDeleteIds.length} selected department${bulkDeleteIds.length > 1 ? 's' : ''}? This will affect all associated subjects and classes. This action cannot be undone.`}
         isLoading={deleteDepartment.isPending}
       />
     </div>

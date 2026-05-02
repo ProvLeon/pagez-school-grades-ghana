@@ -25,7 +25,7 @@ import {
   Loader2,
   XCircle
 } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { useToast } from "@/hooks/use-toast";
 import { useClasses } from "@/hooks/useClasses";
@@ -39,15 +39,24 @@ import { useBulkStudentImport, BulkImportProgress } from "@/hooks/useBulkStudent
 import { useBulkResultsImport, BulkResultsImportProgress } from "@/hooks/useBulkResultsImport";
 import { TemplateService } from "@/services/templateService";
 import { cn } from "@/lib/utils";
+import { useGradingSettings } from "@/hooks/useGradingSettings";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
 
 type OperationType = "students" | "results";
 
 export const BulkOperationsSection = () => {
+  const { data: gradingSettings } = useGradingSettings();
+  const { data: academicYearsData = [] } = useAcademicYears();
+
+  // Initialize academicYear with current academic year from grading settings or first available
+  const defaultYear = gradingSettings?.academic_year || (academicYearsData.length > 0 ? academicYearsData[0] : "2024/2025");
+
   const [activeOperation, setActiveOperation] = useState<OperationType>("students");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [targetClass, setTargetClass] = useState("");
   const [targetDepartment, setTargetDepartment] = useState("");
   const [selectedCAType, setSelectedCAType] = useState("");
+  const [academicYear, setAcademicYear] = useState(defaultYear);
 
   // Parse results
   const [studentParseResult, setStudentParseResult] = useState<ParseResult | null>(null);
@@ -81,6 +90,13 @@ export const BulkOperationsSection = () => {
 
   const isParsing = isParsingStudents || isParsingResults;
   const isImporting = isImportingStudents || isImportingResults;
+
+  // Sync academic year with grading settings when they change
+  useEffect(() => {
+    if (gradingSettings) {
+      setAcademicYear(gradingSettings.academic_year);
+    }
+  }, [gradingSettings]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -196,6 +212,7 @@ export const BulkOperationsSection = () => {
     setTargetClass("");
     setTargetDepartment("");
     setSelectedCAType("");
+    setAcademicYear(defaultYear);
     resetStudentProgress();
     resetResultsProgress();
   };
@@ -225,7 +242,23 @@ export const BulkOperationsSection = () => {
           return;
         }
 
-        TemplateService.generateResultsEntryTemplate(className, deptName, students, filteredSubjects);
+        const transformedSubjects = filteredSubjects.map(s => ({
+          name: s.name,
+          code: s.code || s.name.substring(0, 3).toUpperCase()
+        }));
+        // Pass only the SELECTED CA Type to template so it uses the correct one
+        const selectedCA = caTypes.find(ca => ca.id === selectedCAType);
+        const caTypesForTemplate = selectedCA
+          ? [{ id: selectedCA.id, name: selectedCA.name }]
+          : caTypes.map(ca => ({ id: ca.id, name: ca.name }));
+        TemplateService.generateResultsEntryTemplate(
+          className,
+          deptName,
+          students,
+          transformedSubjects,
+          caTypesForTemplate,
+          academicYear
+        );
         toast({
           title: "Template Downloaded",
           description: `Results entry template with ${filteredSubjects.length} subjects has been downloaded.`
@@ -304,7 +337,7 @@ export const BulkOperationsSection = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Upload Area */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Step 1: Download Template */}
+          {/* Step 1: Configure Options */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
@@ -312,21 +345,20 @@ export const BulkOperationsSection = () => {
                   1
                 </div>
                 <CardTitle className="text-base">
-                  {activeOperation === 'students' ? 'Download Template' : 'Select Class & Download Template'}
+                  {activeOperation === 'students' ? 'Configure Options' : 'Select Class & Configure Options'}
                 </CardTitle>
               </div>
-              {activeOperation === 'results' && (
-                <p className="text-sm text-muted-foreground mt-1 ml-8">
-                  Select department and class to generate a template with the correct subjects
-                </p>
-              )}
+              <p className="text-sm text-muted-foreground mt-1 ml-8">
+                {activeOperation === 'students'
+                  ? 'Select department and class for the student registration'
+                  : 'Select department, class, and assessment type to generate a template with the correct subjects'}
+              </p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* For Results: Show selectors first */}
-              {activeOperation === 'results' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/20">
+            <CardContent>
+              <ScrollArea className="w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border rounded-lg bg-muted/20">
                   <div>
-                    <Label htmlFor="templateDepartment" className="text-sm font-medium">
+                    <Label htmlFor="targetDepartment" className="text-sm font-medium">
                       Department <span className="text-destructive">*</span>
                     </Label>
                     <Select value={targetDepartment || ""} onValueChange={(v) => {
@@ -345,7 +377,7 @@ export const BulkOperationsSection = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="templateClass" className="text-sm font-medium">
+                    <Label htmlFor="targetClass" className="text-sm font-medium">
                       Class <span className="text-destructive">*</span>
                     </Label>
                     <Select
@@ -366,24 +398,76 @@ export const BulkOperationsSection = () => {
                     </Select>
                   </div>
 
-                  {/* Show subject count when selections are made */}
+                  {activeOperation === 'results' && (
+                    <div>
+                      <Label htmlFor="caType" className="text-sm font-medium">
+                        Assessment Type (SBA) <span className="text-destructive">*</span>
+                      </Label>
+                      <Select value={selectedCAType || ""} onValueChange={(v) => setSelectedCAType(v)}>
+                        <SelectTrigger className="mt-1.5">
+                          <SelectValue placeholder="Select assessment type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {caTypes.map((caType) => (
+                            <SelectItem key={caType.id} value={caType.id}>{caType.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {activeOperation === 'results' && (
+                    <div className="sm:col-span-2 lg:col-span-3">
+                      <Label htmlFor="academicYear" className="text-sm font-medium">
+                        Academic Year <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="academicYear"
+                        placeholder="e.g., 2024/2025"
+                        className="mt-1.5"
+                        value={academicYear}
+                        onChange={(e) => setAcademicYear(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {/* Show confirmation when selections are made */}
                   {targetDepartment && targetClass && (
-                    <div className="col-span-full">
+                    <div className="sm:col-span-2 lg:col-span-3">
                       <div className="flex items-center gap-2 text-sm">
                         <CheckCircle2 className="w-4 h-4 text-green-600" />
                         <span className="text-muted-foreground">
-                          Template will include <span className="font-medium text-foreground">{getFilteredSubjects().length} subjects</span> and <span className="font-medium text-foreground">{students.length} students</span>
+                          {activeOperation === 'students'
+                            ? `Ready to download template for ${classes.find(c => c.id === targetClass)?.name || 'selected class'}`
+                            : `Template will include ${getFilteredSubjects().length} subjects and ${students.length} students`}
                         </span>
                       </div>
                     </div>
                   )}
                 </div>
-              )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
 
-              {/* Template Download Section */}
+          {/* Step 2: Download Template */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-semibold">
+                  2
+                </div>
+                <CardTitle className="text-base">
+                  Download Template
+                </CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1 ml-8">
+                Download the pre-formatted Excel template with the selected configuration
+              </p>
+            </CardHeader>
+            <CardContent>
               <div className={cn(
                 "flex items-center justify-between p-4 border rounded-lg",
-                activeOperation === 'results' && (!targetDepartment || !targetClass)
+                !targetDepartment || !targetClass || (activeOperation === 'results' && !selectedCAType)
                   ? "bg-muted/10 opacity-60"
                   : "bg-muted/30"
               )}>
@@ -394,11 +478,13 @@ export const BulkOperationsSection = () => {
                       {activeOperation === 'students' ? 'Student Registration Template' : 'Results Entry Template'}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {activeOperation === 'students'
-                        ? 'Excel file with pre-formatted columns and instructions'
-                        : targetDepartment && targetClass
+                      {!targetDepartment || !targetClass
+                        ? 'Configure options above to generate template'
+                        : activeOperation === 'students'
                           ? `Template for ${classes.find(c => c.id === targetClass)?.name || 'selected class'}`
-                          : 'Select department and class above to generate'
+                          : !selectedCAType
+                            ? 'Select assessment type to generate template'
+                            : `Template for ${classes.find(c => c.id === targetClass)?.name || 'selected class'} - ${caTypes.find(ca => ca.id === selectedCAType)?.name || 'SBA'}`
                       }
                     </p>
                   </div>
@@ -407,84 +493,11 @@ export const BulkOperationsSection = () => {
                   variant="outline"
                   onClick={handleDownloadTemplate}
                   className="gap-2"
-                  disabled={activeOperation === 'results' && (!targetDepartment || !targetClass)}
+                  disabled={!targetDepartment || !targetClass || (activeOperation === 'results' && !selectedCAType)}
                 >
                   <Download className="w-4 h-4" />
                   Download
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Step 2: Configure Options (for students) / Additional Options (for results) */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-semibold">
-                  2
-                </div>
-                <CardTitle className="text-base">
-                  {activeOperation === 'students' ? 'Configure Options (Optional)' : 'Additional Options'}
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activeOperation === 'students' && (
-                  <>
-                    <div>
-                      <Label htmlFor="targetDepartment">Department</Label>
-                      <Select value={targetDepartment || "__all__"} onValueChange={(v) => setTargetDepartment(v === "__all__" ? "" : v)}>
-                        <SelectTrigger className="mt-1.5">
-                          <SelectValue placeholder="All departments" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__all__">All Departments</SelectItem>
-                          {departments.map((dept) => (
-                            <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="targetClass">Class</Label>
-                      <Select value={targetClass || "__all__"} onValueChange={(v) => setTargetClass(v === "__all__" ? "" : v)}>
-                        <SelectTrigger className="mt-1.5">
-                          <SelectValue placeholder="Select class" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__all__">All Classes</SelectItem>
-                          {classes
-                            .filter(cls => !targetDepartment || cls.department_id === targetDepartment)
-                            .map((cls) => (
-                              <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
-
-                {activeOperation === 'results' && (
-                  <div>
-                    <Label htmlFor="caType">Assessment Type (SBA)</Label>
-                    <Select value={selectedCAType || "__auto__"} onValueChange={(v) => setSelectedCAType(v === "__auto__" ? "" : v)}>
-                      <SelectTrigger className="mt-1.5">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__auto__">Auto-detect from file</SelectItem>
-                        {caTypes.map((caType) => (
-                          <SelectItem key={caType.id} value={caType.id}>{caType.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      The system will try to detect the assessment type from your file
-                    </p>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>

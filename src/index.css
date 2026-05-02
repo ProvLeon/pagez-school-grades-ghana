@@ -31,6 +31,15 @@
         --ring: 221 83% 53%;
 
         --radius: 0.5rem;
+
+        --sidebar-background: 0 0% 100%;
+        --sidebar-foreground: 240 6% 10%;
+        --sidebar-primary: 221 83% 53%;
+        --sidebar-primary-foreground: 0 0% 100%;
+        --sidebar-accent: 240 5% 96%;
+        --sidebar-accent-foreground: 240 6% 10%;
+        --sidebar-border: 240 6% 90%;
+        --sidebar-ring: 221 83% 53%;
     }
 
     .dark {
@@ -62,6 +71,15 @@
         --destructive-foreground: 0 0% 100%;
 
         --ring: 221 73% 33%;
+
+        --sidebar-background: 240 6% 10%;
+        --sidebar-foreground: 0 0% 98%;
+        --sidebar-primary: 221 73% 33%;
+        --sidebar-primary-foreground: 0 0% 100%;
+        --sidebar-accent: 240 4% 16%;
+        --sidebar-accent-foreground: 0 0% 98%;
+        --sidebar-border: 240 4% 16%;
+        --sidebar-ring: 221 73% 33%;
     }
 }
 
@@ -105,6 +123,23 @@ input[type="number"] {
 
     .animate-spotlight-pulse {
         animation: spotlight-pulse 2s ease-in-out infinite;
+    }
+
+    /* Pulsing ring for secondary walkthrough element (e.g. sidebar nav item) */
+    @keyframes walkthroughPulse {
+
+        0%,
+        100% {
+            box-shadow: 0 0 0 3px hsla(221, 83%, 53%, 0.25), 0 0 12px hsla(221, 83%, 53%, 0.3);
+            border-color: hsl(221, 83%, 53%);
+            opacity: 1;
+        }
+
+        50% {
+            box-shadow: 0 0 0 6px hsla(221, 83%, 53%, 0.15), 0 0 22px hsla(221, 83%, 53%, 0.45);
+            border-color: hsl(221, 83%, 65%);
+            opacity: 0.85;
+        }
     }
 
     /* Fade in animation */

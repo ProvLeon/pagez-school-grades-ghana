@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Department } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { getUserOrganizationId } from '@/utils/organizationHelper';
 
 // Re-export Department type for use in components
 export type { Department };
@@ -10,13 +11,23 @@ export const useDepartments = () => {
   return useQuery({
     queryKey: ['departments'],
     queryFn: async () => {
+      // Get user's organization for data isolation
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [] as Department[];
+      }
+
       const { data, error } = await supabase
         .from('departments')
         .select('*')
+        .eq('organization_id', organizationId)
         .order('name');
 
       if (error) throw error;
-      return data as Department[];
+      // Exclude SHS from all department lists
+      const filtered = (data as Department[]).filter(d => d.name.toLowerCase() !== 'shs' && d.name.toLowerCase() !== 'senior high' && d.name.toLowerCase() !== 'senior high school');
+      return filtered;
     },
   });
 };
@@ -27,9 +38,14 @@ export const useCreateDepartment = () => {
 
   return useMutation({
     mutationFn: async (department: { name: string; description?: string }) => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User is not associated with any organization');
+      }
+
       const { data, error } = await supabase
         .from('departments')
-        .insert([department])
+        .insert([{ ...department, organization_id: organizationId }])
         .select()
         .single();
 

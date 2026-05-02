@@ -3,13 +3,38 @@ import { SchoolSettings, AcademicSession, AcademicTerm } from '@/types/schoolSet
 
 export const schoolSettingsService = {
   async fetchSettings(): Promise<SchoolSettings | null> {
-    const { data, error } = await (supabase as any)
-      .from('school_settings')
-      .select('*')
-      .single();
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    if (error && error.code !== 'PGRST116') {
-      throw error;
+    if (userError || !user) {
+      console.error('Error getting current user:', userError);
+      return null;
+    }
+
+    // Get user's organization
+    const { data: userOrg } = await (supabase as any)
+      .from('user_organization_profiles')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    const organizationId = userOrg?.organization_id;
+
+    // Fetch school settings by organization_id (preferred) or fall back to admin_id
+    let query = (supabase as any).from('school_settings').select('*');
+
+    if (organizationId) {
+      query = query.eq('organization_id', organizationId);
+    } else {
+      query = query.eq('admin_id', user.id);
+    }
+
+    const { data, error } = await query.maybeSingle();
+
+    if (error) {
+      console.error('Error fetching school settings:', error);
+      return null;
     }
 
     return data;
@@ -20,7 +45,64 @@ export const schoolSettingsService = {
     console.log('Updates received:', updates);
     console.log('logo_url in updates:', updates.logo_url);
 
-    // First, try to get existing settings
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Check if user has an organization
+    const { data: userOrg } = await (supabase as any)
+      .from('user_organization_profiles')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    let organizationId = userOrg?.organization_id;
+
+    // If user doesn't have an organization, create one
+    if (!organizationId) {
+      const orgName = updates.school_name || 'My School';
+
+      // Create a new organization
+      const { data: newOrg, error: orgError } = await supabase
+        .from('organizations')
+        .insert({
+          admin_id: user.id,
+          name: orgName,
+          school_name: orgName
+        })
+        .select('id')
+        .single();
+
+      if (orgError) {
+        console.error('Error creating organization:', orgError);
+        throw new Error('Failed to create organization for school');
+      }
+
+      organizationId = newOrg.id;
+
+      // Create user_organization_profile entry
+      const { error: profileError } = await (supabase as any)
+        .from('user_organization_profiles')
+        .insert({
+          user_id: user.id,
+          organization_id: organizationId,
+          role: 'admin',
+          is_active: true
+        });
+
+      if (profileError) {
+        console.error('Error creating user organization profile:', profileError);
+        throw new Error('Failed to link user to organization');
+      }
+
+      console.log(`Created new organization ${organizationId} for user ${user.id}`);
+    }
+
+    // First, try to get existing settings for the current user
     const existingSettings = await this.fetchSettings();
     console.log('Existing settings:', existingSettings);
 
@@ -34,6 +116,7 @@ export const schoolSettingsService = {
         .from('school_settings')
         .update(updatePayload)
         .eq('id', existingSettings.id)
+        .eq('admin_id', user.id) // Ensure user can only update their own school
         .select()
         .single();
 
@@ -44,12 +127,42 @@ export const schoolSettingsService = {
         console.error('Database update error:', error);
         throw error;
       }
+
+      // SYNCHRONIZATION FIX: Also update the root organizations table with the new school name
+      const targetOrgId = organizationId || existingSettings.organization_id;
+      
+      try {
+        let orgUpdateQuery = (supabase as any).from('organizations').update({
+          name: updates.school_name,
+          school_name: updates.school_name
+        });
+
+        // Use the strict org ID if available, otherwise fallback to admin_id for legacy unlinked users
+        if (targetOrgId) {
+          orgUpdateQuery = orgUpdateQuery.eq('id', targetOrgId);
+        } else {
+          orgUpdateQuery = orgUpdateQuery.eq('admin_id', user.id);
+        }
+
+        const { error: orgUpdateError } = await orgUpdateQuery;
+
+        if (orgUpdateError) {
+          console.error('Failed to sync new school name to organizations table:', orgUpdateError);
+        } else {
+          console.log('Successfully synced organizations table with new school name (fallback mode enabled).');
+        }
+      } catch (err) {
+        console.error('Error executing organization sync query:', err);
+      }
+
       return data;
     } else {
-      // Create new record
+      // Create new record with organization_id
       const { data, error } = await (supabase as any)
         .from('school_settings')
         .insert({
+          admin_id: user.id,
+          organization_id: organizationId, // Link to organization for multi-tenancy
           school_name: updates.school_name || 'My School',
           location: updates.location || null,
           address_1: updates.address_1 || null,
@@ -58,8 +171,7 @@ export const schoolSettingsService = {
           headteacher_name: updates.headteacher_name || null,
           primary_color: updates.primary_color || '#e11d48',
           logo_url: updates.logo_url || null,
-          headteacher_signature_url: updates.headteacher_signature_url || null,
-          ...updates
+          headteacher_signature_url: updates.headteacher_signature_url || null
         })
         .select()
         .single();
@@ -143,7 +255,7 @@ export const schoolSettingsService = {
       .select('*')
       .eq('session_id', sessionId)
       .eq('term_name', 'First Term')
-      .single();
+      .maybeSingle();
 
     if (firstTerm) {
       await (supabase as any)

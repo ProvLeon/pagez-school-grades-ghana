@@ -99,7 +99,7 @@ const AddTransferDialog = ({ children }: AddTransferDialogProps) => {
       <DialogTrigger asChild>
         {triggerButton}
       </DialogTrigger>
-      <DialogContent className="max-w-md sm:max-w-lg ">
+      <DialogContent className="max-w-md sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create New Transfer</DialogTitle>
@@ -179,17 +179,6 @@ const AddTransferDialog = ({ children }: AddTransferDialogProps) => {
                 value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                 rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Additional Notes</Label>
-              <Textarea
-                id="notes"
-                placeholder="Any additional information..."
-                value={formData.notes || ""}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={2}
               />
             </div>
 

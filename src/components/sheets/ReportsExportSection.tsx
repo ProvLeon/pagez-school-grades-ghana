@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +25,8 @@ import {
 import { useClasses } from "@/hooks/useClasses";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useToast } from "@/hooks/use-toast";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
+import { useGradingSettings } from "@/hooks/useGradingSettings";
 import { IndividualReportsSection } from "./IndividualReportsSection";
 import { ExportService, NoDataError } from "@/services/exportService";
 import { cn } from "@/lib/utils";
@@ -43,11 +45,17 @@ interface ReportType {
 }
 
 export const ReportsExportSection = () => {
+  const { data: academicYearsData = [] } = useAcademicYears();
+  const { data: gradingSettings } = useGradingSettings();
+
+  // Initialize selectedYear with current academic year from grading settings or first available
+  const defaultYear = gradingSettings?.academic_year || (academicYearsData.length > 0 ? academicYearsData[0] : "2024/2025");
+
   const [selectedReport, setSelectedReport] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
-  const [selectedYear, setSelectedYear] = useState("2024/2025");
+  const [selectedYear, setSelectedYear] = useState(defaultYear);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [lastGenerated, setLastGenerated] = useState<string | null>(null);
@@ -56,11 +64,19 @@ export const ReportsExportSection = () => {
   const { data: classes = [] } = useClasses();
   const { data: departments = [] } = useDepartments();
 
+  // Sync selected year and term with grading settings when they change
+  useEffect(() => {
+    if (gradingSettings) {
+      setSelectedYear(gradingSettings.academic_year);
+      setSelectedTerm(gradingSettings.term || "");
+    }
+  }, [gradingSettings]);
+
   const reportTypes: ReportType[] = [
     {
       id: "individual_reports",
       name: "Individual Report Cards",
-      description: "Generate GES-compliant report cards for individual students with grades, comments, and signatures.",
+      description: "Generate e-Result System compliant report cards for individual students with grades, comments, and signatures.",
       icon: GraduationCap,
       badge: "PDF",
       badgeVariant: "default",
@@ -125,7 +141,8 @@ export const ReportsExportSection = () => {
     { value: "third", label: "Third Term" }
   ];
 
-  const academicYears = ["2024/2025", "2023/2024", "2022/2023"];
+  // Use dynamic academic years from database/grading settings
+  const academicYears = academicYearsData.length > 0 ? academicYearsData : ["2024/2025", "2023/2024", "2022/2023"];
 
   const filteredClasses = selectedDepartment
     ? classes.filter(c => c.department_id === selectedDepartment)
@@ -307,7 +324,7 @@ export const ReportsExportSection = () => {
     setSelectedClass("");
     setSelectedDepartment("");
     setSelectedTerm("");
-    setSelectedYear("2024/2025");
+    setSelectedYear(defaultYear);
   };
 
   // Show Individual Reports section if selected
@@ -336,7 +353,7 @@ export const ReportsExportSection = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Report Type Selection */}
       <Card>
         <CardHeader>
@@ -357,8 +374,8 @@ export const ReportsExportSection = () => {
             )}
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CardContent className="px-4 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {reportTypes.map((report) => {
               const Icon = report.icon;
               const isSelected = selectedReport === report.id;
@@ -414,7 +431,7 @@ export const ReportsExportSection = () => {
       </Card>
 
       {/* Configuration Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Filters */}
         <div className="lg:col-span-2">
           <Card>
@@ -427,8 +444,8 @@ export const ReportsExportSection = () => {
                 Narrow down the data to include in your report
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <CardContent className="px-4 sm:px-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {/* Academic Year */}
                 <div className="space-y-2">
                   <Label htmlFor="year" className="flex items-center gap-1.5">

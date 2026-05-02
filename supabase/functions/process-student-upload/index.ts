@@ -33,10 +33,61 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Get authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+    // Create user client with auth header for verification
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: authHeader },
+      },
+    });
+
+    // Create admin client for database operations
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify the caller is authenticated
+    const { data: { user: callerUser }, error: userError } = await userClient.auth.getUser();
+    if (userError || !callerUser) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Invalid session' }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Verify caller is in an organization
+    const { data: userOrgProfile, error: orgError } = await userClient
+      .from('user_organization_profiles')
+      .select('organization_id')
+      .eq('user_id', callerUser.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgError || !userOrgProfile) {
+      return new Response(
+        JSON.stringify({ error: 'User not associated with any organization' }),
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
 
     if (req.method !== 'POST') {
       return new Response(

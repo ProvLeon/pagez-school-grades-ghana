@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { getUserOrganizationId } from "@/utils/organizationHelper";
 
 export type MockExamSession = {
   id: string;
@@ -18,9 +19,16 @@ export const useMockExamSessions = () => {
   return useQuery({
     queryKey: ["mock-exam-sessions"],
     queryFn: async () => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        console.warn('User not associated with any organization');
+        return [];
+      }
+
       const { data, error } = await supabase
         .from("mock_exam_sessions")
         .select("*")
+        .eq('organization_id', organizationId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -33,13 +41,19 @@ export const useMockExamStats = () => {
   return useQuery({
     queryKey: ["mock-exam-sessions", "stats"],
     queryFn: async () => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        return { sessions: 0, results: 0, published: 0, pending: 0 };
+      }
+
       const [allSessions, publishedSessions, allResults] = await Promise.all([
-        supabase.from("mock_exam_sessions").select("id", { count: "exact" }),
+        supabase.from("mock_exam_sessions").select("id", { count: "exact" }).eq('organization_id', organizationId),
         supabase
           .from("mock_exam_sessions")
           .select("id", { count: "exact" })
+          .eq('organization_id', organizationId)
           .eq("is_published", true),
-        supabase.from("mock_exam_results").select("id", { count: "exact" }),
+        supabase.from("mock_exam_results").select("id", { count: "exact" }).eq('organization_id', organizationId),
       ]);
 
       const sessions = allSessions.count || 0;
@@ -65,6 +79,11 @@ export const useCreateMockExamSession = () => {
       is_published?: boolean;
       status?: string;
     }) => {
+      const organizationId = await getUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User is not associated with any organization');
+      }
+
       const { data, error } = await supabase
         .from("mock_exam_sessions")
         .insert([
@@ -74,6 +93,7 @@ export const useCreateMockExamSession = () => {
             term: payload.term,
             exam_date: payload.exam_date ?? null,
             is_published: payload.is_published ?? false,
+            organization_id: organizationId,
             status: payload.status ?? "draft",
           },
         ])

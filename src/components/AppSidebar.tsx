@@ -54,7 +54,7 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/dashboard",
     icon: LayoutDashboard,
     tourId: "sidebar-dashboard"
     // All roles can see dashboard
@@ -157,7 +157,7 @@ export function AppSidebar() {
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [logoError, setLogoError] = useState(false);
-  const [schoolName, setSchoolName] = useState("GES SBA System");
+  const [schoolName, setSchoolName] = useState("e-Result System");
   const [schoolLogo, setSchoolLogo] = useState<string | null>(null);
   const { userProfile, isTeacher, isAdmin } = useAuth();
 
@@ -183,11 +183,23 @@ export function AppSidebar() {
 
   // Fetch school settings for name and logo
   useEffect(() => {
+    let isMounted = true;
+
     const fetchSchoolSettings = async () => {
       try {
-        const { data, error } = await supabase
+        // Get current user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !user || !isMounted) {
+          console.error('Error getting user:', userError);
+          return;
+        }
+
+        // Fetch school settings for current user (admin_id = user.id)
+        const { data, error } = await (supabase as any)
           .from('school_settings')
           .select('school_name, logo_url')
+          .eq('admin_id', user.id)
           .single();
 
         if (error && error.code !== 'PGRST116') {
@@ -195,7 +207,7 @@ export function AppSidebar() {
           return;
         }
 
-        if (data) {
+        if (data && isMounted) {
           if (data.school_name) {
             setSchoolName(data.school_name);
           }
@@ -211,34 +223,46 @@ export function AppSidebar() {
 
     fetchSchoolSettings();
 
-    // Subscribe to changes in school_settings
-    const channel = supabase
-      .channel('school_settings_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'school_settings'
-        },
-        (payload: { new: { school_name?: string; logo_url?: string } | null }) => {
-          if (payload.new) {
-            if (payload.new.school_name) {
-              setSchoolName(payload.new.school_name);
-            }
-            if (payload.new.logo_url) {
-              setSchoolLogo(payload.new.logo_url);
-              setLogoError(false);
-            } else {
-              setSchoolLogo(null);
+    // Subscribe to changes in school_settings - properly handle React 18 Strict Mode
+    let channel: any = null;
+    try {
+      // Clean up any existing channels with this name to prevent duplicates
+      supabase.removeAllChannels();
+
+      // Create and subscribe to channel
+      channel = supabase
+        .channel('school_settings_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'school_settings'
+          },
+          (payload: { new: { school_name?: string; logo_url?: string } | null }) => {
+            if (payload.new && isMounted) {
+              if (payload.new.school_name) {
+                setSchoolName(payload.new.school_name);
+              }
+              if (payload.new.logo_url) {
+                setSchoolLogo(payload.new.logo_url);
+                setLogoError(false);
+              } else {
+                setSchoolLogo(null);
+              }
             }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    } catch (error) {
+      console.error('Error setting up school_settings subscription:', error);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      isMounted = false;
+      if (channel) {
+        channel.unsubscribe();
+      }
     };
   }, []);
 
@@ -311,7 +335,7 @@ export function AppSidebar() {
                     onClick={() => toggleExpanded(item.title)}
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                      isActive(item.url) ? "text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      isActive(item.url) ? "text-primary dark:text-blue-500" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                     data-tour={item.tourId}
                   >
@@ -327,7 +351,7 @@ export function AppSidebar() {
                           to={subItem.url}
                           className={cn(
                             "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                            isActive(subItem.url, true) ? "text-primary bg-muted" : "text-muted-foreground hover:text-foreground"
+                            isActive(subItem.url, true) ? "text-primary dark:text-blue-500 bg-muted" : "text-muted-foreground hover:text-foreground"
                           )}
                         >
                           {subItem.title}
@@ -341,7 +365,7 @@ export function AppSidebar() {
                   to={item.url}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                    isActive(item.url, true) ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    isActive(item.url, true) ? "bg-muted text-primary dark:text-blue-500" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                   data-tour={item.tourId}
                 >
@@ -356,7 +380,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 border-t">
         <div className="text-xs text-muted-foreground text-center">
-          © {new Date().getFullYear()} {schoolName}. v1.2.0
+          @2025 e-Result System v {import.meta.env.VITE_APP_VERSION} | PB Pagez LTD
         </div>
       </SidebarFooter>
     </Sidebar>

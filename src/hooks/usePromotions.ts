@@ -15,10 +15,7 @@ export const CLASS_PROGRESSION_ORDER = [
   "JHS 1",
   "JHS 2",
   "JHS 3",
-  "SHS 1",
-  "SHS 2",
-  "SHS 3",
-  "Graduation" // Special case - student has completed school
+  "Graduation" // Special case - student has completed Basic School
 ] as const;
 
 export type ClassName = typeof CLASS_PROGRESSION_ORDER[number];
@@ -88,19 +85,16 @@ export function getProgressionIndex(className: string): number {
 
   if (lowerName.includes('kg1') || lowerName.includes('kg 1') || lowerName === 'kindergarten 1') return 0;
   if (lowerName.includes('kg2') || lowerName.includes('kg 2') || lowerName === 'kindergarten 2') return 1;
-  if ((lowerName.includes('class 1') || lowerName === 'primary 1' || lowerName === 'p1') && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 2;
-  if ((lowerName.includes('class 2') || lowerName === 'primary 2' || lowerName === 'p2') && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 3;
-  if ((lowerName.includes('class 3') || lowerName === 'primary 3' || lowerName === 'p3') && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 4;
-  if ((lowerName.includes('class 4') || lowerName === 'primary 4' || lowerName === 'p4') && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 5;
-  if ((lowerName.includes('class 5') || lowerName === 'primary 5' || lowerName === 'p5') && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 6;
-  if ((lowerName.includes('class 6') || lowerName === 'primary 6' || lowerName === 'p6') && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 7;
-  if (lowerName.includes('jhs 1') || lowerName.includes('jhs1') || lowerName === 'junior high 1') return 8;
-  if (lowerName.includes('jhs 2') || lowerName.includes('jhs2') || lowerName === 'junior high 2') return 9;
-  if (lowerName.includes('jhs 3') || lowerName.includes('jhs3') || lowerName === 'junior high 3') return 10;
-  if (lowerName.includes('shs 1') || lowerName.includes('shs1') || lowerName === 'senior high 1') return 11;
-  if (lowerName.includes('shs 2') || lowerName.includes('shs2') || lowerName === 'senior high 2') return 12;
-  if (lowerName.includes('shs 3') || lowerName.includes('shs3') || lowerName === 'senior high 3') return 13;
-  if (lowerName.includes('graduat')) return 14;
+  if ((lowerName.includes('class 1') || lowerName === 'primary 1' || lowerName === 'p1' || lowerName.includes('basic 1')) && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 2;
+  if ((lowerName.includes('class 2') || lowerName === 'primary 2' || lowerName === 'p2' || lowerName.includes('basic 2')) && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 3;
+  if ((lowerName.includes('class 3') || lowerName === 'primary 3' || lowerName === 'p3' || lowerName.includes('basic 3')) && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 4;
+  if ((lowerName.includes('class 4') || lowerName === 'primary 4' || lowerName === 'p4' || lowerName.includes('basic 4')) && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 5;
+  if ((lowerName.includes('class 5') || lowerName === 'primary 5' || lowerName === 'p5' || lowerName.includes('basic 5')) && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 6;
+  if ((lowerName.includes('class 6') || lowerName === 'primary 6' || lowerName === 'p6' || lowerName.includes('basic 6')) && !lowerName.includes('jhs') && !lowerName.includes('shs')) return 7;
+  if (lowerName.includes('jhs 1') || lowerName.includes('jhs1') || lowerName === 'junior high 1' || lowerName.includes('basic 7')) return 8;
+  if (lowerName.includes('jhs 2') || lowerName.includes('jhs2') || lowerName === 'junior high 2' || lowerName.includes('basic 8')) return 9;
+  if (lowerName.includes('jhs 3') || lowerName.includes('jhs3') || lowerName === 'junior high 3' || lowerName.includes('basic 9')) return 10;
+  if (lowerName.includes('graduat')) return 11;
 
   return -1; // Not in standard progression
 }
@@ -128,8 +122,8 @@ export function getNextClass(currentClassName: string): ClassName | null {
  */
 export function shouldGraduate(currentClassName: string): boolean {
   const currentIndex = getProgressionIndex(currentClassName);
-  // SHS 3 is index 13, Graduation is index 14
-  return currentIndex === 13;
+  // JHS 3 is index 10, Graduation is index 11
+  return currentIndex === 10;
 }
 
 /**
@@ -153,28 +147,28 @@ export function findNextClassInDatabase(
   allClasses: ClassMapping[],
   preferredDepartmentId?: string
 ): ClassMapping | null {
-  const nextClassName = getNextClass(currentClassName);
+  const currentIndex = getProgressionIndex(currentClassName);
 
-  if (!nextClassName) {
-    return null; // Graduation or not in progression
+  if (currentIndex === -1) {
+    return null; // Not in progression
   }
 
-  if (nextClassName === "Graduation") {
-    return null; // Special case - will be handled separately
+  if (shouldGraduate(currentClassName)) {
+    return null; // Graduation
   }
 
-  const normalizedNext = normalizeClassName(nextClassName);
+  const expectedNextIndex = currentIndex + 1;
 
-  // First try to find a class in the same department
+  // First try to find a class in the same department with the next progression index
   if (preferredDepartmentId) {
     const sameDeptClass = allClasses.find(
-      cls => cls.normalizedName === normalizedNext && cls.department_id === preferredDepartmentId
+      cls => cls.progressionIndex === expectedNextIndex && cls.department_id === preferredDepartmentId
     );
     if (sameDeptClass) return sameDeptClass;
   }
 
-  // Fall back to any class with the right name
-  return allClasses.find(cls => cls.normalizedName === normalizedNext) || null;
+  // Fall back to any class with the right progression index
+  return allClasses.find(cls => cls.progressionIndex === expectedNextIndex) || null;
 }
 
 /**

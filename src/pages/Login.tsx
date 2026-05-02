@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Mail, Lock, AlertCircle, LogIn } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, ArrowRight, Shield, BarChart3, FileText } from "lucide-react";
 import { authService, LoginCredentials } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link, useNavigate } from "react-router-dom";
+import AuthPanelDecoration from "@/components/auth/AuthPanelDecoration";
+import LoadingComp from "@/components/ui/loading";
 
 const Login = () => {
   const { isAuthenticated, loading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState<LoginCredentials>({
     email: "",
@@ -21,23 +22,18 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // If still loading auth state, show loading indicator
+  /* ── Loading State ───────────────────────────────────────────────────── */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-primary/10">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
+      <LoadingComp />
     );
   }
 
-  // If authenticated, redirect immediately - don't render anything else
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
+  /* ── Validation ──────────────────────────────────────────────────────── */
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!formData.email) {
@@ -61,9 +57,7 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
 
@@ -73,10 +67,9 @@ const Login = () => {
       if (result.success) {
         toast({
           title: "Login Successful",
-          description: "Welcome back to PB Pagez!",
+          description: "Welcome back to e-Results GH!",
           variant: "default",
         });
-        // AuthContext will update and trigger re-render with Navigate
       } else {
         toast({
           title: "Login Failed",
@@ -84,7 +77,7 @@ const Login = () => {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "System Error",
         description: "An unexpected error occurred. Please try again later.",
@@ -95,59 +88,116 @@ const Login = () => {
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
+  /* ── Render ──────────────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-primary/10 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-2xl border bg-card/80 backdrop-blur-sm">
-        <CardHeader className="text-center pb-6">
-          <div className="flex justify-center mb-4">
-            <img src="/lovable-uploads/97e233bb-185f-4d11-9bc3-52cabe2bef85.png" alt="Logo" className="w-20 h-20" />
-          </div>
-          <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">
-            PB Pagez School System
-          </CardTitle>
-          <p className="text-muted-foreground text-sm sm:text-base mt-2">
-            Secure access to your academic dashboard
-          </p>
-        </CardHeader>
+    <div className="min-h-screen flex">
+      {/* Left Panel — Branding */}
+      <div className="hidden lg:flex lg:w-[45%] xl:w-[40%] relative bg-gradient-to-br from-[#1E3A8A] via-[#2563EB] to-[#1d4ed8] overflow-hidden">
+        {/* Abstract geometric decoration */}
+        <AuthPanelDecoration />
 
-        <CardContent className="p-6 pt-0">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <div className="relative">
-                <Mail className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className={`pl-10 h-12 ${errors.email ? 'border-destructive' : ''}`}
-                />
-              </div>
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-between p-10 xl:p-16 w-full">
+          {/* Logo */}
+          <div className="flex items-center gap-3" onClick={() => navigate("/")}>
+            <img src="/ERESULTS_LOGO.png" alt="e-Results GH" className="w-10 h-10 rounded-full border-white border-[1px] shadow-lg" />
+            <span className="text-white/90 text-lg font-bold tracking-tight">e-Results GH</span>
+          </div>
+
+          {/* Hero Text */}
+          <div className="space-y-8 my-auto py-16">
+            <div className="space-y-5">
+              <h1 className="text-4xl xl:text-5xl font-extrabold text-white leading-[1.15] tracking-tight">
+                Welcome back
+                <br />
+                to your
+                <br />
+                <span className="text-blue-200">academic hub.</span>
+              </h1>
+              <p className="text-blue-200/80 text-lg max-w-sm leading-relaxed">
+                Pick up right where you left off. Your results, reports, and analytics are waiting.
+              </p>
+            </div>
+
+            {/* Key highlights */}
+            <div className="space-y-4 pt-4">
+              {[
+                { icon: FileText, text: "Instant report sheet generation" },
+                { icon: Shield, text: "Your data is always secure" },
+                { icon: BarChart3, text: "Real-time performance analytics" },
+              ].map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/15 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-blue-200" />
+                  </div>
+                  <span className="text-white/80 text-sm font-medium">{text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <p className="text-blue-300/40 text-xs">
+            Trusted by schools across Ghana. Built by PB Pagez LTD.
+          </p>
+        </div>
+      </div>
+
+      {/* Right Panel — Form */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-white to-slate-50/80">
+        <div className="w-full max-w-[440px]">
+          {/* Mobile logo */}
+          <div className="flex items-center gap-3 mb-10 lg:hidden cursor-pointer" onClick={() => navigate("/")}>
+            <img src="/ERESULTS_LOGO.png" alt="e-Results GH" className="w-10 h-10 rounded-full border-white border-[1px] shadow-lg" />
+            <span className="text-gray-900 text-lg font-bold tracking-tight">e-Results GH</span>
+          </div>
+
+          {/* Header */}
+          <div className="space-y-2 mb-10">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+              Sign in
+            </h2>
+            <p className="text-gray-500 text-base">
+              Access your academic dashboard securely.
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-5" autoComplete="off">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
+                Email Address
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="admin@school.edu.gh"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                required
+                disabled={isLoading}
+                className={`h-12 rounded-xl bg-gray-50/80 border-gray-200 focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all ${errors.email ? 'border-red-400 bg-red-50/50' : ''}`}
+              />
               {errors.email && (
-                <p className="text-sm text-destructive flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
+                <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                  <AlertCircle className="w-3 h-3" />
                   {errors.email}
                 </p>
               )}
             </div>
 
-            <div className="space-y-2">
+            {/* Password */}
+            <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <Label htmlFor="password">Password</Label>
-                <a href="/forgot-password" className="text-sm text-primary hover:underline">
+                <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
+                  Password
+                </Label>
+                <a href="/forgot-password" className="text-xs text-[#2563EB] hover:underline font-semibold transition-colors">
                   Forgot Password?
                 </a>
               </div>
               <div className="relative">
-                <Lock className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -156,72 +206,60 @@ const Login = () => {
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   required
                   disabled={isLoading}
-                  className={`pl-10 pr-12 h-12 ${errors.password ? 'border-destructive' : ''}`}
+                  autoComplete="new-password"
+                  className={`h-12 pr-12 rounded-xl bg-gray-50/80 border-gray-200 focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all ${errors.password ? 'border-red-400 bg-red-50/50' : ''}`}
                 />
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={togglePasswordVisibility}
-                  disabled={isLoading}
+                  className="absolute right-0 top-0 h-full px-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </Button>
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
               {errors.password && (
-                <p className="text-sm text-destructive flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
+                <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                  <AlertCircle className="w-3 h-3" />
                   {errors.password}
                 </p>
               )}
             </div>
 
-            <Button
+            {/* Submit */}
+            <button
               type="submit"
-              className="w-full h-12 font-semibold shadow-lg transition-all duration-200"
               disabled={isLoading}
+              className="w-full bg-[#2563EB] hover:bg-[#1d4ed8] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl text-base shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   Authenticating...
                 </>
               ) : (
                 <>
-                  <LogIn className="w-5 h-5 mr-2" />
                   Sign In
+                  <ArrowRight className="w-5 h-5" />
                 </>
               )}
-            </Button>
+            </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Need access?{" "}
-              <button
-                type="button"
-                className="text-primary hover:underline font-medium"
-                onClick={() => {
-                  toast({
-                    title: "Contact Administrator",
-                    description: "Please contact your system administrator at admin@pbpagez.com for account assistance.",
-                  });
-                }}
-              >
-                Contact Admin
-              </button>
+          {/* Footer Link */}
+          <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+            <p className="text-sm text-gray-500">
+              Don't have an account?{" "}
+              <Link to="/signup" className="text-[#2563EB] hover:underline font-bold transition-colors">
+                Sign Up
+              </Link>
             </p>
-            <p className="text-xs text-muted-foreground mt-4">
-              PB Pagez v{import.meta.env.VITE_APP_VERSION || '1.0.0'} | Secure Academic Management
+            <p className="text-xs text-gray-400 mt-4">
+              e-Results GH v {import.meta.env.VITE_APP_VERSION} | PB Pagez LTD
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };

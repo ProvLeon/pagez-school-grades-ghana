@@ -8,9 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Users } from "lucide-react";
 
 const GENDER_COLORS = {
-  male: 'hsl(var(--primary))',
-  female: 'hsl(var(--secondary))',
-  unknown: 'hsl(var(--muted-foreground))',
+  male: '#3B82F6',   // Crisp blue
+  female: '#A855F7', // Bright purple
+  unknown: '#94A3B8',
 };
 
 export const PerformanceOverview = () => {
@@ -26,17 +26,29 @@ export const PerformanceOverview = () => {
     const classStats = new Map<string, { total: number; count: number; name: string }>();
 
     results.forEach(result => {
-      if (!result.class_id || result.total_score === null || result.total_score === undefined) return;
+      if (!result.class_id) return;
+
+      // Calculate total score from subject_marks if available
+      let totalScore = 0;
+      if (result.subject_marks && result.subject_marks.length > 0) {
+        totalScore = result.subject_marks.reduce((sum, mark) => sum + (mark.total_score || 0), 0);
+      } else if (result.total_score !== null && result.total_score !== undefined) {
+        // Fallback to total_score if subject_marks not available
+        totalScore = result.total_score;
+      } else {
+        // Skip if no score data available
+        return;
+      }
 
       const className = result.class?.name || 'Unknown';
       const existing = classStats.get(result.class_id);
 
       if (existing) {
-        existing.total += result.total_score;
+        existing.total += totalScore;
         existing.count += 1;
       } else {
         classStats.set(result.class_id, {
-          total: result.total_score,
+          total: totalScore,
           count: 1,
           name: className
         });
@@ -78,15 +90,13 @@ export const PerformanceOverview = () => {
   const isLoading = isLoadingStudents || isLoadingClasses || isLoadingResults;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-muted-foreground" />
-            Class Performance Overview
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div data-tour="dashboard-performance" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-card p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 dark:border-border flex flex-col">
+        <div className="mb-5 flex items-center gap-2 border-b border-slate-100 dark:border-border pb-3">
+          <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h3 className="text-lg font-bold text-slate-900 dark:text-card-foreground">Class Performance Overview</h3>
+        </div>
+        <div className="flex-1">
           {isLoading ? (
             <div className="h-80 flex items-center justify-center">
               <Skeleton className="w-full h-64" />
@@ -121,18 +131,24 @@ export const PerformanceOverview = () => {
                   <Tooltip
                     cursor={{ fill: 'hsl(var(--muted))' }}
                     contentStyle={{
-                      background: 'hsl(var(--background))',
+                      background: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--card-foreground))'
                     }}
+                    itemStyle={{ color: 'hsl(var(--card-foreground))' }}
                     formatter={(value: number, name: string) => [`${value}%`, 'Avg Score']}
                     labelFormatter={(label) => `Class: ${label}`}
                   />
                   <Bar
                     dataKey="performance"
-                    fill="hsl(var(--primary))"
-                    radius={[4, 4, 0, 0]}
+                    fill="#3B82F6"
+                    radius={[6, 6, 0, 0]}
                     maxBarSize={50}
+                    isAnimationActive={true}
+                    animationDuration={1500}
+                    animationEasing="ease-out"
+                    animationBegin={200}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -143,17 +159,15 @@ export const PerformanceOverview = () => {
               Based on {results.length} result{results.length !== 1 ? 's' : ''} across {classPerformanceData.length} class{classPerformanceData.length !== 1 ? 'es' : ''}
             </p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-muted-foreground" />
-            Student Gender Distribution
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="group relative overflow-hidden rounded-2xl bg-white dark:bg-card p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 dark:border-border flex flex-col">
+        <div className="mb-5 flex items-center gap-2 border-b border-slate-100 dark:border-border pb-3">
+          <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <h3 className="text-lg font-bold text-slate-900 dark:text-card-foreground">Student Gender Distribution</h3>
+        </div>
+        <div className="flex-1">
           {isLoadingStudents ? (
             <div className="h-80 flex items-center justify-center">
               <Skeleton className="w-48 h-48 rounded-full" />
@@ -173,9 +187,16 @@ export const PerformanceOverview = () => {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    outerRadius={80}
+                    innerRadius={60}
+                    outerRadius={85}
+                    paddingAngle={5}
                     dataKey="value"
                     nameKey="name"
+                    stroke="none"
+                    isAnimationActive={true}
+                    animationDuration={1500}
+                    animationEasing="ease-out"
+                    animationBegin={200}
                     label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
                       const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                       const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
@@ -187,10 +208,10 @@ export const PerformanceOverview = () => {
                           fill="white"
                           textAnchor="middle"
                           dominantBaseline="central"
-                          fontSize={12}
+                          fontSize={11}
                           fontWeight="bold"
                         >
-                          {`${(percent * 100).toFixed(0)}%`}
+                          {percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
                         </text>
                       );
                     }}
@@ -199,6 +220,7 @@ export const PerformanceOverview = () => {
                       <Cell
                         key={`cell-${index}`}
                         fill={GENDER_COLORS[entry.key as keyof typeof GENDER_COLORS] || GENDER_COLORS.unknown}
+                        className="stroke-background stroke-[2px] transition-all duration-300 hover:opacity-80"
                       />
                     ))}
                   </Pie>
@@ -208,15 +230,17 @@ export const PerformanceOverview = () => {
                     align="center"
                     formatter={(value, entry) => {
                       const item = genderData.find(d => d.name === value);
-                      return `${value} (${item?.value || 0})`;
+                      return <span className="text-slate-700 dark:text-slate-300">{`${value} (${item?.value || 0})`}</span>;
                     }}
                   />
                   <Tooltip
                     contentStyle={{
-                      background: 'hsl(var(--background))',
+                      background: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
-                      borderRadius: 'var(--radius)'
+                      borderRadius: 'var(--radius)',
+                      color: 'hsl(var(--card-foreground))'
                     }}
+                    itemStyle={{ color: 'hsl(var(--card-foreground))' }}
                     formatter={(value: number) => [`${value} students`, 'Count']}
                   />
                 </PieChart>
@@ -228,8 +252,8 @@ export const PerformanceOverview = () => {
               Total: {students.length} student{students.length !== 1 ? 's' : ''}
             </p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };

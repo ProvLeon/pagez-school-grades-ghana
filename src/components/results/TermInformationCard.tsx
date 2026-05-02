@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -9,13 +10,45 @@ import { useAddResultsForm } from "@/contexts/AddResultsFormContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
+interface FormData {
+  conduct?: string;
+  attitude?: string;
+  interest?: string;
+  teachers_comment?: string;
+  heads_remarks?: string;
+  days_present?: string;
+  days_school_opened?: string;
+  class_id?: string;
+  attendance?: string;
+  [key: string]: string | undefined;
+}
+
+interface GradingSettings {
+  academic_year?: string;
+  term?: string;
+  attendance_for_term?: number;
+  [key: string]: unknown;
+}
+
+interface SubjectMark {
+  subject_name?: string;
+  total_score?: number;
+  exam_score?: number;
+  ca1_score?: number;
+  ca2_score?: number;
+  ca3_score?: number;
+  ca4_score?: number;
+  grade?: string;
+}
+
 interface TermInformationCardProps {
-  formData: any;
-  setFormData: (data: any) => void;
+  formData: FormData;
+  setFormData: (data: FormData) => void;
   conductOptions?: Array<{ id: string; value: string }>;
   attitudeOptions?: Array<{ id: string; value: string }>;
   interestOptions?: Array<{ id: string; value: string }>;
   teacherCommentOptions?: Array<{ id: string; value: string }>;
+  gradingSettings?: GradingSettings;
 }
 
 const TermInformationCard = ({
@@ -25,6 +58,7 @@ const TermInformationCard = ({
   attitudeOptions = [],
   interestOptions = [],
   teacherCommentOptions = [],
+  gradingSettings,
 }: TermInformationCardProps) => {
   const { subjectMarks, selectedStudent, selectedClass } = useAddResultsForm();
   const [aiLoading, setAiLoading] = useState(false);
@@ -44,8 +78,8 @@ const TermInformationCard = ({
     try {
       // Prepare subject data for AI
       const subjectsData = Object.entries(subjectMarks)
-        .filter(([_, mark]: [string, any]) => mark && (mark.total_score !== undefined || mark.exam_score !== undefined))
-        .map(([subjectId, mark]: [string, any]) => ({
+        .filter(([_, mark]: [string, SubjectMark]) => mark && (mark.total_score !== undefined || mark.exam_score !== undefined))
+        .map(([subjectId, mark]: [string, SubjectMark]) => ({
           subject_id: subjectId,
           name: mark.subject_name || subjectId,
           total_score: mark.total_score ?? (
@@ -63,9 +97,9 @@ const TermInformationCard = ({
       });
 
       // Calculate average score
-      const validScores = subjectsData.filter((s) => typeof s.total_score === "number");
+      const validScores = subjectsData.filter((s): s is typeof s & { total_score: number } => typeof s.total_score === "number");
       const averageScore = validScores.length > 0
-        ? validScores.reduce((sum, s) => sum + s.total_score, 0) / validScores.length
+        ? validScores.reduce((sum: number, s) => sum + s.total_score, 0) / validScores.length
         : 0;
 
       // Prepare request body
@@ -95,7 +129,19 @@ const TermInformationCard = ({
       }
 
       if (data?.error) {
-        throw new Error(data.error);
+        // Handle specific error codes for better user feedback
+        const errorCode = data?.code;
+        let userMessage = data?.error || "Failed to generate AI remark.";
+
+        if (errorCode === "missing_api_key" || errorCode === "auth_error") {
+          userMessage = "The AI service is not properly configured. Please contact your administrator.";
+        } else if (errorCode === "all_models_failed") {
+          userMessage = "All AI models are currently unavailable. Please try again later or enter the remark manually.";
+        } else if (data?.details) {
+          userMessage = data.details;
+        }
+
+        throw new Error(userMessage);
       }
 
       if (data?.remark) {
@@ -105,13 +151,26 @@ const TermInformationCard = ({
           description: "AI has generated a head teacher's remark based on the student's performance.",
         });
       } else {
-        throw new Error("No remark was generated");
+        throw new Error("No remark was generated. Please try again.");
       }
     } catch (error: any) {
       console.error("Error generating head remark:", error);
+
+      // Provide helpful error messages based on error type
+      let errorTitle = "Generation Failed";
+      let errorDescription = error.message || "Failed to generate AI remark. Please try again or enter manually.";
+
+      if (error.message?.includes("503") || error.message?.includes("unavailable")) {
+        errorTitle = "Service Unavailable";
+        errorDescription = "The AI service is temporarily unavailable. You can still enter the remark manually.";
+      } else if (error.message?.includes("401") || error.message?.includes("403")) {
+        errorTitle = "Configuration Error";
+        errorDescription = "The AI service is not properly configured. Please contact your administrator.";
+      }
+
       toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate AI remark. Please try again or enter manually.",
+        title: errorTitle,
+        description: errorDescription,
         variant: "destructive",
       });
     } finally {
@@ -130,12 +189,44 @@ const TermInformationCard = ({
     return "F";
   };
 
+  // Calculate attendance display
+  const attendanceForTerm = gradingSettings?.attendance_for_term || formData.days_school_opened || 0;
+  const daysPresent = formData.days_present || 0;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Term Information & Remarks</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Days Present / Attendance Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+          <div className="space-y-2">
+            <Label htmlFor="days_present">Days Present</Label>
+            <Input
+              id="days_present"
+              type="number"
+              min="0"
+              max={attendanceForTerm}
+              placeholder="Enter days present"
+              value={formData.days_present || ""}
+              onChange={(e) => setFormData({ ...formData, days_present: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter the number of days the student was present this term.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Attendance for Term</Label>
+            <div className="p-3 bg-background rounded-md border">
+              <p className="font-medium">{attendanceForTerm} days</p>
+              <p className="text-xs text-muted-foreground">
+                Total school days this term (from Grading Settings)
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Label htmlFor="conduct">Conduct</Label>

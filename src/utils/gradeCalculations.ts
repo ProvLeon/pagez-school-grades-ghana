@@ -26,34 +26,35 @@ export const calculateTotalScore = (scores: SubjectScore, caConfig: CAType | und
     return Math.min(Math.max(n, min), max);
   };
 
-  // Single CA mode (e.g., 50/50, 70/30, 60/40): CA raw score out of 100
+  // Single CA mode (e.g., 50/50, 70/30, 60/40): CA raw score out of max CA (e.g., 30, 40, 50)
   if (config.ca) {
-    const caRaw = clamp(scores.ca1_score, 0, 100);
-    total += (caRaw * config.ca) / 100;
+    // Use the actual CA score provided, do not convert/scale
+    const caRaw = clamp(scores.ca1_score, 0, config.ca);
+    total += caRaw;
   }
 
   // Split CA components (e.g., 60/10/10/10/10):
   // Each CAi raw score is capped at its own weight (e.g., max 10),
-  // contributing directly to that percentage of the total.
+  // Use the actual CAi score provided, do not convert/scale
   if (config.ca1) {
     const max = config.ca1;
     const raw = clamp(scores.ca1_score, 0, max);
-    total += (raw * config.ca1) / max; // effectively raw when max == weight
+    total += raw;
   }
   if (config.ca2) {
     const max = config.ca2;
     const raw = clamp(scores.ca2_score, 0, max);
-    total += (raw * config.ca2) / max;
+    total += raw;
   }
   if (config.ca3) {
     const max = config.ca3;
     const raw = clamp(scores.ca3_score, 0, max);
-    total += (raw * config.ca3) / max;
+    total += raw;
   }
   if (config.ca4) {
     const max = config.ca4;
     const raw = clamp(scores.ca4_score, 0, max);
-    total += (raw * config.ca4) / max;
+    total += raw;
   }
 
   // Exam is always out of 100

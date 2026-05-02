@@ -6,8 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Download, Filter, Edit, Trash2, Plus, Search, MoreHorizontal, Eye, Users, X, Info } from "lucide-react";
+import { Download, Filter, Edit, Trash2, Plus, Search, MoreHorizontal, Eye, Users, X, Info, Loader2 } from "lucide-react";
 import { useStudents, useDeleteStudent, Student } from "@/hooks/useStudents";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { useClasses } from "@/hooks/useClasses";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +26,8 @@ import { useCanAccessClass } from "@/hooks/useTeacherClassAccess";
 
 const ManageStudents = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { isTeacher, isAdmin, teacherRecord } = useAuth();
   const {
     getAccessibleClassIds,
@@ -38,6 +43,8 @@ const ManageStudents = () => {
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [deletingStudent, setDeletingStudent] = useState<{ id: string, name: string } | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [filters, setFilters] = useState({
     class_id: "",
     department_id: "",
@@ -102,6 +109,41 @@ const ManageStudents = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedStudents.length === 0) return;
+
+    setIsBulkDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .in('id', selectedStudents);
+
+      if (error) throw error;
+
+      // Invalidate queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['students'] });
+      await queryClient.invalidateQueries({ queryKey: ['classes'] });
+
+      toast({
+        title: "Students Deleted",
+        description: `Successfully deleted ${selectedStudents.length} student(s).`,
+      });
+      setSelectedStudents([]);
+      setShowBulkDeleteConfirm(false);
+    } catch (error: unknown) {
+      console.error('Bulk delete error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete students. Please try again.";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const handleSelectStudent = (studentId: string, checked: boolean) => {
     setSelectedStudents(prev => checked ? [...prev, studentId] : prev.filter(id => id !== studentId));
   };
@@ -140,12 +182,28 @@ const ManageStudents = () => {
                 : "Manage all student records in your school."}
             </p>
           </div>
-          {isAdmin && (
-            <Button onClick={() => navigate('/students/add-students')}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Student
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isAdmin && selectedStudents.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                disabled={isBulkDeleting}
+              >
+                {isBulkDeleting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 mr-2" />
+                )}
+                Delete Selected ({selectedStudents.length})
+              </Button>
+            )}
+            {isAdmin && (
+              <Button onClick={() => navigate('/students/add-students')}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Student
+              </Button>
+            )}
+          </div>
         </div>
 
         {isTeacher && teacherAccessLoading && (
@@ -168,9 +226,9 @@ const ManageStudents = () => {
         )}
 
         {teacherHasNoAssignments && (
-          <Alert variant="destructive">
-            <Info className="h-4 w-4" />
-            <AlertDescription>
+          <Alert className="bg-amber-50 border-amber-200">
+            <Info className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-700">
               You don't have any class assignments yet. Please contact your administrator to be assigned to classes before you can view students.
             </AlertDescription>
           </Alert>
@@ -240,16 +298,7 @@ const ManageStudents = () => {
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
-        ) : teacherRecordMissing ? (
-          <div className="text-center py-20">
-            <Users className="mx-auto h-12 w-12 text-destructive" />
-            <h3 className="mt-4 text-lg font-semibold text-destructive">Teacher Account Not Linked</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Your user account is not connected to a teacher record.<br />
-              Please contact your administrator to link your account.
-            </p>
-          </div>
-        ) : teacherHasNoAssignments ? (
+        ) : teacherRecordMissing || teacherHasNoAssignments ? (
           <div className="text-center py-20">
             <Users className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">No Class Assignments</h3>
@@ -333,6 +382,14 @@ const ManageStudents = () => {
       <BulkStudentOperationsDialog selectedStudents={selectedStudents} studentNames={studentNames} open={showBulkDialog} onOpenChange={setShowBulkDialog} onClearSelection={() => setSelectedStudents([])} />
       <StudentDetailsDialog student={viewingStudent} open={!!viewingStudent} onOpenChange={(open) => !open && setViewingStudent(null)} />
       <DeleteConfirmationDialog isOpen={!!deletingStudent} onOpenChange={(open) => !open && setDeletingStudent(null)} onConfirm={confirmDelete} title="Delete Student" description={`Are you sure you want to delete ${deletingStudent?.name}?`} isLoading={deleteStudent.isPending} />
+      <DeleteConfirmationDialog
+        isOpen={showBulkDeleteConfirm}
+        onOpenChange={(open) => !open && setShowBulkDeleteConfirm(false)}
+        onConfirm={handleBulkDelete}
+        title="Delete Selected Students"
+        description={`Are you sure you want to delete ${selectedStudents.length} selected student(s)? This action cannot be undone.`}
+        isLoading={isBulkDeleting}
+      />
     </div>
   );
 };

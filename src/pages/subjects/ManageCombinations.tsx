@@ -308,6 +308,8 @@ const ManageCombinations = () => {
   const [editingCombination, setEditingCombination] = useState<SubjectCombination | null>(null);
   const [viewingCombination, setViewingCombination] = useState<SubjectCombination | null>(null);
   const [deletingCombination, setDeletingCombination] = useState<SubjectCombination | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     department_id: "",
     status: "",
@@ -391,6 +393,34 @@ const ManageCombinations = () => {
         onSuccess: () => setDeletingCombination(null),
         onError: () => setDeletingCombination(null),
       });
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedCombinations.length > 0) {
+      setBulkDeleteIds(selectedCombinations);
+      setIsBulkDeleting(true);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    if (bulkDeleteIds.length === 0) return;
+
+    try {
+      for (const id of bulkDeleteIds) {
+        await new Promise<void>((resolve, reject) => {
+          deleteCombination.mutate(id, {
+            onSuccess: () => resolve(),
+            onError: () => reject(),
+          });
+        });
+      }
+      setSelectedCombinations([]);
+    } catch (error) {
+      console.error('Error deleting combinations:', error);
+    } finally {
+      setIsBulkDeleting(false);
+      setBulkDeleteIds([]);
     }
   };
 
@@ -587,12 +617,7 @@ const ManageCombinations = () => {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => {
-                      if (selectedCombinations.length === 1) {
-                        const combo = combinations.find(c => c.id === selectedCombinations[0]);
-                        if (combo) setDeletingCombination(combo);
-                      }
-                    }}
+                    onClick={handleBulkDelete}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete Selected
@@ -768,6 +793,21 @@ const ManageCombinations = () => {
         onConfirm={confirmDelete}
         title="Delete Subject Combination"
         description={`Are you sure you want to delete the "${deletingCombination?.name}" combination? This action cannot be undone.`}
+        isLoading={deleteCombination.isPending}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={isBulkDeleting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsBulkDeleting(false);
+            setBulkDeleteIds([]);
+          }
+        }}
+        onConfirm={confirmBulkDelete}
+        title="Delete Selected Combinations"
+        description={`Are you sure you want to delete ${bulkDeleteIds.length} selected combination${bulkDeleteIds.length > 1 ? 's' : ''}? This action cannot be undone.`}
         isLoading={deleteCombination.isPending}
       />
     </div>
