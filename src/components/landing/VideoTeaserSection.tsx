@@ -105,7 +105,7 @@ const VideoTeaserSection = ({
             videoUrl={resolvedVideoUrl}
             title="See e-Results GH in Action"
             description="Streamline your school's results management in minutes"
-            thumbnail="/thumbnail.jpg"
+            //thumbnail="/thumbnail.jpg"
             dark={dark}
           />
         </div>
