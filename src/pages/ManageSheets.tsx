@@ -1,25 +1,24 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Header } from "@/components/Header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TemplateGeneratorSection } from "@/components/sheets/TemplateGeneratorSection";
-import { BulkOperationsSection } from "@/components/sheets/BulkOperationsSection";
-import { ReportsExportSection } from "@/components/sheets/ReportsExportSection";
-import { SheetOperationsHistory } from "@/components/sheets/SheetOperationsHistory";
-// import { SheetsStatsCards } from "@/components/sheets/SheetsStatsCards";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  FileSpreadsheet,
-  Upload,
-  Download,
-  History,
-  Info,
-  CheckCircle2,
-  ArrowRight,
-  Users,
-  GraduationCap,
-  FileText
+  FileSpreadsheet, Upload, Download,
+  History, Info, CheckCircle2,
+  ArrowRight, Users, GraduationCap, FileText
 } from "lucide-react";
+
+// ✅ Lazy load the heavy sections
+const BulkOperationsSection = lazy(() => import("@/components/sheets/BulkOperationsSection").then(m => ({ default: m.BulkOperationsSection })));
+const ReportsExportSection = lazy(() => import("@/components/sheets/ReportsExportSection").then(m => ({ default: m.ReportsExportSection })));
+const SheetOperationsHistory = lazy(() => import("@/components/sheets/SheetOperationsHistory").then(m => ({ default: m.SheetOperationsHistory })));
+
+const LoadingTab = () => (
+  <div className="flex items-center justify-center py-12 text-muted-foreground">
+    Loading...
+  </div>
+);
 
 const ManageSheets = () => {
   const [activeTab, setActiveTab] = useState("bulk-ops");
@@ -137,7 +136,9 @@ const ManageSheets = () => {
           </TabsList>
 
           <TabsContent value="bulk-ops" className="mt-6">
+            <Suspense fallback={<LoadingTab />}>
             <BulkOperationsSection />
+            </Suspense>
           </TabsContent>
 
           {/*<TabsContent value="templates" className="mt-6">
@@ -145,11 +146,15 @@ const ManageSheets = () => {
           </TabsContent>*/}
 
           <TabsContent value="reports" className="mt-6">
+            <Suspense fallback={<LoadingTab />}>
             <ReportsExportSection />
+              </Suspense>
           </TabsContent>
 
           <TabsContent value="history" className="mt-6">
+            <Suspense fallback={<LoadingTab />}>
             <SheetOperationsHistory />
+              </Suspense>
           </TabsContent>
         </Tabs>
 
