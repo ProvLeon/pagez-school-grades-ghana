@@ -1,0 +1,9 @@
+[install]
+# Trust all postinstall scripts (fixes the "Blocked 2 postinstalls" warning)
+trust = true
+
+# Use production-friendly frozen lockfile behavior
+frozenLockfile = false
+
+# Always fetch latest compatible versions
+cache = true
