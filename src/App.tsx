@@ -62,7 +62,7 @@ const ResultsAnalytics = lazy(() => import("./pages/results/ResultsAnalytics"));
 // import TeacherManageResults from "./pages/teacher/TeacherManageResults";
 
 // Mock pages
-const AddMockScores = lazy(() => import("./pages/mock/AddMockScores"));";
+const AddMockScores = lazy(() => import("./pages/mock/AddMockScores"));
 
 // Create QueryClient with enhanced configuration
 const queryClient = new QueryClient({
