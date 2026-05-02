@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => ({
     // Reduce memory usage during build
     sourcemap: false,
     // Increase chunk size warning limit
-    chunkSizeWarningLimit: 3000,
+    chunkSizeWarningLimit: 2000,
     // Optimize rollup options
     rollupOptions: {
       output: {
