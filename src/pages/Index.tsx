@@ -50,7 +50,7 @@ const Index = () => {
         <WhyChooseSection />
 
         {/* Video Teaser Section - Optimal position: post-awareness, pre-pricing decision */}
-        <VideoTeaserSection />
+        <VideoTeaserSection videoUrl="https://youtu.be/i3WfERe94KM" />
 
         {/* Pricing Section */}
         <PricingSection />
