@@ -14,56 +14,55 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { SubscriptionOverlay } from "@/components/billing/SubscriptionOverlay";
 import { TrialBanner } from "@/components/billing/TrialBanner";
 import LoadingComp from "@/components/ui/loading";
-// TeacherProtectedRoute no longer needed - using unified role-based routes
 import { getUserOrganizationId } from "@/utils/organizationHelper";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 
-// Pages
-import Index from "./pages/Index";
-import NoOrganization from "./pages/NoOrganization";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Classes from "./pages/Classes";
-import Subjects from "./pages/Subjects";
-import Students from "./pages/Students";
-import Results from "./pages/Results";
-import ManageSheets from "./pages/ManageSheets";
-import ManageTransfers from "./pages/ManageTransfers";
-import ManageTeacher from "./pages/ManageTeacher";
-import Settings from "./pages/Settings";
-import ManageProfile from "./pages/ManageProfile";
-import NotFound from "./pages/NotFound";
-import PublicReports from "./pages/PublicReports";
-import PublicMockResults from "./pages/PublicMockResults";
-import MockExams from "./pages/MockExams";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import SignUp from "./pages/SignUp";
+// ✅ LAZY LOAD all pages instead of static imports
+const Index = lazy(() => import("./pages/Index"));
+const NoOrganization = lazy(() => import("./pages/NoOrganization"));
+const Login = lazy(() => import("./pages/Login"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Classes = lazy(() => import("./pages/Classes"));
+const Subjects = lazy(() => import("./pages/Subjects"));
+const Students = lazy(() => import("./pages/Students"));
+const Results = lazy(() => import("./pages/Results"));
+const ManageSheets = lazy(() => import("./pages/ManageSheets"));
+const ManageTransfers = lazy(() => import("./pages/ManageTransfers"));
+const ManageTeacher = lazy(() => import("./pages/ManageTeacher"));
+const Settings = lazy(() => import("./pages/Settings"));
+const ManageProfile = lazy(() => import("./pages/ManageProfile"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const PublicReports = lazy(() => import("./pages/PublicReports"));
+const PublicMockResults = lazy(() => import("./pages/PublicMockResults"));
+const MockExams = lazy(() => import("./pages/MockExams"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const SignUp = lazy(() => import("./pages/SignUp"));
 
 // Subject pages
-import ManageSubjects from "./pages/subjects/ManageSubjects";
-import ManageDepartments from "./pages/subjects/ManageDepartments";
-import ManageCombinations from "./pages/subjects/ManageCombinations";
+const ManageSubjects = lazy(() => import("./pages/subjects/ManageSubjects"));
+const ManageDepartments = lazy(() => import("./pages/subjects/ManageDepartments"));
+const ManageCombinations = lazy(() => import("./pages/subjects/ManageCombinations"));
 
 // Student pages
-import AddStudents from "./pages/students/AddStudents";
-import ManageStudents from "./pages/students/ManageStudents";
+const AddStudents = lazy(() => import("./pages/students/AddStudents"));
+const ManageStudents = lazy(() => import("./pages/students/ManageStudents"));
 
 // Result pages
-import AddResults from "./pages/results/AddResults";
-import ManageResults from "./pages/results/ManageResults";
-import ViewResult from "./pages/results/ViewResult";
-import EditResult from "./pages/results/EditResult";
-import GradingSettings from "./pages/results/GradingSettings";
-import ResultsAnalytics from "./pages/results/ResultsAnalytics";
+const AddResults = lazy(() => import("./pages/results/AddResults"));
+const ManageResults = lazy(() => import("./pages/results/ManageResults"));
+const ViewResult = lazy(() => import("./pages/results/ViewResult"));
+const EditResult = lazy(() => import("./pages/results/EditResult"));
+const GradingSettings = lazy(() => import("./pages/results/GradingSettings"));
+const ResultsAnalytics = lazy(() => import("./pages/results/ResultsAnalytics"));
 
 // Teacher pages - no longer needed, using unified Dashboard and Results pages
 // import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 // import TeacherManageResults from "./pages/teacher/TeacherManageResults";
 
 // Mock pages
-import AddMockScores from "./pages/mock/AddMockScores";
+const AddMockScores = lazy(() => import("./pages/mock/AddMockScores"));
 
 // Create QueryClient with enhanced configuration
 const queryClient = new QueryClient({
@@ -184,6 +183,10 @@ const RouteAwareHelpButton = () => {
   return <FloatingHelpButton />;
 };
 
+const PageLoader = () => (
+  <LoadingComp message="Loading..." subtext="Please wait" />
+);
+
 const App = () => {
   const [hideAuthBanner, setHideAuthBanner] = useState<boolean>(() => {
     try {
@@ -244,6 +247,7 @@ const App = () => {
                 <WalkthroughProvider>
                   <WalkthroughOverlay />
                   <RouteAwareHelpButton />
+                  <Suspense fallback={<PageLoader />}>
                   <Routes>
                     {/* Public Routes */}
                     <Route path="/" element={<Index />} />
@@ -478,6 +482,7 @@ const App = () => {
                     {/* 404 - Keep this last */}
                     <Route path="*" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <NotFound />} />
                   </Routes>
+                    </Suspense>
                 </WalkthroughProvider>
               </AuthProvider>
             </ThemeProvider>
