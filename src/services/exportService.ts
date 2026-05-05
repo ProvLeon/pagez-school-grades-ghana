@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 
 // Custom error class for "no data found" scenarios
@@ -177,6 +176,7 @@ export class ExportService {
    * Generate Class Broadsheet Excel file
    */
   static async generateClassBroadsheet(filters: ExportFilters): Promise<void> {
+    const XLSX = await import('xlsx');
     const results = await this.fetchResultsData(filters);
 
     if (results.length === 0) {
@@ -302,6 +302,7 @@ export class ExportService {
    * Generate Position Rankings Excel file
    */
   static async generatePositionRankings(filters: ExportFilters): Promise<void> {
+    const XLSX = await import('xlsx');
     const results = await this.fetchResultsData(filters);
 
     if (results.length === 0) {
@@ -568,7 +569,7 @@ export class ExportService {
   /**
    * Export data to Excel with professional styling
    */
-  static exportToExcel(
+  static async exportToExcel(
     data: (string | number | boolean | null | undefined)[][],
     sheetName: string,
     filename: string,
@@ -577,7 +578,8 @@ export class ExportService {
       subtitle?: string;
       columnWidths?: number[];
     }
-  ): void {
+  ): Promise<void> {
+    const XLSX = await import('xlsx');
     const workbook = XLSX.utils.book_new();
 
     const allRows: (string | number | boolean | null | undefined)[][] = [];

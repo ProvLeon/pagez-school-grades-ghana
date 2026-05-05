@@ -217,12 +217,12 @@ export const BulkOperationsSection = () => {
     resetResultsProgress();
   };
 
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
     try {
       if (activeOperation === 'students') {
         const className = classes.find(c => c.id === targetClass)?.name;
         const deptName = departments.find(d => d.id === targetDepartment)?.name;
-        TemplateService.generateStudentRegistrationTemplate(className, deptName, 50);
+        await TemplateService.generateStudentRegistrationTemplate(className, deptName, 50);
         toast({
           title: "Template Downloaded",
           description: "Student registration template has been downloaded."
@@ -251,7 +251,7 @@ export const BulkOperationsSection = () => {
         const caTypesForTemplate = selectedCA
           ? [{ id: selectedCA.id, name: selectedCA.name }]
           : caTypes.map(ca => ({ id: ca.id, name: ca.name }));
-        TemplateService.generateResultsEntryTemplate(
+        await TemplateService.generateResultsEntryTemplate(
           className,
           deptName,
           students,

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
 import { formatDate, formatPhoneNumber } from '@/utils/dateUtils';
 
 export interface ParsedStudentData {
@@ -35,8 +34,9 @@ export const useExcelParser = () => {
       return new Promise((resolve) => {
         const reader = new FileReader();
 
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
           try {
+            const XLSX = await import('xlsx');
             const data = event.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
 
