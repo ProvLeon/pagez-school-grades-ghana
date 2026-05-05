@@ -206,7 +206,7 @@ export const ReportsExportSection = () => {
             ['Class', 'Average', 'Pass Rate'],
             ...deptSummary.summary.classPerformance.map(c => [c.className, c.average, `${c.passRate}%`])
           ];
-          ExportService.exportToExcel(
+          await ExportService.exportToExcel(
             deptData,
             'Department Summary',
             `Department_Summary_${filters.term.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`,
@@ -240,7 +240,7 @@ export const ReportsExportSection = () => {
               s.subject, s.averageScore, s.highestScore, s.lowestScore, `${s.passRate}%`
             ])
           ];
-          ExportService.exportToExcel(
+          await ExportService.exportToExcel(
             perfExport,
             'Performance Analysis',
             `Performance_Analysis_${filters.term.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`,
@@ -268,7 +268,7 @@ export const ReportsExportSection = () => {
               s.studentId, s.studentName, s.className, s.daysPresent, s.daysAbsent, s.daysOpened, `${s.attendanceRate}%`
             ])
           ];
-          ExportService.exportToExcel(
+          await ExportService.exportToExcel(
             attExport,
             'Attendance Summary',
             `Attendance_Summary_${filters.term.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`,

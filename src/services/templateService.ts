@@ -1,5 +1,5 @@
 
-import XLSX from 'xlsx-js-style';
+import type { WorkSheet } from 'xlsx';
 
 export interface TemplateColumn {
   header: string;
@@ -112,7 +112,7 @@ function getColLetter(index: number): string {
 
 // Helper to apply data validation
 function addDataValidation(
-  sheet: XLSX.WorkSheet,
+  sheet: WorkSheet,
   colIndex: number,
   startRow: number,
   endRow: number,
@@ -133,11 +133,12 @@ function addDataValidation(
 }
 
 export class TemplateService {
-  static generateStudentRegistrationTemplate(
+  static async generateStudentRegistrationTemplate(
     className?: string,
     departmentName?: string,
     expectedCount: number = 50
-  ): void {
+  ): Promise<void> {
+    const XLSX = (await import('xlsx-js-style')).default;
     const columns: TemplateColumn[] = [
       { header: 'Full Name', key: 'full_name', width: 28, required: true, example: 'John Doe Mensah' },
       { header: 'Gender', key: 'gender', width: 12, required: true, validation: { type: 'list', options: ['Male', 'Female'] }, example: 'Male' },
@@ -270,14 +271,15 @@ export class TemplateService {
     XLSX.writeFile(workbook, filename);
   }
 
-  static generateResultsEntryTemplate(
+  static async generateResultsEntryTemplate(
     className?: string,
     departmentName?: string,
     students: Array<{ student_id: string; full_name: string }> = [],
     subjects: Array<{ name: string; code?: string }> = [],
     caTypes: Array<{ id: string; name: string }> = [],
     academicYear?: string
-  ): void {
+  ): Promise<void> {
+    const XLSX = (await import('xlsx-js-style')).default;
     // Get example CA Type from the list or use default
     const caTypeExample = caTypes.length > 0 ? caTypes[0].name : 'SBA 30/70';
     const caTypeOptions = caTypes.length > 0 ? caTypes.map(ct => ct.name) : undefined;
@@ -459,10 +461,11 @@ export class TemplateService {
     XLSX.writeFile(workbook, filename);
   }
 
-  static generateAttendanceTemplate(
+  static async generateAttendanceTemplate(
     className?: string,
     students: Array<{ student_id: string; full_name: string }> = []
-  ): void {
+  ): Promise<void> {
+    const XLSX = (await import('xlsx-js-style')).default;
     const columns: TemplateColumn[] = [
       { header: 'Date', key: 'date', width: 16, required: true, validation: { type: 'date', format: 'DD/MM/YYYY' } },
       { header: 'Student ID', key: 'student_id', width: 14, required: true },

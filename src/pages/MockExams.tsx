@@ -67,8 +67,8 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { getMockGradeLabel } from "@/utils/mockGradeCalculations";
 import { cn } from "@/lib/utils";
 
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// jspdf and jspdf-autotable are dynamically imported inside the PDF export
+// handlers below to keep them out of the initial page bundle.
 
 // Stats Card Component
 const StatCard = ({
@@ -457,9 +457,11 @@ export default function MockExams() {
   const currentSession = sessions.find((s) => s.id === selectedSessionId);
 
   // Export PDF with detailed student results and subject scores
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!currentSession || filteredResults.length === 0) return;
 
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -984,6 +986,9 @@ export default function MockExams() {
     if (!currentSession) return;
 
     toast({ title: "Generating PDF...", description: `Preparing result for ${result.student_name}.` });
+
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
 
     // Calculate rank if not provided (find the position in filtered results)
     const studentRank = rank !== undefined ? rank : filteredResults.findIndex(r => r.id === result.id) + 1;

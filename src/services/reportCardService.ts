@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jspdf and jspdf-autotable are dynamically imported inside generatePDF
+// to keep them out of the initial bundle (~444 KB combined).
 
 export interface ReportCardData {
   student: {
@@ -367,7 +367,8 @@ export class ReportCardService {
   }
 
   // Helper method to add rounded border around an image
-  private static addRoundedBorder(pdf: jsPDF, x: number, y: number, width: number, height: number, radius: number = 2) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private static addRoundedBorder(pdf: any, x: number, y: number, width: number, height: number, radius: number = 2) {
     const lineWidth = 0.5;
     pdf.setLineWidth(lineWidth);
     pdf.setDrawColor(0, 0, 0); // Black border
@@ -429,6 +430,8 @@ export class ReportCardService {
   }
 
   static async generatePDF(data: ReportCardData): Promise<Blob> {
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();

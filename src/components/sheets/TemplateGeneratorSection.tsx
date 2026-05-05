@@ -66,7 +66,7 @@ export const TemplateGeneratorSection = () => {
     return subjects;
   };
 
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
     if (!selectedTemplate) {
       toast({
         title: "Template Required",
@@ -83,13 +83,13 @@ export const TemplateGeneratorSection = () => {
     try {
       switch (selectedTemplate) {
         case 'student_registration':
-          TemplateService.generateStudentRegistrationTemplate(className, departmentName, parseInt(studentCount) || 50);
+          await TemplateService.generateStudentRegistrationTemplate(className, departmentName, parseInt(studentCount) || 50);
           break;
         case 'results_entry':
-          TemplateService.generateResultsEntryTemplate(className, departmentName, students, getFilteredSubjects());
+          await TemplateService.generateResultsEntryTemplate(className, departmentName, students, getFilteredSubjects());
           break;
         case 'attendance':
-          TemplateService.generateAttendanceTemplate(className, students);
+          await TemplateService.generateAttendanceTemplate(className, students);
           break;
         default:
           toast({

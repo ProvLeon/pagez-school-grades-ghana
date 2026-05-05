@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
 
 export interface ParsedResultData {
   student_id: string;
@@ -41,8 +40,9 @@ export const useResultsExcelParser = () => {
       return new Promise((resolve) => {
         const reader = new FileReader();
 
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
           try {
+            const XLSX = await import('xlsx');
             const data = event.target?.result as string | ArrayBuffer;
             const workbook = XLSX.read(data, { type: 'binary' });
 

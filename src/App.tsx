@@ -249,8 +249,9 @@ const App = () => {
                   <RouteAwareHelpButton />
                   <Suspense fallback={<PageLoader />}>
                   <Routes>
-                    {/* Public Routes */}
-                    <Route path="/" element={<Index />} />
+                    {/* Landing page: own null-fallback Suspense — no spinner on refresh */}
+                    <Route path="/" element={<Suspense fallback={null}><Index /></Suspense>} />
+                    {/* All other routes use the outer Suspense for their loading state */}
                     <Route path="/login" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <Login />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
@@ -482,7 +483,7 @@ const App = () => {
                     {/* 404 - Keep this last */}
                     <Route path="*" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <NotFound />} />
                   </Routes>
-                    </Suspense>
+                  </Suspense>
                 </WalkthroughProvider>
               </AuthProvider>
             </ThemeProvider>
