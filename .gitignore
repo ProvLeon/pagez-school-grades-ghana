@@ -61,22 +61,12 @@ fix_db/
 *local.n
 temp_auto_push.bat
 temp_interactive_push.bat
+docs/
+.zed/
 AI_REMARK_FIX_SUMMARY.md
 CLIENT_PROPOSAL_eResults_GH copy.md
-CLIENT_PROPOSAL_eResults_GH.md
-COMPLETE_DATABASE_SETUP_UPDATED.md
-.zed/artifacts/pagez-school-grades-ghana2/task.md
-docs/FLOW_DIAGRAM.md
-docs/AI_REMARK_GENERATION_TROUBLESHOOTING.md
-docs/QUICK_REFERENCE.md
-docs/README.md
-docs/SETUP_OPENROUTER_API.md
-docs/fixes/ACADEMIC_YEAR_SYNC_FIX.md
-docs/implementation/IMPLEMENTATION_SUMMARY.md
-docs/improvements/ALL_IMPROVEMENTS_SUMMARY.md
-docs/IMPLEMENTATION_CHECKLIST.md
-.zed/artifacts/pagez-school-grades-ghana2/Implementation.md
 client_proposal_SaaS_billing.md
+COMPLETE_DATABASE_SETUP_UPDATED.md
+CLIENT_PROPOSAL_eResults_GH.md
 FINAL_SUMMARY.txt
-.gitignore
 CHANGES_SUMMARY.txt
