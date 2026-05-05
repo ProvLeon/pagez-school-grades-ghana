@@ -61,3 +61,12 @@ fix_db/
 *local.n
 temp_auto_push.bat
 temp_interactive_push.bat
+docs/
+.zed/
+AI_REMARK_FIX_SUMMARY.md
+CLIENT_PROPOSAL_eResults_GH copy.md
+client_proposal_SaaS_billing.md
+COMPLETE_DATABASE_SETUP_UPDATED.md
+CLIENT_PROPOSAL_eResults_GH.md
+FINAL_SUMMARY.txt
+CHANGES_SUMMARY.txt
