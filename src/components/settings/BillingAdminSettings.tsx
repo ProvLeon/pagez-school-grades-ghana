@@ -228,8 +228,8 @@ export const BillingAdminSettings: React.FC = () => {
         // No committed seats yet — seed from enrolled count or economic minimum, whichever is higher
         seed = Math.max(studentCount, MIN_ECONOMIC_SEATS);
       } else if (status === 'active') {
-        // Mid-year top-up — anchor to what they already paid for
-        seed = Math.max(declared, studentCount);
+        // Top-up mode: input is the ADDITIONAL seats to buy — seed at 1
+        seed = 1;
       } else {
         // trial_expired / grace / locked — renewal: declared takes priority, studentCount as safety net
         seed = Math.max(declared, studentCount);
@@ -299,29 +299,40 @@ export const BillingAdminSettings: React.FC = () => {
   const isActiveSubscription = subscription_status === 'active';
 
   // ── Per-status seat floor ───────────────────────────────────────────────
-  // active (top-up): can never go below already-committed declared count or enrolled students
-  // all others: floor is the higher of the trial cap or currently enrolled students
+  // active (top-up): input is a DELTA — minimum 1 additional seat
+  // all others: input is the TOTAL — floor is higher of trial cap or enrolled count
   const seatFloor = isActiveSubscription
-    ? Math.max(declared_seat_count, studentCount)
+    ? 1
     : Math.max(TRIAL_SEAT_CAP, studentCount);
 
-  // ── Default seat seed (fallback when input is empty) ───────────────────
+  // ── Seat count resolution ───────────────────────────────────────────────
+  // Active top-up: resolvedDelta = additional seats being bought
+  //               resolvedSeats  = declared + delta  (new total sent to Paystack)
+  // All other states: resolvedSeats = total seats as typed
   const defaultSeats = subscription_status === 'trial'
     ? Math.max(studentCount, MIN_ECONOMIC_SEATS)
     : Math.max(declared_seat_count, studentCount);
 
-  const resolvedSeats = seatInput === '' ? defaultSeats : (seatInput as number);
-  const seatsValid = (resolvedSeats as number) >= seatFloor;
-  const annualFee = calcAnnualFee(resolvedSeats as number);
-  const isMinimumApplied =
-    (resolvedSeats as number) * PER_SEAT_RATE < MINIMUM_FEE;
+  const resolvedDelta: number = isActiveSubscription
+    ? (seatInput === '' || (seatInput as number) < 1 ? 1 : (seatInput as number))
+    : 0;
+
+  const resolvedSeats: number = isActiveSubscription
+    ? declared_seat_count + resolvedDelta
+    : (seatInput === '' ? defaultSeats : (seatInput as number));
+
+  const seatsValid = isActiveSubscription
+    ? resolvedDelta >= 1
+    : resolvedSeats >= seatFloor;
+
+  const annualFee = calcAnnualFee(resolvedSeats);
+  const isMinimumApplied = resolvedSeats * PER_SEAT_RATE < MINIMUM_FEE;
 
   // ── Inline seat validation states ──────────────────────────────────────
-  const isBelowCommitted = isActiveSubscription &&
-    (resolvedSeats as number) < declared_seat_count;
-  const isBelowEnrolled = (resolvedSeats as number) < studentCount;
-  const isBelowEconomic = !isBelowCommitted && !isBelowEnrolled &&
-    (resolvedSeats as number) < MIN_ECONOMIC_SEATS;
+  // isBelowCommitted is impossible in delta mode (delta >= 1 always adds seats)
+  const isBelowCommitted = false;
+  const isBelowEnrolled = !isActiveSubscription && resolvedSeats < studentCount;
+  const isBelowEconomic = !isBelowEnrolled && resolvedSeats < MIN_ECONOMIC_SEATS;
 
   // ── Per-status panel labels ─────────────────────────────────────────────
   const panelTitle = (() => {
@@ -698,23 +709,27 @@ export const BillingAdminSettings: React.FC = () => {
                   className="text-xs font-semibold text-neutral-600 uppercase tracking-wide"
                 >
                   {isActiveSubscription
-                    ? 'Seats to add (top-up)'
+                    ? 'Additional seats to add'
                     : 'Students to register this year'}
                 </Label>
                 <div className="flex items-center gap-2">
-                  {/* Decrease button — disabled at the floor */}
+                  {/* Decrease button */}
                   <button
                     type="button"
-                    aria-label="Decrease seats by 10"
-                    disabled={(resolvedSeats as number) <= seatFloor}
-                    onClick={() =>
-                      setSeatInput(
-                        Math.max(seatFloor, (resolvedSeats as number) - 10)
-                      )
-                    }
+                    aria-label="Decrease seats by 1"
+                    disabled={isActiveSubscription
+                      ? resolvedDelta <= 1
+                      : resolvedSeats <= seatFloor}
+                    onClick={() => {
+                      if (isActiveSubscription) {
+                        setSeatInput(Math.max(1, resolvedDelta - 1));
+                      } else {
+                        setSeatInput(Math.max(seatFloor, resolvedSeats - 10));
+                      }
+                    }}
                     className={cn(
                       'w-9 h-9 rounded-lg border flex items-center justify-center transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300',
-                      (resolvedSeats as number) <= seatFloor
+                      (isActiveSubscription ? resolvedDelta <= 1 : resolvedSeats <= seatFloor)
                         ? 'border-neutral-100 bg-neutral-50 cursor-not-allowed opacity-35'
                         : 'border-neutral-200 bg-neutral-50 hover:bg-neutral-100 active:bg-neutral-200'
                     )}
@@ -725,8 +740,8 @@ export const BillingAdminSettings: React.FC = () => {
                   <Input
                     id="seat-count"
                     type="number"
-                    min={seatFloor}
-                    step={10}
+                    min={isActiveSubscription ? 1 : seatFloor}
+                    step={1}
                     value={seatInput}
                     onChange={(e) => {
                       if (e.target.value === '') {
@@ -737,14 +752,14 @@ export const BillingAdminSettings: React.FC = () => {
                       }
                     }}
                     onBlur={() => {
-                      // Clamp to floor on blur — covers both empty and below-floor typed values
-                      if (seatInput === '' || (seatInput as number) < seatFloor) {
-                        setSeatInput(seatFloor);
+                      const floor = isActiveSubscription ? 1 : seatFloor;
+                      if (seatInput === '' || (seatInput as number) < floor) {
+                        setSeatInput(floor);
                       }
                     }}
                     className={cn(
                       'text-center text-base font-bold h-9 focus:ring-1 focus:ring-blue-100',
-                      (isBelowEnrolled || isBelowCommitted)
+                      isBelowEnrolled
                         ? 'border-red-300 focus:border-red-400'
                         : 'border-neutral-200 focus:border-blue-300'
                     )}
@@ -752,15 +767,32 @@ export const BillingAdminSettings: React.FC = () => {
 
                   <button
                     type="button"
-                    aria-label="Increase seats by 10"
-                    onClick={() =>
-                      setSeatInput((resolvedSeats as number) + 10)
-                    }
+                    aria-label="Increase seats by 1"
+                    onClick={() => {
+                      if (isActiveSubscription) {
+                        setSeatInput(resolvedDelta + 1);
+                      } else {
+                        setSeatInput(resolvedSeats + 10);
+                      }
+                    }}
                     className="w-9 h-9 rounded-lg border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 active:bg-neutral-200 flex items-center justify-center transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
                   >
                     <Plus className="w-3.5 h-3.5 text-neutral-600" />
                   </button>
                 </div>
+
+                {/* For top-up mode: show the resulting new total */}
+                {isActiveSubscription && (
+                  <p className="text-xs text-neutral-500 flex items-center gap-1">
+                    <Info className="w-3 h-3 shrink-0" />
+                    Current: {declared_seat_count} seats
+                    {resolvedDelta > 0 && (
+                      <span className="font-semibold text-neutral-700">
+                        {' '}+{resolvedDelta} → New total: {resolvedSeats} seats
+                      </span>
+                    )}
+                  </p>
+                )}
 
                 {/* Inline contextual guidance — layered by severity */}
                 <AnimatePresence mode="wait">
@@ -797,18 +829,7 @@ export const BillingAdminSettings: React.FC = () => {
                       <Info className="w-3.5 h-3.5 shrink-0" />
                       Below {MIN_ECONOMIC_SEATS} seats, the GHS {MINIMUM_FEE} minimum fee applies — you pay the same for fewer available seats.
                     </motion.p>
-                  ) : isActiveSubscription ? (
-                    <motion.p
-                      key="topup-hint"
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      className="text-xs text-neutral-400 flex items-center gap-1.5"
-                    >
-                      <Info className="w-3.5 h-3.5 shrink-0" />
-                      Seats can only increase mid-year. Current commitment: {declared_seat_count} seats.
-                    </motion.p>
-                  ) : (
+                  ) : isActiveSubscription ? null : (
                     <motion.p
                       key="default-hint"
                       initial={{ opacity: 0, y: -4 }}

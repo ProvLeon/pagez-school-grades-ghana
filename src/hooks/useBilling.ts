@@ -87,16 +87,11 @@ export const useBilling = () => {
     const seats = seatCount ?? billing.declared_seat_count;
     const fee = amountGHS ?? calcAnnualFee(seats);
 
-    // Persist the declared seat count BEFORE opening Paystack so the webhook
-    // can read the correct value if it fires before the frontend updates.
-    if (seatCount !== undefined && seatCount !== billing.declared_seat_count) {
-      await billingService.updateDeclaredSeats(billing.id, seats);
-      // Optimistically update local state so the UI reflects the new cap immediately
-      setBilling(prev =>
-        prev ? { ...prev, declared_seat_count: seats } : null
-      );
-    }
-
+    // NOTE: We do NOT write declared_seat_count to the DB here.
+    // seat_count is forwarded to the verify-payment Edge Function via metadata
+    // and the verifyAndActivate() call — the Edge Function updates declared_seat_count
+    // only after Paystack confirms the payment. Updating before payment would cause
+    // the seat quota to reflect instantly even if the user cancels or closes Paystack.
     const reference = `REF_${Date.now()}_${billing.id.substring(0, 8)}`;
 
     await billingService.initializePayment(
