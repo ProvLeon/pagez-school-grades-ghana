@@ -34,8 +34,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [initialAuthLoading, setInitialAuthLoading] = useState(true);
   const { toast } = useToast();
 
-  const { data: userProfile, isLoading: profileLoading } = useUserProfile(user?.id);
-  const { data: teacherRecord, isLoading: teacherLoading } = useTeacherByUserId(user?.id);
+  const { data: userProfile, isLoading: profileLoading, isFetched: profileFetched } = useUserProfile(user?.id);
+  const { data: teacherRecord, isLoading: teacherLoading, isFetched: teacherFetched } = useTeacherByUserId(user?.id);
+
+  // Roles are only trustworthy once BOTH queries have fetched at least once
+  // for the current user. `isFetched` resets to false automatically whenever
+  // the queryKey changes (i.e. userId changes), so this correctly blocks any
+  // intermediate render where profileLoading/teacherLoading haven't started yet.
+  const rolesReady = !user || (profileFetched && teacherFetched);
 
   // Derive role from profile type first (source of truth).
   // teacherRecord is only a fallback for users who haven't had their profile
@@ -170,9 +176,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [clearInvalidSession]);
 
-  // Include both initial auth loading AND profile/teacher loading
-  // This ensures we don't show "Access Denied" while profile or teacher record is still loading
-  const contextLoading = initialAuthLoading || (!!user && (profileLoading || teacherLoading));
+  // Hold the loading gate open until:
+  // 1. The initial auth session check is done, AND
+  // 2. Both profile + teacher queries have fetched at least once for the current user.
+  // Using rolesReady (isFetched-based) instead of isLoading prevents the one-frame
+  // window where isLoading is still false before React Query kicks off its fetch.
+  const contextLoading = initialAuthLoading || !rolesReady;
 
   const contextValue: AuthContextType = {
     user,

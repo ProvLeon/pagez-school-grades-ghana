@@ -36,7 +36,7 @@ const ProtectedRoute = ({
   children,
   requireAdmin = false,
 }: ProtectedRouteProps) => {
-  const { userProfile, loading, profileLoading, isAdmin, isTeacher, isAuthenticated } = useAuth();
+  const { userProfile, loading, isAdmin, isTeacher, isAuthenticated } = useAuth();
   const location = useLocation();
 
   const disableAuth = import.meta.env.VITE_DISABLE_AUTH === "true";
@@ -45,8 +45,10 @@ const ProtectedRoute = ({
     return <>{children}</>;
   }
 
-  // Show loading while auth is initializing OR while profile is loading for authenticated users
-  if (loading || (isAuthenticated && profileLoading)) {
+  // Show loading while auth initialises OR while role data hasn't been fetched yet.
+  // contextLoading (from AuthContext) is now gated on isFetched for both profile
+  // and teacher queries, so a single check here is sufficient.
+  if (loading) {
     return <LoadingComp message="Authenticating" subtext="Verifying your credentials" />;
   }
 
