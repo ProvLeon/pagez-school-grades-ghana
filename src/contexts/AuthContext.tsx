@@ -37,9 +37,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: userProfile, isLoading: profileLoading } = useUserProfile(user?.id);
   const { data: teacherRecord, isLoading: teacherLoading } = useTeacherByUserId(user?.id);
 
-  // User is a teacher if their profile says so OR if they have a linked teacher record
-  const isTeacher = userProfile?.user_type === 'teacher' || !!teacherRecord;
+  // Derive role from profile type first (source of truth).
+  // teacherRecord is only a fallback for users who haven't had their profile
+  // created yet — it must never override an admin's actual role.
   const isAdmin = ['admin', 'super_admin'].includes((userProfile?.user_type as string) ?? '');
+  const isTeacher = !isAdmin && (userProfile?.user_type === 'teacher' || !!teacherRecord);
   const isAuthenticated = !!user;
 
   // Function to refresh user data from Supabase

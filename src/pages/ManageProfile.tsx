@@ -22,7 +22,7 @@ const generateUsername = (name: string): string => {
 
 const ManageProfile = () => {
   const navigate = useNavigate();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, isTeacher, teacherRecord } = useAuth();
   const { toast } = useToast();
   const [showGuides, setShowGuides] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -55,6 +55,7 @@ const ManageProfile = () => {
     fullName: user?.user_metadata?.full_name || "",
     email: user?.email || "",
     username: getInitialUsername(),
+    phoneNumber: "",
     newPassword: ""
   });
 
