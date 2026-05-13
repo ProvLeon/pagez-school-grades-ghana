@@ -155,13 +155,22 @@ const LandingFooter = () => {
             &copy; {currentYear} PB Pagez LTD. All Rights Reserved.
           </p>
           <div className="flex items-center gap-6 text-xs text-white/40">
-            <a href="#" className="hover:text-white/60 transition-colors">
+            <Link
+              to="/privacy"
+              className="hover:text-white/60 transition-colors"
+            >
               Privacy Policy
-            </a>
-            <a href="#" className="hover:text-white/60 transition-colors">
+            </Link>
+            <Link
+              to="/terms"
+              className="hover:text-white/60 transition-colors"
+            >
               Terms of Service
-            </a>
-            <a href="#" className="hover:text-white/60 transition-colors">
+            </Link>
+            <a
+              href="#"
+              className="hover:text-white/60 transition-colors"
+            >
               Cookie Policy
             </a>
           </div>

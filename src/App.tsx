@@ -40,6 +40,10 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const SignUp = lazy(() => import("./pages/SignUp"));
 
+// Legal pages
+const TermsAndConditions = lazy(() => import("./components/legal/TermsAndConditions"));
+const PrivacyPolicy = lazy(() => import("./components/legal/PrivacyPolicy"));
+
 // Subject pages
 const ManageSubjects = lazy(() => import("./pages/subjects/ManageSubjects"));
 const ManageDepartments = lazy(() => import("./pages/subjects/ManageDepartments"));
@@ -264,241 +268,245 @@ const App = () => {
                   <WalkthroughOverlay />
                   <RouteAwareHelpButton />
                   <Suspense fallback={<PageLoader />}>
-                  <Routes>
-                    {/* Landing page: own null-fallback Suspense — no spinner on refresh */}
-                    <Route path="/" element={<Suspense fallback={null}><Index /></Suspense>} />
-                    {/* All other routes use the outer Suspense for their loading state */}
-                    <Route path="/login" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <Login />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/signup" element={<SignUp />} />
-                    <Route path="/student-reports" element={<PublicReports />} />
-                    <Route path="/mock-results" element={<PublicMockResults />} />
-                    <Route path="/mock-results/:sessionId" element={<PublicMockResults />} />
+                    <Routes>
+                      {/* Landing page: own null-fallback Suspense — no spinner on refresh */}
+                      <Route path="/" element={<Suspense fallback={null}><Index /></Suspense>} />
+                      {/* All other routes use the outer Suspense for their loading state */}
+                      <Route path="/login" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <Login />} />
+                      <Route path="/forgot-password" element={<ForgotPassword />} />
+                      <Route path="/reset-password" element={<ResetPassword />} />
+                      <Route path="/signup" element={<SignUp />} />
+                      <Route path="/student-reports" element={<PublicReports />} />
+                      <Route path="/mock-results" element={<PublicMockResults />} />
+                      <Route path="/mock-results/:sessionId" element={<PublicMockResults />} />
 
-                    {/* No Organization Route - Protected but no sidebar layout */}
-                    <Route
-                      path="/no-organization"
-                      element={
-                        <ProtectedRoute>
-                          <NoOrganization />
-                        </ProtectedRoute>
-                      }
-                    />
+                      {/* Legal Pages */}
+                      <Route path="/terms" element={<TermsAndConditions />} />
+                      <Route path="/privacy" element={<PrivacyPolicy />} />
 
-                    {/* Protected Routes */}
-                    <Route
-                      path="/dashboard"
-                      element={
-                        <ProtectedAppRoute>
-                          <Dashboard />
-                        </ProtectedAppRoute>
-                      }
-                    />
+                      {/* No Organization Route - Protected but no sidebar layout */}
+                      <Route
+                        path="/no-organization"
+                        element={
+                          <ProtectedRoute>
+                            <NoOrganization />
+                          </ProtectedRoute>
+                        }
+                      />
 
-                    {/* Classes */}
-                    <Route
-                      path="/classes"
-                      element={
-                        <ProtectedAppRoute>
-                          <Classes />
-                        </ProtectedAppRoute>
-                      }
-                    />
+                      {/* Protected Routes */}
+                      <Route
+                        path="/dashboard"
+                        element={
+                          <ProtectedAppRoute>
+                            <Dashboard />
+                          </ProtectedAppRoute>
+                        }
+                      />
 
-                    {/* Subjects */}
-                    <Route
-                      path="/subjects"
-                      element={
-                        <ProtectedAppRoute>
-                          <Subjects />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/subjects/manage-subjects"
-                      element={
-                        <ProtectedAppRoute>
-                          <ManageSubjects />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/subjects/manage-departments"
-                      element={
-                        <ProtectedAppRoute requireAdmin>
-                          <ManageDepartments />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/subjects/manage-combinations"
-                      element={
-                        <ProtectedAppRoute>
-                          <ManageCombinations />
-                        </ProtectedAppRoute>
-                      }
-                    />
+                      {/* Classes */}
+                      <Route
+                        path="/classes"
+                        element={
+                          <ProtectedAppRoute>
+                            <Classes />
+                          </ProtectedAppRoute>
+                        }
+                      />
 
-                    {/* Students */}
-                    <Route
-                      path="/students"
-                      element={
-                        <ProtectedAppRoute>
-                          <Students />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/students/add-students"
-                      element={
-                        <ProtectedAppRoute>
-                          <AddStudents />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/students/manage-students"
-                      element={
-                        <ProtectedAppRoute>
-                          <ManageStudents />
-                        </ProtectedAppRoute>
-                      }
-                    />
+                      {/* Subjects */}
+                      <Route
+                        path="/subjects"
+                        element={
+                          <ProtectedAppRoute>
+                            <Subjects />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/subjects/manage-subjects"
+                        element={
+                          <ProtectedAppRoute>
+                            <ManageSubjects />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/subjects/manage-departments"
+                        element={
+                          <ProtectedAppRoute requireAdmin>
+                            <ManageDepartments />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/subjects/manage-combinations"
+                        element={
+                          <ProtectedAppRoute>
+                            <ManageCombinations />
+                          </ProtectedAppRoute>
+                        }
+                      />
 
-                    {/* Results */}
-                    <Route
-                      path="/results"
-                      element={
-                        <ProtectedAppRoute>
-                          <Results />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/results/add-results"
-                      element={
-                        <ProtectedAppRoute>
-                          <AddResults />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/results/manage-results"
-                      element={
-                        <ProtectedAppRoute>
-                          <ManageResults />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/results/view/:id"
-                      element={
-                        <ProtectedAppRoute>
-                          <ViewResult />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/results/edit/:id"
-                      element={
-                        <ProtectedAppRoute>
-                          <EditResult />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/results/grading-settings"
-                      element={
-                        <ProtectedAppRoute requireAdmin>
-                          <GradingSettings />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/results/analytics"
-                      element={
-                        <ProtectedAppRoute>
-                          <ResultsAnalytics />
-                        </ProtectedAppRoute>
-                      }
-                    />
+                      {/* Students */}
+                      <Route
+                        path="/students"
+                        element={
+                          <ProtectedAppRoute>
+                            <Students />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/students/add-students"
+                        element={
+                          <ProtectedAppRoute>
+                            <AddStudents />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/students/manage-students"
+                        element={
+                          <ProtectedAppRoute>
+                            <ManageStudents />
+                          </ProtectedAppRoute>
+                        }
+                      />
 
-                    {/* Mock Exams */}
-                    <Route
-                      path="/mock-exams"
-                      element={
-                        <ProtectedAppRoute>
-                          <MockExams />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/mock/add-scores"
-                      element={
-                        <ProtectedAppRoute>
-                          <AddMockScores />
-                        </ProtectedAppRoute>
-                      }
-                    />
+                      {/* Results */}
+                      <Route
+                        path="/results"
+                        element={
+                          <ProtectedAppRoute>
+                            <Results />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/results/add-results"
+                        element={
+                          <ProtectedAppRoute>
+                            <AddResults />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/results/manage-results"
+                        element={
+                          <ProtectedAppRoute>
+                            <ManageResults />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/results/view/:id"
+                        element={
+                          <ProtectedAppRoute>
+                            <ViewResult />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/results/edit/:id"
+                        element={
+                          <ProtectedAppRoute>
+                            <EditResult />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/results/grading-settings"
+                        element={
+                          <ProtectedAppRoute requireAdmin>
+                            <GradingSettings />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/results/analytics"
+                        element={
+                          <ProtectedAppRoute>
+                            <ResultsAnalytics />
+                          </ProtectedAppRoute>
+                        }
+                      />
 
-                    {/* Management */}
-                    <Route
-                      path="/manage-sheets"
-                      element={
-                        <ProtectedAppRoute requireAdmin>
-                          <ManageSheets />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/manage-transfers"
-                      element={
-                        <ProtectedAppRoute requireAdmin>
-                          <ManageTransfers />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/manage-teacher"
-                      element={
-                        <ProtectedAppRoute requireAdmin>
-                          <ManageTeacher />
-                        </ProtectedAppRoute>
-                      }
-                    />
+                      {/* Mock Exams */}
+                      <Route
+                        path="/mock-exams"
+                        element={
+                          <ProtectedAppRoute>
+                            <MockExams />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/mock/add-scores"
+                        element={
+                          <ProtectedAppRoute>
+                            <AddMockScores />
+                          </ProtectedAppRoute>
+                        }
+                      />
 
-                    {/* Settings & Profile */}
-                    <Route
-                      path="/settings"
-                      element={
-                        <ProtectedAppRoute requireAdmin>
-                          <Settings />
-                        </ProtectedAppRoute>
-                      }
-                    />
-                    <Route
-                      path="/profile"
-                      element={
-                        <ProtectedAppRoute>
-                          <ManageProfile />
-                        </ProtectedAppRoute>
-                      }
-                    />
+                      {/* Management */}
+                      <Route
+                        path="/manage-sheets"
+                        element={
+                          <ProtectedAppRoute requireAdmin>
+                            <ManageSheets />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/manage-transfers"
+                        element={
+                          <ProtectedAppRoute requireAdmin>
+                            <ManageTransfers />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/manage-teacher"
+                        element={
+                          <ProtectedAppRoute requireAdmin>
+                            <ManageTeacher />
+                          </ProtectedAppRoute>
+                        }
+                      />
 
-                    {/* Legacy routes - redirect to unified routes */}
-                    <Route path="/teacher/dashboard" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/teacher-dashboard" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/teacher/results/add" element={<Navigate to="/results/add-results" replace />} />
-                    <Route path="/teacher/results/manage" element={<Navigate to="/results/manage-results" replace />} />
-                    <Route path="/teacher/manage-results" element={<Navigate to="/results/manage-results" replace />} />
+                      {/* Settings & Profile */}
+                      <Route
+                        path="/settings"
+                        element={
+                          <ProtectedAppRoute requireAdmin>
+                            <Settings />
+                          </ProtectedAppRoute>
+                        }
+                      />
+                      <Route
+                        path="/profile"
+                        element={
+                          <ProtectedAppRoute>
+                            <ManageProfile />
+                          </ProtectedAppRoute>
+                        }
+                      />
 
-                    {/* Redirects */}
-                    <Route path="/manage-profile" element={<Navigate to="/profile" replace />} />
+                      {/* Legacy routes - redirect to unified routes */}
+                      <Route path="/teacher/dashboard" element={<Navigate to="/dashboard" replace />} />
+                      <Route path="/teacher-dashboard" element={<Navigate to="/dashboard" replace />} />
+                      <Route path="/teacher/results/add" element={<Navigate to="/results/add-results" replace />} />
+                      <Route path="/teacher/results/manage" element={<Navigate to="/results/manage-results" replace />} />
+                      <Route path="/teacher/manage-results" element={<Navigate to="/results/manage-results" replace />} />
 
-                    {/* 404 - Keep this last */}
-                    <Route path="*" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <NotFound />} />
-                  </Routes>
+                      {/* Redirects */}
+                      <Route path="/manage-profile" element={<Navigate to="/profile" replace />} />
+
+                      {/* 404 - Keep this last */}
+                      <Route path="*" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <NotFound />} />
+                    </Routes>
                   </Suspense>
                 </WalkthroughProvider>
               </AuthProvider>

@@ -34,14 +34,14 @@ export const billingService = {
       .from('organizations')
       .select('id, name, subscription_status, declared_seat_count, trial_ends_at, current_subscription_ends_at, billing_enabled')
       .eq('id', userOrg.organization_id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching billing details:', error);
       return null;
     }
 
-    return data as OrganizationBilling;
+    return data as OrganizationBilling | null;
   },
 
   async getStudentCount(orgId: string): Promise<number> {

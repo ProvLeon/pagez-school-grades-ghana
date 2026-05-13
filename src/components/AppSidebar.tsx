@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Building2,
   User,
+  HelpCircle,
   LucideIcon
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -143,6 +144,16 @@ const menuItems: MenuItem[] = [
     tourId: "sidebar-profile"
     // All roles can see their profile
   },
+  {
+    title: "Help & Legal",
+    url: "#",
+    icon: HelpCircle,
+    tourId: "sidebar-legal",
+    subItems: [
+      { title: "Privacy Policy", url: "/privacy" },
+      { title: "Terms of Service", url: "/terms" }
+    ]
+  },
 ];
 
 // Helper to check if user has access to a menu item
@@ -187,34 +198,46 @@ export function AppSidebar() {
 
     const fetchSchoolSettings = async () => {
       try {
-        // Get current user
         const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user || !isMounted) return;
 
-        if (userError || !user || !isMounted) {
-          console.error('Error getting user:', userError);
-          return;
+        // ── Unified path: get the user's organization_id first ───────────────
+        // Admins have a row in user_organization_profiles (role='admin') just
+        // like teachers. Both can read their own row (RLS: user_id = auth.uid()).
+        const { data: myOrgProfile } = await supabase
+          .from('user_organization_profiles')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (myOrgProfile?.organization_id && isMounted) {
+          // Query school_settings directly by organization_id.
+          // RLS migration 003 allows org members to read their school settings.
+          const { data, error } = await (supabase as any)
+            .from('school_settings')
+            .select('school_name, logo_url')
+            .eq('organization_id', myOrgProfile.organization_id)
+            .maybeSingle();
+
+          if (!error && data && isMounted) {
+            if (data.school_name) setSchoolName(data.school_name);
+            if (data.logo_url) { setSchoolLogo(data.logo_url); setLogoError(false); }
+            return;
+          }
         }
 
-        // Fetch school settings for current user (admin_id = user.id)
-        const { data, error } = await (supabase as any)
+        // ── Fallback for admins without an org profile row ───────────────────
+        // Older admin accounts may not have a user_organization_profiles entry.
+        // Fall back to the legacy admin_id match on school_settings.
+        const { data: adminData } = await (supabase as any)
           .from('school_settings')
           .select('school_name, logo_url')
           .eq('admin_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching school settings:', error);
-          return;
-        }
-
-        if (data && isMounted) {
-          if (data.school_name) {
-            setSchoolName(data.school_name);
-          }
-          if (data.logo_url) {
-            setSchoolLogo(data.logo_url);
-            setLogoError(false);
-          }
+        if (adminData && isMounted) {
+          if (adminData.school_name) setSchoolName(adminData.school_name);
+          if (adminData.logo_url) { setSchoolLogo(adminData.logo_url); setLogoError(false); }
         }
       } catch (error) {
         console.error('Error fetching school settings:', error);

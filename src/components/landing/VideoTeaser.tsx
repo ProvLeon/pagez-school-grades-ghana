@@ -33,7 +33,7 @@ const VideoTeaser: React.FC<VideoTeaserProps> = ({
     const videoId = url.includes("youtu.be")
       ? url.split("/").pop()
       : new URLSearchParams(new URL(url).search).get("v");
-    return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    return `https://www.youtube.com/embed/${videoId}?autoplay=1&vq=hd720`;
   };
 
   const getVimeoEmbedUrl = (url: string) => {
@@ -131,8 +131,9 @@ const VideoTeaser: React.FC<VideoTeaserProps> = ({
                   title={title}
                   className="w-full h-full"
                   frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
                 />
               ) : (
                 // HTML5 video for local files

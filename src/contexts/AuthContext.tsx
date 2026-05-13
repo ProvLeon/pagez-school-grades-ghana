@@ -5,6 +5,7 @@ import { authService } from "@/services/authService";
 import { useUserProfile, Profile } from "@/hooks/useProfiles";
 import { useTeacherByUserId } from "@/hooks/useTeacherClassAccess";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface TeacherRecord {
   id: string;
@@ -33,6 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [initialAuthLoading, setInitialAuthLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: userProfile, isLoading: profileLoading, isFetched: profileFetched } = useUserProfile(user?.id);
   const { data: teacherRecord, isLoading: teacherLoading, isFetched: teacherFetched } = useTeacherByUserId(user?.id);
@@ -68,11 +70,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = useCallback(async () => {
     try {
-      // Clear local user state immediately
+      // 1. Wipe all React Query cached data immediately — prevents stale
+      //    authenticated data from briefly flashing on the login page.
+      queryClient.clear();
+
+      // 2. Clear local user state → ProtectedRoute detects isAuthenticated=false
+      //    and redirects to /login via React Router (no page reload).
       setUser(null);
 
-      // Clear all Supabase-related items from localStorage
-      // This ensures no stale session data remains
+      // 3. Clear any leftover Supabase session keys from storage
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -82,7 +88,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
 
-      // Also clear sessionStorage
       const sessionKeysToRemove: string[] = [];
       for (let i = 0; i < sessionStorage.length; i++) {
         const key = sessionStorage.key(i);
@@ -92,11 +97,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
 
-      // Attempt to sign out from Supabase (this may fail if session already invalid)
+      // 4. Tell Supabase to invalidate the server-side session token
       try {
         await authService.signOut();
       } catch (e) {
-        // Ignore errors - we've already cleared local storage
+        // Safe to ignore — local state is already cleared
         console.warn('Supabase signOut error (ignored):', e);
       }
 
@@ -105,20 +110,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "You have been successfully signed out.",
         variant: "default",
       });
+
+      // NOTE: No window.location.replace here.
+      // setUser(null) already triggers ProtectedRoute → navigate('/login') via
+      // React Router — a smooth SPA transition with no page reload.
     } catch (error) {
-      // Log error but still proceed with sign out
       console.warn('Sign out error:', error);
       toast({
         title: "Signed Out",
         description: "You have been signed out.",
         variant: "default",
       });
-    } finally {
-      // Always redirect to login, regardless of errors
-      // Use replace to prevent back button from returning to authenticated page
-      window.location.replace(window.location.origin + '/login');
     }
-  }, [toast]);
+  }, [toast, queryClient]);
 
   // Clear invalid session data from storage
   const clearInvalidSession = useCallback(async () => {
