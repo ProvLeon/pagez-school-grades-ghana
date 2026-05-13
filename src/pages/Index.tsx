@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Helmet } from "react-helmet";
 import LandingNav from "@/components/landing/LandingNav";
 import HeroSection from "@/components/landing/HeroSection";
@@ -12,6 +13,20 @@ import CTASection from "@/components/landing/CTASection";
 import LandingFooter from "@/components/landing/LandingFooter";
 
 const Index = () => {
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      const id = hash.replace("#", "");
+      const element = document.getElementById(id);
+      if (element) {
+        // Delay slightly to allow the layout to stabilize and animations to start
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: "smooth" });
+        }, 150);
+      }
+    }
+  }, []);
+
   return (
     <>
       <Helmet>

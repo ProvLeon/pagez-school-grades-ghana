@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FileText, GraduationCap, Menu, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +27,7 @@ const LandingNav = () => {
   const [activeSection, setActiveSection] = useState("home");
 
   const navigate = useNavigate();
+  const location = useLocation();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +55,7 @@ const LandingNav = () => {
     });
 
     return () => observers.forEach(o => o.disconnect());
-  }, []);
+  }, [location.pathname]); // Re-run when path changes
 
   // ── Click outside to close dropdown & mobile menu ───────────────────────────
   useEffect(() => {
@@ -82,9 +83,16 @@ const LandingNav = () => {
   const go = (href: string) => {
     setMobileOpen(false);
     setDropdownOpen(false);
+
     if (href.startsWith("#")) {
-      const el = document.querySelector(href);
-      if (el) el.scrollIntoView({ behavior: "smooth" });
+      if (location.pathname === "/") {
+        const el = document.querySelector(href);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+          return;
+        }
+      }
+      navigate(`/${href}`);
     } else {
       navigate(href);
     }

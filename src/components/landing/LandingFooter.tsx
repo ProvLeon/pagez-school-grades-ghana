@@ -1,8 +1,25 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Mail, Phone, MapPin } from "lucide-react";
 
 const LandingFooter = () => {
   const currentYear = new Date().getFullYear();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const go = (href: string) => {
+    if (href.startsWith("#")) {
+      if (location.pathname === "/") {
+        const el = document.querySelector(href);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+          return;
+        }
+      }
+      navigate(`/${href}`);
+    } else {
+      navigate(href);
+    }
+  };
 
   return (
     <footer className="bg-[#0f172a] text-white">
@@ -32,6 +49,8 @@ const LandingFooter = () => {
                 <a
                   key={social.name}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-white/30 hover:text-white/70 transition-colors text-xs font-medium"
                 >
                   {social.name}
@@ -63,12 +82,12 @@ const LandingFooter = () => {
                 </Link>
               </li>
               <li>
-                <a
-                  href="#pricing"
+                <button
+                  onClick={() => go("#pricing")}
                   className="text-white/50 hover:text-white transition-colors"
                 >
                   Pricing
-                </a>
+                </button>
               </li>
               <li>
                 <Link
@@ -88,28 +107,28 @@ const LandingFooter = () => {
             </h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <a
-                  href="#features"
+                <button
+                  onClick={() => go("#features")}
                   className="text-white/50 hover:text-white transition-colors"
                 >
                   Features
-                </a>
+                </button>
               </li>
               <li>
-                <a
-                  href="#why-choose"
+                <button
+                  onClick={() => go("#why-choose")}
                   className="text-white/50 hover:text-white transition-colors"
                 >
                   Why e-Results?
-                </a>
+                </button>
               </li>
               <li>
-                <a
-                  href="#faq"
+                <button
+                  onClick={() => go("#faq")}
                   className="text-white/50 hover:text-white transition-colors"
                 >
                   FAQ
-                </a>
+                </button>
               </li>
               <li>
                 <a
