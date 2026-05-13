@@ -106,8 +106,8 @@ const LandingNav = () => {
 
           {/* ── Logo ─────────────────────────────────────────────────────────── */}
           <a
-            href="#home"
-            onClick={(e) => { e.preventDefault(); go("#home"); }}
+            href="/"
+            onClick={(e) => { e.preventDefault(); go("/"); }}
             className="flex items-center gap-2.5 group shrink-0"
             aria-label="e-Results GH — back to top"
           >
