@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { billingService, TRIAL_SEAT_CAP, calcAnnualFee } from '@/services/billingService';
 import { OrganizationBilling } from '@/types/billing';
 import { useToast } from './use-toast';
@@ -19,9 +19,15 @@ export const useBilling = () => {
     });
   }, []);
 
+  // Guard: only show the full loading skeleton on the FIRST data fetch.
+  // Subsequent re-fetches (after payment, billing toggle, etc.) update state
+  // silently — the existing data stays visible while the new data loads.
+  const hasLoadedRef = useRef(false);
+
   const fetchBilling = async () => {
+    const isFirstLoad = !hasLoadedRef.current;
     try {
-      setLoading(true);
+      if (isFirstLoad) setLoading(true);
       const data = await billingService.fetchBillingDetails();
       setBilling(data);
       if (data) {
@@ -31,7 +37,8 @@ export const useBilling = () => {
     } catch (err) {
       console.error("Failed to load billing:", err);
     } finally {
-      setLoading(false);
+      hasLoadedRef.current = true;
+      if (isFirstLoad) setLoading(false);
     }
   };
 
