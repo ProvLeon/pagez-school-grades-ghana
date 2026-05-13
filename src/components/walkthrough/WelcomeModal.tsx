@@ -118,7 +118,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({
         {/* Content */}
         <div className="px-6 py-6">
           <p className="text-sm text-muted-foreground mb-5">
-            With PB Pagez, you can manage all aspects of your school in one place:
+            With e-Results, you can manage all aspects of your school in one place:
           </p>
 
           {/* Feature grid */}

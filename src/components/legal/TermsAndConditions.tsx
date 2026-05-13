@@ -26,6 +26,8 @@ import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import LandingNav from "@/components/landing/LandingNav";
 import LandingFooter from "@/components/landing/LandingFooter";
 
+import { Button, buttonVariants } from "@/components/ui/button";
+
 interface TermsSection {
   number: string;
   title: string;
@@ -34,7 +36,11 @@ interface TermsSection {
   icon: React.ReactNode;
 }
 
-const TermsAndConditions: React.FC = () => {
+interface TermsAndConditionsProps {
+  isModal?: boolean;
+}
+
+const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ isModal = false }) => {
   const [activeSection, setActiveSection] = useState<string>("acceptance");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -228,15 +234,77 @@ const TermsAndConditions: React.FC = () => {
     day: "numeric",
   });
 
+  if (isModal) {
+    return (
+      <div className="bg-background text-foreground font-sans">
+        <div className="mb-8">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 mb-4">
+            <Scale className="w-3 h-3 text-blue-600" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">Legal Agreement</span>
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight mb-2">Terms & Conditions</h1>
+          <p className="text-sm text-muted-foreground flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+            Last updated: {lastUpdated}
+          </p>
+        </div>
+
+        <div className="space-y-12">
+          <div className="p-6 bg-muted/30 rounded-2xl border border-border/50">
+            <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+              <Scale className="w-5 h-5 text-blue-600" />
+              Understanding Our Terms
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              These Terms and Conditions establish the legal framework for your use of the e-Results GH platform. By accessing or using our platform, you enter into a binding agreement with PB Pagez LTD. We encourage you to read these terms carefully and contact our support team if you have any questions.
+            </p>
+          </div>
+
+          <div className="space-y-12">
+            {termsSections.map((section) => (
+              <section key={section.id} id={section.id} className="scroll-mt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    {section.icon}
+                  </div>
+                  <h2 className="text-xl font-bold">{section.title}</h2>
+                </div>
+                <div className="pl-11 space-y-4">
+                  {Array.isArray(section.content) ? (
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {section.content.map((item, idx) => (
+                        <li key={idx} className="flex gap-3 p-3 rounded-xl bg-muted/20 border border-border/50 text-sm text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500/30 mt-1.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {section.content}
+                    </p>
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-[#1A1A1A] font-sans selection:bg-blue-100 selection:text-blue-900">
-      <LandingNav />
+      {!isModal && <LandingNav />}
 
       {/* Scroll Progress Bar */}
-      <motion.div
-        className="fixed top-[60px] left-0 right-0 h-1 bg-[#2563EB] z-[60] origin-left"
-        style={{ scaleX }}
-      />
+      {!isModal && (
+        <motion.div
+          className="fixed top-[60px] left-0 right-0 h-1 bg-blue-600 z-[60] origin-left"
+          style={{ scaleX }}
+        />
+      )}
+
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden bg-white border-b border-gray-100">
@@ -478,13 +546,19 @@ const TermsAndConditions: React.FC = () => {
                   <div className="flex items-center gap-4 shrink-0">
                     <a
                       href="mailto:support@eresultsgh.com"
-                      className="px-8 py-4 rounded-2xl text-sm font-bold text-white border border-white/10 hover:bg-white/5 transition-all"
+                      className={cn(
+                        buttonVariants({ variant: "outline" }),
+                        "px-8 py-6 rounded-2xl text-sm font-bold border-white/10 !no-underline hover:bg-white/5 hover:text-white transition-all"
+                      )}
                     >
                       Contact Support
                     </a>
                     <Link
                       to="/privacy"
-                      className="px-8 py-4 rounded-2xl text-sm font-bold bg-[#2563EB] hover:bg-blue-500 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 transition-all"
+                      className={cn(
+                        buttonVariants({ variant: "default" }),
+                        "px-8 py-6 rounded-2xl text-sm font-bold text-white bg-[#2563EB] !text-white !no-underline hover:bg-blue-500 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 transition-all"
+                      )}
                     >
                       View Privacy Policy
                     </Link>
@@ -496,39 +570,41 @@ const TermsAndConditions: React.FC = () => {
         </div>
       </div>
 
-      <LandingFooter />
+      {!isModal && <LandingFooter />}
 
       {/* Mobile Floating Menu Button */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed bottom-8 right-8 z-[70] w-14 h-14 rounded-full bg-[#2563EB] text-white shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-      >
-        <AnimatePresence mode="wait">
-          {isMobileMenuOpen ? (
-            <motion.div
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-            >
-              <ChevronDown className="w-6 h-6 rotate-180" />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="menu"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-            >
-              <BookOpen className="w-6 h-6" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </button>
+      {!isModal && (
+        <Button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="lg:hidden fixed bottom-8 right-8 z-[70] w-14 h-14 rounded-full bg-[#2563EB] text-white shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all p-0"
+        >
+          <AnimatePresence mode="wait">
+            {isMobileMenuOpen ? (
+              <motion.div
+                key="close"
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+              >
+                <ChevronDown className="w-6 h-6 rotate-180" />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="menu"
+                initial={{ rotate: 90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: -90, opacity: 0 }}
+              >
+                <BookOpen className="w-6 h-6" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Button>
+      )}
 
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
-        {isMobileMenuOpen && (
+        {isMobileMenuOpen && !isModal && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
@@ -572,12 +648,12 @@ const TermsAndConditions: React.FC = () => {
                 ))}
               </div>
               <div className="p-6 bg-gray-50 shrink-0">
-                <button
+                <Button
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold text-sm shadow-xl shadow-gray-900/10 active:scale-[0.98] transition-all"
+                  className="w-full py-7 bg-gray-900 text-white rounded-2xl font-bold text-sm shadow-xl shadow-gray-900/10 active:scale-[0.98] transition-all hover:bg-gray-800"
                 >
                   Dismiss
-                </button>
+                </Button>
               </div>
             </motion.div>
           </>

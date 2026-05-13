@@ -24,6 +24,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -171,6 +172,7 @@ export function AppSidebar() {
   const [schoolName, setSchoolName] = useState("e-Result System");
   const [schoolLogo, setSchoolLogo] = useState<string | null>(null);
   const { userProfile, isTeacher, isAdmin } = useAuth();
+  const { setOpenMobile } = useSidebar();
 
   // Determine user's role
   const userRole: UserRole = useMemo(() => {
@@ -368,24 +370,50 @@ export function AppSidebar() {
                   </button>
                   {expandedItems.includes(item.title) && (
                     <div className="ml-4 mt-1 pl-4 border-l border-border space-y-1">
-                      {item.subItems.map((subItem) => (
-                        <Link
-                          key={subItem.title}
-                          to={subItem.url}
-                          className={cn(
-                            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                            isActive(subItem.url, true) ? "text-primary dark:text-blue-500 bg-muted" : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          {subItem.title}
-                        </Link>
-                      ))}
+                      {item.subItems.map((subItem) => {
+                        const isModalLink = subItem.url === '/privacy' || subItem.url === '/terms';
+
+                        if (isModalLink) {
+                          const modalType = subItem.url === '/privacy' ? 'privacy' : 'terms';
+                          return (
+                            <button
+                              key={subItem.title}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                window.dispatchEvent(new CustomEvent('openLegalModal', { detail: { type: modalType } }));
+                                setOpenMobile(false);
+                              }}
+                              className={cn(
+                                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full text-left",
+                                "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                              )}
+                            >
+                              {subItem.title}
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <Link
+                            key={subItem.title}
+                            to={subItem.url}
+                            onClick={() => setOpenMobile(false)}
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                              isActive(subItem.url, true) ? "text-primary dark:text-blue-500 bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            )}
+                          >
+                            {subItem.title}
+                          </Link>
+                        );
+                      })}
                     </div>
                   )}
                 </>
               ) : (
                 <Link
                   to={item.url}
+                  onClick={() => setOpenMobile(false)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                     isActive(item.url, true) ? "bg-muted text-primary dark:text-blue-500" : "text-muted-foreground hover:bg-muted hover:text-foreground"

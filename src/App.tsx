@@ -17,6 +17,8 @@ import LoadingComp from "@/components/ui/loading";
 import { getUserOrganizationId } from "@/utils/organizationHelper";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState, lazy, Suspense } from "react";
+import { LegalModal } from "@/components/LegalModal";
+import { useLegalModal } from "@/hooks/useLegalModal";
 
 // ✅ LAZY LOAD all pages instead of static imports
 const Index = lazy(() => import("./pages/Index"));
@@ -97,16 +99,21 @@ const queryClient = new QueryClient({
 });
 
 // Layout wrapper component for protected routes
-const AppLayout = ({ children }: { children: React.ReactNode }) => (
-  <SidebarProvider>
-    <div className="min-h-screen flex w-full max-w-none bg-background">
-      <AppSidebar />
-      <main className="flex-1 min-w-0 w-full">
-        {children}
-      </main>
-    </div>
-  </SidebarProvider>
-);
+const AppLayout = ({ children }: { children: React.ReactNode }) => {
+  const { isOpen, type, close } = useLegalModal();
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full max-w-none bg-background">
+        <AppSidebar />
+        <main className="flex-1 min-w-0 w-full">
+          {children}
+        </main>
+        <LegalModal isOpen={isOpen} type={type} onClose={close} />
+      </div>
+    </SidebarProvider>
+  );
+};
 
 // Protected route wrapper with layout and organization check
 const ProtectedAppRoute = ({

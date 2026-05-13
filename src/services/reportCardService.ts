@@ -907,7 +907,7 @@ export class ReportCardService {
       pdf.setFontSize(7);
       pdf.setFont('helvetica', 'italic');
       pdf.setTextColor(80, 80, 80);
-      const mottoText = `"${data.school.motto}"`;
+      const mottoText = `Motto: "${data.school.motto}"`;
       pdf.text(mottoText, margin + 10, footerTextY, { align: 'left' });
     }
 
@@ -923,7 +923,7 @@ export class ReportCardService {
       pdf.setFontSize(7);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(80, 80, 80);
-      const contactText = `Tel: ${data.school.phone}`;
+      const contactText = `Headteacher's Contact: ${data.school.phone}`;
       pdf.text(contactText, pageWidth - margin - 10, footerTextY, { align: 'right' });
     }
 

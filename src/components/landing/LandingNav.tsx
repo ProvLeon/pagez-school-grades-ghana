@@ -19,8 +19,13 @@ const reportLinks = [
 
 
 
+import { useAuth } from "@/contexts/AuthContext";
+
+import { Button, buttonVariants } from "@/components/ui/button";
+
 // ─── Component ────────────────────────────────────────────────────────────────
 const LandingNav = () => {
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -228,18 +233,30 @@ const LandingNav = () => {
 
           {/* ── Desktop CTAs ─────────────────────────────────────────────────── */}
           <div className="hidden md:flex items-center gap-2.5 shrink-0">
-            <button
-              onClick={() => navigate("/login")}
-              className="text-[13.5px] font-semibold text-gray-700 hover:text-[#2563EB] px-4 py-2 rounded-lg border border-gray-200 hover:border-blue-200 bg-white hover:bg-blue-50/50 transition-all duration-200"
-            >
-              Log in
-            </button>
-            <button
-              onClick={() => navigate("/signup")}
-              className="text-[13.5px] font-semibold bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-5 py-2 rounded-lg shadow-md shadow-blue-500/20 hover:shadow-blue-500/35 hover:-translate-y-px transition-all duration-200"
-            >
-              Start Free Trial
-            </button>
+            {user ? (
+              <Button
+                onClick={() => navigate("/dashboard")}
+                className="text-[13.5px] font-semibold bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-6 py-2.5 rounded-lg shadow-md shadow-blue-500/20 hover:shadow-blue-500/35 hover:-translate-y-px transition-all duration-200 flex items-center gap-2 h-auto"
+              >
+                Go to Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/login")}
+                  className="text-[13.5px] font-semibold text-gray-700 hover:text-[#2563EB] px-4 py-2 rounded-lg border-gray-200 hover:border-blue-200 bg-white hover:bg-blue-50/50 transition-all duration-200 h-auto"
+                >
+                  Log in
+                </Button>
+                <Button
+                  onClick={() => navigate("/signup")}
+                  className="text-[13.5px] font-semibold bg-[#2563EB] hover:bg-[#1d4ed8] text-white px-5 py-2 rounded-lg shadow-md shadow-blue-500/20 hover:shadow-blue-500/35 hover:-translate-y-px transition-all duration-200 h-auto"
+                >
+                  Start Free Trial
+                </Button>
+              </>
+            )}
           </div>
 
           {/* ── Mobile hamburger ─────────────────────────────────────────────── */}
@@ -345,18 +362,30 @@ const LandingNav = () => {
                 animate={{ opacity: 1, x: 0, transition: { delay: (navLinks.length + reportLinks.length + 1) * 0.05, duration: 0.22 } }}
                 className="pt-3 mt-2 border-t border-gray-100 flex flex-col gap-2"
               >
-                <button
-                  onClick={() => { navigate("/login"); setMobileOpen(false); }}
-                  className="w-full text-[14px] font-semibold text-gray-700 border border-gray-200 px-4 py-2.5 rounded-xl hover:border-blue-200 hover:text-[#2563EB] hover:bg-blue-50/50 transition-all"
-                >
-                  Log in
-                </button>
-                <button
-                  onClick={() => { navigate("/signup"); setMobileOpen(false); }}
-                  className="w-full text-[14px] font-semibold bg-[#2563EB] text-white px-4 py-2.5 rounded-xl hover:bg-[#1d4ed8] shadow-md shadow-blue-500/20 transition-all"
-                >
-                  Start Free Trial
-                </button>
+                {user ? (
+                  <Button
+                    onClick={() => { navigate("/dashboard"); setMobileOpen(false); }}
+                    className="w-full text-[14px] font-semibold bg-[#2563EB] text-white px-4 py-6 rounded-xl hover:bg-[#1d4ed8] shadow-md shadow-blue-500/20 transition-all text-center h-auto"
+                  >
+                    Go to Dashboard
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => { navigate("/login"); setMobileOpen(false); }}
+                      className="w-full text-[14px] font-semibold text-gray-700 border-gray-200 px-4 py-6 rounded-xl hover:border-blue-200 hover:text-[#2563EB] hover:bg-blue-50/50 transition-all h-auto"
+                    >
+                      Log in
+                    </Button>
+                    <Button
+                      onClick={() => { navigate("/signup"); setMobileOpen(false); }}
+                      className="w-full text-[14px] font-semibold bg-[#2563EB] text-white px-4 py-6 rounded-xl hover:bg-[#1d4ed8] shadow-md shadow-blue-500/20 transition-all h-auto"
+                    >
+                      Start Free Trial
+                    </Button>
+                  </>
+                )}
               </motion.div>
             </div>
           </motion.div>

@@ -33,7 +33,7 @@ export const walkthroughSteps: WalkthroughStep[] = [
   // Welcome Section
   {
     id: "welcome",
-    title: "Welcome to PB Pagez!",
+    title: "Welcome to e-Results GH!",
     description:
       "Let's take a quick tour to help you get familiar with your school management system. This will only take a few minutes.",
     placement: "center",
