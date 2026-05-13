@@ -173,62 +173,7 @@ const VideoTeaserSection = ({
           />
         </div>
 
-        {showRecommendedVideos && recommendedVideos.length > 0 && (
-          <div className="mt-16 md:mt-20">
-            <h3
-              className={cn(
-                "text-2xl md:text-3xl font-bold mb-8",
-                dark ? "text-white" : "text-gray-900"
-              )}
-            >
-              More from @{channelHandle}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {recommendedVideos.map((video) => (
-                <button
-                  key={video.id}
-                  onClick={() => setSelectedVideo(video)}
-                  className={cn(
-                    "group relative overflow-hidden rounded-xl transition-all duration-300",
-                    "hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500",
-                    selectedVideo?.id === video.id
-                      ? "ring-2 ring-blue-500 shadow-lg"
-                      : ""
-                  )}
-                >
-                  <div className="relative aspect-video overflow-hidden bg-slate-900 rounded-xl">
-                    <img
-                      src={video.thumbnail}
-                      alt={video.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                        <Play className="w-8 h-8 text-white fill-white" />
-                      </div>
-                    </div>
-                    {video.duration && (
-                      <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-semibold">
-                        {video.duration}
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-3">
-                    <h4
-                      className={cn(
-                        "text-sm md:text-base font-semibold line-clamp-2 text-left group-hover:text-blue-600",
-                        dark ? "text-white" : "text-gray-900"
-                      )}
-                    >
-                      {video.title}
-                    </h4>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+
       </div>
     </section>
   );

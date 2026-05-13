@@ -1,31 +1,188 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ArrowLeft, FileText, Lightbulb, Clipboard } from "lucide-react";
+import {
+  ChevronDown,
+  ArrowLeft,
+  FileText,
+  Lightbulb,
+  Clipboard,
+  Shield,
+  Search,
+  BookOpen,
+  Scale,
+  CreditCard,
+  UserCheck,
+  Lock,
+  Zap,
+  HelpCircle,
+  AlertTriangle,
+  FileCheck,
+  Globe,
+  Mail,
+  Smartphone
+} from "lucide-react";
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
+import LandingNav from "@/components/landing/LandingNav";
+import LandingFooter from "@/components/landing/LandingFooter";
 
 interface TermsSection {
   number: string;
   title: string;
   content: string | string[];
   id: string;
+  icon: React.ReactNode;
 }
 
 const TermsAndConditions: React.FC = () => {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [activeSection, setActiveSection] = useState<string>("acceptance");
-  const [isMobileTooltipOpen, setIsMobileTooltipOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const toggleSection = (sectionNumber: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(sectionNumber)) {
-      newExpanded.delete(sectionNumber);
-    } else {
-      newExpanded.add(sectionNumber);
-    }
-    setExpandedSections(newExpanded);
-  };
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
 
-  // Track active section on scroll
+  const termsSections: TermsSection[] = [
+    {
+      number: "01",
+      title: "Acceptance of Terms",
+      id: "acceptance",
+      icon: <UserCheck className="w-5 h-5" />,
+      content:
+        "By accessing, browsing, or using this website, users agree to comply with and be bound by these Terms and Conditions and the Privacy Policy of eResults GH. These terms constitute a legally binding agreement between you and PB Pagez LTD.",
+    },
+    {
+      number: "02",
+      title: "Purpose of the Platform",
+      id: "purpose",
+      icon: <Zap className="w-5 h-5" />,
+      content:
+        "eResults GH provides digital educational services including examination result checking, academic records access, student performance management, educational reporting services, and online result verification. We aim to modernize academic administration for Ghanaian schools.",
+    },
+    {
+      number: "03",
+      title: "User Responsibilities",
+      id: "responsibilities",
+      icon: <FileCheck className="w-5 h-5" />,
+      content: [
+        "Provide accurate and truthful information during registration",
+        "Maintain the confidentiality of account credentials",
+        "Avoid unauthorized access to system resources",
+        "Abstain from any activities that could harm platform integrity",
+        "Ensure all uploaded data complies with local educational regulations",
+      ],
+    },
+    {
+      number: "04",
+      title: "Account Security",
+      id: "security",
+      icon: <Lock className="w-5 h-5" />,
+      content:
+        "Users are responsible for maintaining the confidentiality of passwords and account details. eResults GH uses advanced encryption but cannot be held liable for security breaches resulting from user negligence or shared credentials.",
+    },
+    {
+      number: "05",
+      title: "Payment and Billing",
+      id: "payment",
+      icon: <CreditCard className="w-5 h-5" />,
+      content:
+        "Payments made on the platform for subscription tiers or result checking services are non-refundable unless otherwise stated by our billing department. We use secure third-party payment processors to ensure transaction safety.",
+    },
+    {
+      number: "06",
+      title: "Intellectual Property Rights",
+      id: "intellectual-property",
+      icon: <Shield className="w-5 h-5" />,
+      content:
+        "All website content including logos, software code, graphics, layouts, and text remains the exclusive intellectual property of PB Pagez LTD. Unauthorized reproduction or distribution is strictly prohibited.",
+    },
+    {
+      number: "07",
+      title: "Data Accuracy",
+      id: "data-accuracy",
+      icon: <Smartphone className="w-5 h-5" />,
+      content:
+        "eResults GH strives to ensure the highest level of accuracy in report generation but does not guarantee that all records will always be error-free. We rely on the data provided by educational institutions.",
+    },
+    {
+      number: "08",
+      title: "Prohibited Activities",
+      id: "prohibited-activities",
+      icon: <AlertTriangle className="w-5 h-5" />,
+      content: [
+        "Attempting to hack or breach platform security",
+        "Reverse engineering any part of the software",
+        "Manipulating academic records or results",
+        "Using the platform for spam or unauthorized marketing",
+        "Impersonating school officials or other users",
+      ],
+    },
+    {
+      number: "09",
+      title: "Limitation of Liability",
+      id: "liability",
+      icon: <Scale className="w-5 h-5" />,
+      content:
+        "To the maximum extent permitted by law, eResults GH shall not be liable for platform downtime, technical failures, loss of data, or unauthorized access caused by factors beyond our reasonable control.",
+    },
+    {
+      number: "10",
+      title: "Third-Party Services",
+      id: "third-party",
+      icon: <Globe className="w-5 h-5" />,
+      content:
+        "The website may integrate with third-party services such as payment gateways (Hubtel/Paystack) and analytics providers. Your use of these services is governed by their respective terms and privacy policies.",
+    },
+    {
+      number: "11",
+      title: "Suspension or Termination",
+      id: "termination",
+      icon: <AlertTriangle className="w-5 h-5" />,
+      content:
+        "eResults GH reserves the right to suspend or terminate user accounts without prior notice for misuse, policy violations, or non-payment of subscription fees.",
+    },
+    {
+      number: "12",
+      title: "Modifications to Terms",
+      id: "modifications",
+      icon: <Clipboard className="w-5 h-5" />,
+      content:
+        "These terms may be updated periodically. While we aim to notify users of material changes, your continued use of the platform constitutes acceptance of the most recent version of these Terms and Conditions.",
+    },
+    {
+      number: "13",
+      title: "Governing Law",
+      id: "governing-law",
+      icon: <Scale className="w-5 h-5" />,
+      content:
+        "These Terms and Conditions are governed by and construed in accordance with the laws of the Republic of Ghana. Any disputes shall be subject to the exclusive jurisdiction of the courts of Ghana.",
+    },
+    {
+      number: "14",
+      title: "Contact Information",
+      id: "contact",
+      icon: <Mail className="w-5 h-5" />,
+      content: [
+        "Website: https://eresultsgh.com",
+        "Email: support@eresultsgh.com",
+        "Phone: +233 248 639 158",
+        "Address: Accra, Ghana",
+      ],
+    },
+  ];
+
+  const filteredSections = termsSections.filter(
+    (section) =>
+      section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (Array.isArray(section.content)
+        ? section.content.some((c) => c.toLowerCase().includes(searchQuery.toLowerCase()))
+        : section.content.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   useEffect(() => {
     const handleScroll = () => {
       const sections = termsSections.map((s) => ({
@@ -37,7 +194,7 @@ const TermsAndConditions: React.FC = () => {
       for (const section of sections) {
         if (section.element) {
           const rect = section.element.getBoundingClientRect();
-          if (rect.top <= 200) {
+          if (rect.top <= 120) {
             currentActive = section.id;
           }
         }
@@ -45,113 +202,25 @@ const TermsAndConditions: React.FC = () => {
       setActiveSection(currentActive);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const termsSections: TermsSection[] = [
-    {
-      number: "1",
-      title: "Acceptance of Terms",
-      id: "acceptance",
-      content:
-        "By accessing, browsing, or using this website, users agree to comply with and be bound by these Terms and Conditions and the Privacy Policy of eResults GH.",
-    },
-    {
-      number: "2",
-      title: "Purpose of the Platform",
-      id: "purpose",
-      content:
-        "eResults GH provides digital educational services including examination result checking, academic records access, student performance management, educational reporting services, and online result verification.",
-    },
-    {
-      number: "3",
-      title: "User Responsibilities",
-      id: "responsibilities",
-      content:
-        "Users agree to provide accurate information, maintain confidentiality of credentials, and avoid unauthorized access or harmful activities on the platform.",
-    },
-    {
-      number: "4",
-      title: "Account Security",
-      id: "security",
-      content:
-        "Users are responsible for maintaining the confidentiality of passwords and account details.",
-    },
-    {
-      number: "5",
-      title: "Payment and Billing",
-      id: "payment",
-      content:
-        "Payments made on the platform are non-refundable unless otherwise stated.",
-    },
-    {
-      number: "6",
-      title: "Intellectual Property Rights",
-      id: "intellectual-property",
-      content:
-        "All website content including logos, software, graphics, layouts, and text remains the intellectual property of eResults GH.",
-    },
-    {
-      number: "7",
-      title: "Data Accuracy",
-      id: "data-accuracy",
-      content:
-        "eResults GH strives to ensure accuracy but does not guarantee all records will always be error-free.",
-    },
-    {
-      number: "8",
-      title: "Prohibited Activities",
-      id: "prohibited-activities",
-      content:
-        "Users shall not attempt to hack, reverse engineer, manipulate records, or misuse the platform.",
-    },
-    {
-      number: "9",
-      title: "Limitation of Liability",
-      id: "liability",
-      content:
-        "eResults GH shall not be liable for downtime, technical failures, or unauthorized access caused by user negligence.",
-    },
-    {
-      number: "10",
-      title: "Third-Party Services",
-      id: "third-party",
-      content:
-        "The website may integrate with third-party services such as payment gateways and analytics providers.",
-    },
-    {
-      number: "11",
-      title: "Suspension or Termination",
-      id: "termination",
-      content:
-        "eResults GH reserves the right to suspend or terminate accounts for misuse or policy violations.",
-    },
-    {
-      number: "12",
-      title: "Modifications to Terms",
-      id: "modifications",
-      content:
-        "These terms may be updated periodically without prior notice.",
-    },
-    {
-      number: "13",
-      title: "Governing Law",
-      id: "governing-law",
-      content:
-        "These Terms and Conditions are governed by the laws of the Republic of Ghana.",
-    },
-    {
-      number: "14",
-      title: "Contact Information",
-      id: "contact",
-      content: [
-        "Website: https://eresultsgh.com",
-        "Email: support@eresultsgh.com",
-        "Phone: +233 248 639 158",
-      ],
-    },
-  ];
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      const offset = 100;
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+      setActiveSection(id);
+      setIsMobileMenuOpen(false);
+    }
+  };
 
   const lastUpdated = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -159,338 +228,361 @@ const TermsAndConditions: React.FC = () => {
     day: "numeric",
   });
 
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-      setActiveSection(id);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background text-foreground print:bg-white print:text-black">
-      {/* Professional Header with Logo Integration */}
-      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur-sm print:static print:border-gray-300 print:bg-white">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            {/* Logo & Brand */}
-            <Link
-              to="/"
-              className="flex items-center gap-3 hover:opacity-75 transition-opacity duration-200 print:no-underline group"
-            >
-              <div className="relative">
-                <img
-                  src="/ERESULTS_LOGO.png"
-                  alt="e-Results GH"
-                  className="w-8 h-8 print:hidden"
-                />
-              </div>
-              <div className="hidden sm:flex flex-col gap-0.5">
-                <span className="font-bold text-sm text-foreground group-hover:text-primary/80 transition-colors">
-                  e-Results GH
-                </span>
-                <span className="text-xs text-muted-foreground">Ghana's Educational Platform</span>
-              </div>
-            </Link>
+    <div className="min-h-screen bg-[#FDFDFD] text-[#1A1A1A] font-sans selection:bg-blue-100 selection:text-blue-900">
+      <LandingNav />
 
-            {/* Back Button */}
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary font-medium text-sm transition-colors duration-200 print:hidden"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back</span>
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* Scroll Progress Bar */}
+      <motion.div
+        className="fixed top-[60px] left-0 right-0 h-1 bg-[#2563EB] z-[60] origin-left"
+        style={{ scaleX }}
+      />
 
-      {/* Hero Section with Title & Metadata */}
-      <section className="relative overflow-hidden border-b border-border/50 print:border-gray-300">
-        {/* Gradient Background (subtle) */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none print:hidden" />
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 overflow-hidden bg-white border-b border-gray-100">
+        <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-[600px] h-[600px] bg-blue-50/50 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[400px] h-[400px] bg-blue-50/30 rounded-full blur-3xl" />
 
-        <div className="relative px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="p-3 rounded-xl bg-primary/10 print:hidden">
-                <FileText className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground leading-tight">
-                  Terms and Conditions
-                </h1>
-                <p className="text-base text-muted-foreground mt-3 max-w-2xl leading-relaxed">
-                  Please review these terms governing your use of eResults GH. By accessing our platform, you acknowledge and agree to be bound by these terms.
-                </p>
-              </div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="max-w-3xl"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 mb-6">
+              <Scale className="w-3.5 h-3.5 text-[#2563EB]" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#2563EB]">Legal Agreement</span>
             </div>
 
-            {/* Metadata */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm text-muted-foreground print:text-gray-600 pt-4 border-t border-border/30 print:border-gray-300">
-              <span className="flex items-center gap-2">
-                <Clipboard className="w-4 h-4 text-primary/70" />
-                Version 1.0
-              </span>
-              <span className="hidden sm:inline text-border/50 print:text-gray-400">•</span>
-              <span>Last updated: {lastUpdated}</span>
-              <span className="hidden sm:inline text-border/50 print:text-gray-400">•</span>
-              <span>{termsSections.length} Sections</span>
+            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-gray-900 mb-6 leading-[1.1]">
+              Terms & Conditions
+            </h1>
+
+            <p className="text-lg md:text-xl text-gray-500 leading-relaxed max-w-2xl mb-8">
+              Welcome to eResults GH. These terms govern your use of our platform and the services we provide to educational institutions in Ghana.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-6 text-sm text-gray-400">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]" />
+                <span>Last updated: {lastUpdated}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
+                <span>~10 min read</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                <span>Secure & Binding</span>
+              </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Main Content Area - Two Column Layout */}
-      <div className="px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Left Sidebar - Table of Contents (Sticky on Desktop) */}
-          <aside className="lg:col-span-1">
-            {/* Mobile Collapsible TOC */}
-            <div className="lg:hidden mb-6">
-              <button
-                onClick={() => setIsMobileTooltipOpen(!isMobileTooltipOpen)}
-                className={cn(
-                  "w-full px-4 py-3 flex items-center justify-between",
-                  "bg-card border border-border/50 rounded-lg",
-                  "font-semibold text-sm transition-all duration-200",
-                  "hover:border-primary/50",
-                  isMobileTooltipOpen && "border-primary/50 bg-primary/5"
-                )}
-              >
-                <span className="flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4 text-primary" />
-                  Quick Navigation
-                </span>
-                <ChevronDown
-                  className={cn(
-                    "w-4 h-4 transition-transform duration-200",
-                    isMobileTooltipOpen && "rotate-180"
-                  )}
-                />
-              </button>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+
+          {/* Navigation Sidebar */}
+          <aside className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-32 self-start space-y-8">
+            {/* Search */}
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#2563EB] transition-colors" />
+              <input
+                type="text"
+                placeholder="Search terms..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-[#2563EB] transition-all"
+              />
             </div>
 
-            {/* Desktop Sticky TOC */}
-            <nav
-              className={cn(
-                "hidden lg:block",
-                "lg:sticky lg:top-24",
-                "space-y-1.5"
-              )}
-            >
-              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 px-3 print:text-gray-600">
-                In This Page
-              </h3>
-              <ul className="space-y-0.5">
+            {/* Desktop TOC */}
+            <nav className="hidden lg:block">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-6">Contents</p>
+              <ul className="space-y-1">
                 {termsSections.map((section) => (
                   <li key={section.id}>
                     <button
                       onClick={() => scrollToSection(section.id)}
                       className={cn(
-                        "w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium",
-                        "transition-all duration-200 ease-out",
-                        "flex items-start gap-2.5",
+                        "w-full flex items-start gap-3 px-4 py-3 rounded-xl text-left text-[13.5px] font-semibold transition-all duration-200 group",
                         activeSection === section.id
-                          ? "bg-primary/10 text-primary border-l-2 border-primary"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border-l-2 border-transparent"
+                          ? "bg-blue-50 text-[#2563EB] shadow-sm shadow-blue-500/5"
+                          : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                       )}
                     >
-                      <span className="text-xs font-bold text-primary/70 mt-0.5 min-w-fit">
+                      <span className={cn(
+                        "mt-0.5 transition-colors",
+                        activeSection === section.id ? "text-[#2563EB]" : "text-gray-300 group-hover:text-gray-500"
+                      )}>
                         {section.number}
                       </span>
-                      <span className="flex-1 line-clamp-2">{section.title}</span>
+                      <span className="flex-1 leading-snug">{section.title}</span>
                     </button>
                   </li>
                 ))}
               </ul>
             </nav>
 
-            {/* Mobile TOC Dropdown Content */}
-            {isMobileTooltipOpen && (
-              <div className="lg:hidden mb-8 p-3 bg-card border border-border/50 rounded-lg space-y-2">
-                {termsSections.map((section) => (
-                  <button
-                    key={section.id}
-                    onClick={() => {
-                      scrollToSection(section.id);
-                      setIsMobileTooltipOpen(false);
-                    }}
-                    className={cn(
-                      "w-full text-left px-3 py-2 rounded text-sm",
-                      "transition-colors duration-200",
-                      activeSection === section.id
-                        ? "bg-primary/10 text-primary font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    )}
-                  >
-                    <span className="font-bold">{section.number}.</span> {section.title}
-                  </button>
-                ))}
+            {/* Support Box */}
+            <div className="p-6 bg-[#0F172A] rounded-2xl text-white overflow-hidden relative group">
+              <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl group-hover:bg-indigo-500/30 transition-colors" />
+              <div className="relative z-10">
+                <h4 className="font-bold text-sm mb-2">Need clarification?</h4>
+                <p className="text-xs text-gray-400 leading-relaxed mb-4">Our legal team is here to help you understand these terms.</p>
+                <a
+                  href="mailto:support@eresultsgh.com"
+                  className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-indigo-400 hover:text-indigo-300 transition-colors"
+                >
+                  Contact Support
+                  <ArrowLeft className="w-3 h-3 rotate-180" />
+                </a>
               </div>
-            )}
+            </div>
           </aside>
 
-          {/* Right Column - Main Content */}
-          <main className="lg:col-span-3 space-y-6">
-            {/* Introductory Section */}
-            <section className="p-6 bg-card border border-border/50 rounded-xl print:bg-white print:border-gray-300 print:p-0 print:border-0">
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-foreground">Welcome to e-Results GH</h2>
-                <p className="text-sm leading-relaxed text-muted-foreground print:text-gray-700">
-                  These Terms and Conditions ("Terms") establish the legal framework for your use of the e-Results GH platform and our digital educational services. By accessing or using our platform, you enter into a binding agreement with e-Results GH. We encourage you to read these terms carefully and contact our support team if you have any questions.
-                </p>
-              </div>
-            </section>
+          {/* Terms Content */}
+          <main className="lg:col-span-8 xl:col-span-9">
+            <div className="prose prose-blue max-w-none">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="mb-20 p-10 bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.02)] relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 w-1 h-full bg-[#2563EB]" />
+                <HelpCircle className="absolute -bottom-6 -right-6 w-40 h-40 text-gray-50 opacity-[0.03] rotate-12 group-hover:scale-110 group-hover:rotate-0 transition-all duration-700" />
+                <div className="relative z-10">
+                  <h3 className="text-2xl font-extrabold text-gray-900 mb-6 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                      <Scale className="w-5 h-5 text-[#2563EB]" />
+                    </div>
+                    Understanding Our Terms
+                  </h3>
+                  <p className="text-gray-500 text-lg leading-relaxed mb-0 font-medium">
+                    These Terms and Conditions establish the legal framework for your use of the e-Results GH platform. By accessing or using our platform, you enter into a binding agreement with PB Pagez LTD. We encourage you to read these terms carefully and contact our support team if you have any questions.
+                  </p>
+                </div>
+              </motion.div>
 
-            {/* Terms Sections */}
-            <section className="space-y-3">
-              {termsSections.map((section) => {
-                const isExpanded = expandedSections.has(section.number);
-                const isCurrent = activeSection === section.id;
-
-                return (
-                  <article
+              <div className="space-y-24">
+                {(searchQuery ? filteredSections : termsSections).map((section, index) => (
+                  <motion.section
                     key={section.id}
                     id={section.id}
-                    className={cn(
-                      "group transition-all duration-200 print:page-break-inside-avoid",
-                      isCurrent && "lg:ring-2 lg:ring-primary/30 lg:rounded-lg"
-                    )}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 0.5, delay: index * 0.05 }}
+                    className="scroll-mt-32 group"
                   >
-                    {/* Section Header */}
-                    <button
-                      onClick={() => toggleSection(section.number)}
-                      className={cn(
-                        "w-full px-5 py-4 flex items-start justify-between",
-                        "bg-card border border-border/50 rounded-lg",
-                        "hover:border-primary/30 hover:bg-accent/5",
-                        "transition-all duration-200",
-                        "print:bg-white print:border-gray-300 print:cursor-default",
-                        isExpanded && "border-primary/30 bg-primary/5",
-                        isCurrent && "ring-2 ring-primary/30 border-primary/30"
-                      )}
-                    >
-                      <div className="flex items-start gap-4 text-left flex-1">
-                        {/* Section Number Badge */}
-                        <div
-                          className={cn(
-                            "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center",
-                            "text-sm font-bold",
-                            "bg-gradient-to-br from-primary/20 to-primary/10 text-primary",
-                            "border border-primary/20",
-                            "print:bg-white print:border print:border-gray-400 print:text-black"
-                          )}
-                        >
-                          {section.number}
-                        </div>
-
-                        {/* Title */}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-base text-foreground leading-snug">
-                            {section.title}
-                          </h3>
+                    <div className="flex flex-col md:flex-row md:items-start gap-10">
+                      <div className="shrink-0 md:sticky md:top-32">
+                        <div className="w-14 h-14 rounded-2xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 flex items-center justify-center text-gray-400 group-hover:text-[#2563EB] group-hover:border-blue-100 group-hover:scale-110 transition-all duration-500">
+                          {section.icon}
                         </div>
                       </div>
 
-                      {/* Expand Icon */}
-                      <ChevronDown
-                        className={cn(
-                          "w-5 h-5 text-muted-foreground flex-shrink-0 ml-3 transition-transform duration-300 ease-out print:hidden",
-                          "group-hover:text-primary",
-                          isExpanded && "rotate-180 text-primary"
-                        )}
-                      />
-                    </button>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-5">
+                          <span className="text-[11px] font-bold text-blue-600/50 uppercase tracking-[0.3em]">Section {section.number}</span>
+                          <div className="h-px flex-1 bg-gray-100" />
+                        </div>
+                        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-8 group-hover:translate-x-1 transition-transform duration-500">
+                          {section.title}
+                        </h2>
 
-                    {/* Expandable Content */}
-                    <div
-                      className={cn(
-                        "overflow-hidden transition-all duration-300 ease-in-out print:max-h-none print:overflow-visible",
-                        isExpanded ? "max-h-96 visible" : "max-h-0 invisible"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "px-5 py-4 border border-t-0 border-border/50 rounded-b-lg",
-                          "bg-muted/30 text-sm leading-relaxed text-foreground",
-                          "print:bg-white print:border-gray-300 print:border-t print:border-t-gray-300 print:rounded-none"
-                        )}
-                      >
-                        {Array.isArray(section.content) ? (
-                          <ul className="space-y-2.5">
-                            {section.content.map((item, idx) => (
-                              <li key={idx} className="flex gap-3 print:text-gray-800">
-                                <span className="text-primary font-bold mt-0.5">•</span>
-                                <span>{item}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="print:text-gray-800">{section.content}</p>
-                        )}
+                        <div className="space-y-4">
+                          {Array.isArray(section.content) ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {section.content.map((item, idx) => (
+                                <div key={idx} className="flex gap-4 p-5 rounded-2xl bg-white border border-gray-100 hover:border-blue-100 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300 group/item">
+                                  <div className="w-2 h-2 rounded-full bg-gray-200 mt-2 shrink-0 group-hover/item:bg-[#2563EB] transition-colors duration-300" />
+                                  <span className="text-[15px] text-gray-500 font-medium leading-relaxed">{item}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-8 rounded-[2rem] bg-gray-50/30 border border-gray-100/50 text-[17px] text-gray-500 font-medium leading-[1.8]">
+                              {section.content}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </article>
-                );
-              })}
-            </section>
+                  </motion.section>
+                ))}
 
-            {/* CTA Section - Contact & Resources */}
-            <section className="mt-12 pt-8 border-t border-border/50 print:border-gray-300">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Support Card */}
-                <div className="p-6 bg-gradient-to-br from-primary/10 to-accent/5 border border-primary/20 rounded-xl print:bg-white print:border-gray-300">
-                  <h3 className="font-semibold text-foreground mb-2">Need Clarification?</h3>
-                  <p className="text-sm text-muted-foreground mb-4 print:text-gray-700">
-                    Our support team is available to answer any questions about these terms.
-                  </p>
-                  <a
-                    href="mailto:support@eresultsgh.com"
-                    className={cn(
-                      "inline-flex items-center gap-2 px-4 py-2.5 font-medium text-sm",
-                      "bg-primary text-primary-foreground hover:bg-primary/90",
-                      "rounded-lg transition-all duration-200",
-                      "print:bg-blue-600 print:text-white print:no-underline"
-                    )}
-                  >
-                    Contact Support
-                  </a>
+                {searchQuery && filteredSections.length === 0 && (
+                  <div className="text-center py-20 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                    <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium">No sections found matching "{searchQuery}"</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Final Info Section */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="mt-32 pt-16 border-t border-gray-100 space-y-12"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Platform Integrity Card */}
+                <div className="group p-10 rounded-[2.5rem] bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-500 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10 flex flex-col gap-8">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-[#2563EB] group-hover:scale-110 group-hover:bg-[#2563EB] group-hover:text-white transition-all duration-500">
+                      <Shield className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-extrabold text-gray-900 mb-4">Platform Integrity</h3>
+                      <p className="text-[15px] text-gray-500 leading-relaxed">
+                        We maintain strict standards for data integrity and system security to ensure the most reliable reporting engine. Every result generated is backed by our commitment to precision.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Privacy Policy Card */}
-                <div className="p-6 bg-gradient-to-br from-secondary/10 to-accent/5 border border-secondary/20 rounded-xl print:bg-white print:border-gray-300">
-                  <h3 className="font-semibold text-foreground mb-2">Privacy Matters?</h3>
-                  <p className="text-sm text-muted-foreground mb-4 print:text-gray-700">
-                    Review our comprehensive Privacy Policy to understand how we protect your data.
-                  </p>
-                  <Link
-                    to="/privacy"
-                    className={cn(
-                      "inline-flex items-center gap-2 px-4 py-2.5 font-medium text-sm",
-                      "bg-secondary text-secondary-foreground hover:bg-secondary/90",
-                      "rounded-lg transition-all duration-200",
-                      "print:bg-gray-600 print:text-white print:no-underline"
-                    )}
-                  >
-                    Read Policy
-                  </Link>
+                {/* Legal Compliance Card */}
+                <div className="group p-10 rounded-[2.5rem] bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-500 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10 flex flex-col gap-8">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-[#2563EB] group-hover:scale-110 group-hover:bg-[#2563EB] group-hover:text-white transition-all duration-500">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-extrabold text-gray-900 mb-4">Legal Compliance</h3>
+                      <p className="text-[15px] text-gray-500 leading-relaxed">
+                        Our terms are fully compliant with Ghanaian educational regulations and digital commerce laws. we work closely with authorities to ensure a legally robust platform.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </section>
 
-            {/* Footer Info */}
-            <div className="mt-8 pt-6 border-t border-border/30 print:border-gray-300 print:text-gray-700">
-              <p className="text-xs text-muted-foreground print:text-gray-600">
-                <strong>Version:</strong> 1.0 | <strong>Last Updated:</strong> {lastUpdated}
-              </p>
-              <p className="text-xs text-muted-foreground mt-2 print:text-gray-600">
-                These terms are governed by the laws of the Republic of Ghana. For legal inquiries, contact our legal team at support@eresultsgh.com.
-              </p>
-            </div>
+              <div className="p-10 rounded-[2.5rem] bg-gray-900 text-white relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-[100px] group-hover:bg-blue-500/30 transition-colors duration-700" />
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-10">
+                  <div className="max-w-lg">
+                    <h3 className="text-3xl font-extrabold mb-4 tracking-tight">Questions about these terms?</h3>
+                    <p className="text-gray-400 text-[16px] leading-relaxed">
+                      Our support team is ready to assist you with any inquiries regarding our policies and service agreements. We're here to help you navigate.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <a
+                      href="mailto:support@eresultsgh.com"
+                      className="px-8 py-4 rounded-2xl text-sm font-bold text-white border border-white/10 hover:bg-white/5 transition-all"
+                    >
+                      Contact Support
+                    </a>
+                    <Link
+                      to="/privacy"
+                      className="px-8 py-4 rounded-2xl text-sm font-bold bg-[#2563EB] hover:bg-blue-500 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 transition-all"
+                    >
+                      View Privacy Policy
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </main>
         </div>
       </div>
+
+      <LandingFooter />
+
+      {/* Mobile Floating Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed bottom-8 right-8 z-[70] w-14 h-14 rounded-full bg-[#2563EB] text-white shadow-2xl shadow-blue-500/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+      >
+        <AnimatePresence mode="wait">
+          {isMobileMenuOpen ? (
+            <motion.div
+              key="close"
+              initial={{ rotate: -90, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: 90, opacity: 0 }}
+            >
+              <ChevronDown className="w-6 h-6 rotate-180" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="menu"
+              initial={{ rotate: 90, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: -90, opacity: 0 }}
+            >
+              <BookOpen className="w-6 h-6" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </button>
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[65]"
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="lg:hidden fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] z-[66] max-h-[80vh] overflow-hidden flex flex-col shadow-[0_-20px_50px_rgba(0,0,0,0.1)]"
+            >
+              <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-4 mb-2 shrink-0" />
+              <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 shrink-0">
+                <h3 className="font-bold text-gray-900">Contents</h3>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{termsSections.length} Sections</span>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+                {termsSections.map((section) => (
+                  <button
+                    key={section.id}
+                    onClick={() => scrollToSection(section.id)}
+                    className={cn(
+                      "w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left text-sm font-semibold transition-all",
+                      activeSection === section.id
+                        ? "bg-blue-50 text-[#2563EB]"
+                        : "text-gray-500 hover:bg-gray-50"
+                    )}
+                  >
+                    <span className={cn(
+                      "text-[10px] font-bold tracking-wider",
+                      activeSection === section.id ? "text-[#2563EB]" : "text-gray-300"
+                    )}>
+                      {section.number}
+                    </span>
+                    {section.title}
+                  </button>
+                ))}
+              </div>
+              <div className="p-6 bg-gray-50 shrink-0">
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold text-sm shadow-xl shadow-gray-900/10 active:scale-[0.98] transition-all"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
