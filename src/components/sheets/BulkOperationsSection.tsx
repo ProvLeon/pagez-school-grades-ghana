@@ -257,7 +257,8 @@ export const BulkOperationsSection = () => {
           students,
           transformedSubjects,
           caTypesForTemplate,
-          academicYear
+          academicYear,
+          gradingSettings?.next_term_begin || undefined
         );
         toast({
           title: "Template Downloaded",

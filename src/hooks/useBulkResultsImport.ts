@@ -134,12 +134,15 @@ export const useBulkResultsImport = () => {
         // This is used to auto-fill days_school_opened when not provided in the template
         const { data: gradingSettings } = await supabase
           .from('grading_settings')
-          .select('attendance_for_term')
+          .select('attendance_for_term, next_term_begin')
           .eq('organization_id', organizationId)
           .eq('is_active', true)
           .maybeSingle();
 
         const defaultDaysSchoolOpened = gradingSettings?.attendance_for_term || null;
+        // Fallback: if the uploaded row has no next_term_begin value, use the one
+        // set by the admin in Grading Settings so the field is always populated.
+        const defaultNextTermBegin = gradingSettings?.next_term_begin || null;
 
         // Fetch all CA types for this organization to support name-to-ID mapping
         const { data: allCATypes, error: caTypesError } = await supabase
@@ -324,6 +327,8 @@ export const useBulkResultsImport = () => {
                   days_school_opened: resultData.days_school_opened || defaultDaysSchoolOpened,
                   days_present: resultData.days_present || null,
                   days_absent: resultData.days_absent || null,
+                  heads_remarks: resultData.heads_remarks || null,
+                  next_term_begin: resultData.next_term_begin || null,
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', existingResult.id)
@@ -355,6 +360,8 @@ export const useBulkResultsImport = () => {
                   days_school_opened: resultData.days_school_opened || defaultDaysSchoolOpened,
                   days_present: resultData.days_present || null,
                   days_absent: resultData.days_absent || null,
+                  heads_remarks: resultData.heads_remarks || null,
+                  next_term_begin: resultData.next_term_begin || null,
                   admin_approved: false,
                   teacher_approved: false,
                   created_at: new Date().toISOString(),

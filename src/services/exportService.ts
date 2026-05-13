@@ -32,6 +32,8 @@ export interface StudentResult {
   days_absent: number;
   days_school_opened: number;
   attendance_percentage: number;
+  heads_remarks?: string;
+  next_term_begin?: string;
   subjects: {
     name: string;
     code: string;
@@ -147,6 +149,8 @@ export class ExportService {
         days_absent: result.days_absent || 0,
         days_school_opened: result.days_school_opened || 0,
         attendance_percentage: Math.round(attendancePercentage * 100) / 100,
+        heads_remarks: result.heads_remarks || undefined,
+        next_term_begin: result.next_term_begin || undefined,
         subjects
       };
     });
@@ -176,7 +180,7 @@ export class ExportService {
    * Generate Class Broadsheet Excel file
    */
   static async generateClassBroadsheet(filters: ExportFilters): Promise<void> {
-    const XLSX = await import('xlsx');
+    const XLSX = (await import('xlsx-js-style')).default;
     const results = await this.fetchResultsData(filters);
 
     if (results.length === 0) {
@@ -185,116 +189,195 @@ export class ExportService {
       );
     }
 
-    // Get unique subjects across all students
-    const allSubjects = new Map<string, string>();
-    results.forEach(student => {
-      student.subjects.forEach(subject => {
-        allSubjects.set(subject.code || subject.name, subject.name);
-      });
-    });
-    const subjectList = Array.from(allSubjects.entries());
-
-    const workbook = XLSX.utils.book_new();
-
-    // Create header rows
-    const className = results[0]?.class_name || 'All Classes';
-    const departmentName = results[0]?.department_name || '';
-    const termName = filters.term;
+    const className    = results[0]?.class_name    || 'All Classes';
+    const deptName     = results[0]?.department_name || '';
+    const termLabel    = filters.term;
     const academicYear = filters.academicYear;
 
-    // Title section
-    const titleRows = [
-      ['CLASS BROADSHEET'],
-      [''],
-      [`Class: ${className}`, '', `Department: ${departmentName}`],
-      [`Term: ${termName}`, '', `Academic Year: ${academicYear}`],
-      [`Generated: ${new Date().toLocaleDateString('en-GB')}`],
-      ['']
+    // Unique ordered subject list
+    const allSubjects = new Map<string, string>();
+    results.forEach(s => s.subjects.forEach(sub => allSubjects.set(sub.code || sub.name, sub.name)));
+    const subjectList = Array.from(allSubjects.entries()); // [code, name][]
+
+    // ── Colour palette ──────────────────────────────────────────────────────
+    const C = {
+      titleBg:   'FF0D1B4A',  // deep navy
+      titleFg:   'FFFFFFFF',
+      headerBg:  'FF1565C0',  // brand blue
+      headerFg:  'FFFFFFFF',
+      subBg:     'FFE3F2FD',  // light blue for subject cols
+      subFg:     'FF0D47A1',
+      altRow:    'FFF5F8FF',
+      white:     'FFFFFFFF',
+      border:    'FFB0BEC5',
+      summBg:    'FFF1F8E9',
+      summLabel: 'FF1B5E20',
+    };
+
+    const border = (c: string) => ({ style: 'thin', color: { rgb: c } });
+    const borders = { top: border(C.border), bottom: border(C.border), left: border(C.border), right: border(C.border) };
+
+    const mkCell = (v: string | number, s: Record<string, unknown>) => ({ v, s });
+
+    // Helper: column letter from 0-based index
+    const colLetter = (i: number) => {
+      let l = '';
+      for (let n = i; n >= 0; n = Math.floor(n / 26) - 1)
+        l = String.fromCharCode((n % 26) + 65) + l;
+      return l;
+    };
+
+    const ws: Record<string, unknown> = {};
+    const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
+    let R = 0; // current row (0-based)
+
+    const totalCols = 3 + subjectList.length + 5 + 2; // Pos+ID+Name + subjects + Total+Avg+Grade+Present+Absent + Remarks+NextTerm
+
+    // ── Row 0: Main title ────────────────────────────────────────────────────
+    const titleStyle = {
+      font: { bold: true, sz: 14, color: { rgb: C.titleFg }, name: 'Calibri' },
+      fill: { fgColor: { rgb: C.titleBg }, patternType: 'solid' },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: borders,
+    };
+    ws[`A${R + 1}`] = mkCell('CLASS BROADSHEET', titleStyle);
+    merges.push({ s: { r: R, c: 0 }, e: { r: R, c: totalCols - 1 } });
+    R++;
+
+    // ── Row 1: Meta info ──────────────────────────────────────────────────────
+    const metaStyle = {
+      font: { bold: false, sz: 10, color: { rgb: C.titleFg }, name: 'Calibri' },
+      fill: { fgColor: { rgb: C.titleBg }, patternType: 'solid' },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: borders,
+    };
+    const metaText = `${className}${deptName ? ` · ${deptName}` : ''} | ${termLabel} | ${academicYear} | Generated: ${new Date().toLocaleDateString('en-GB')}`;
+    ws[`A${R + 1}`] = mkCell(metaText, metaStyle);
+    merges.push({ s: { r: R, c: 0 }, e: { r: R, c: totalCols - 1 } });
+    R++;
+
+    // ── Blank row ────────────────────────────────────────────────────────────
+    R++;
+
+    // ── Header row ───────────────────────────────────────────────────────────
+    const hBase = {
+      font: { bold: true, sz: 10, color: { rgb: C.headerFg }, name: 'Calibri' },
+      fill: { fgColor: { rgb: C.headerBg }, patternType: 'solid' },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: borders,
+    };
+    const hSubject = {
+      ...hBase,
+      fill: { fgColor: { rgb: C.subBg }, patternType: 'solid' },
+      font: { ...hBase.font, color: { rgb: C.subFg } },
+    };
+
+    const headers = [
+      'Pos', 'Student ID', 'Student Name',
+      ...subjectList.map(([, n]) => n),
+      'Total', 'Avg', 'Grade', 'Days Present', 'Days Absent',
+      "Head's Remarks", 'Next Term Begins',
     ];
+    headers.forEach((h, ci) => {
+      const isSubject = ci >= 3 && ci < 3 + subjectList.length;
+      ws[`${colLetter(ci)}${R + 1}`] = mkCell(h, isSubject ? hSubject : hBase);
+    });
+    R++;
 
-    // Build header row
-    const headerRow = [
-      'Pos',
-      'Student ID',
-      'Student Name',
-      ...subjectList.map(([_, name]) => name),
-      'Total',
-      'Average',
-      'Grade',
-      'Days Present',
-      'Days Absent',
-      'Attendance %'
-    ];
+    // ── Data rows ─────────────────────────────────────────────────────────────
+    results.forEach((student, rowIdx) => {
+      const isAlt = rowIdx % 2 === 1;
+      const cellStyle = {
+        font: { sz: 10, name: 'Calibri' },
+        fill: { fgColor: { rgb: isAlt ? C.altRow : C.white }, patternType: 'solid' },
+        alignment: { horizontal: 'center', vertical: 'center' },
+        border: borders,
+      };
+      const nameStyle = { ...cellStyle, alignment: { horizontal: 'left', vertical: 'center' } };
 
-    // Build data rows
-    const dataRows = results.map(student => {
-      const subjectScores = subjectList.map(([code, name]) => {
-        const subject = student.subjects.find(s => (s.code || s.name) === code || s.name === name);
-        return subject ? subject.total : '';
-      });
-
-      return [
+      const row: (string | number)[] = [
         student.position,
         student.student_id,
         student.student_name,
-        ...subjectScores,
+        ...subjectList.map(([code, name]) => {
+          const sub = student.subjects.find(s => (s.code || s.name) === code || s.name === name);
+          return sub ? sub.total : '';
+        }),
         student.total_score,
         student.average,
         student.grade,
         student.days_present,
         student.days_absent,
-        `${student.attendance_percentage}%`
+        student.heads_remarks || '',
+        student.next_term_begin || '',
       ];
+
+      row.forEach((val, ci) => {
+        ws[`${colLetter(ci)}${R + 1}`] = mkCell(
+          val as string | number,
+          ci === 2 ? nameStyle : cellStyle
+        );
+      });
+      R++;
     });
 
-    // Summary statistics
-    const summaryRows = [
-      [''],
-      ['SUMMARY STATISTICS'],
-      [''],
-      ['Total Students:', results.length],
-      ['Class Average:', Math.round(results.reduce((sum, s) => sum + s.average, 0) / results.length * 100) / 100],
-      ['Highest Score:', Math.max(...results.map(s => s.average))],
-      ['Lowest Score:', Math.min(...results.map(s => s.average))],
-      ['Pass Rate (≥50%):', `${Math.round((results.filter(s => s.average >= 50).length / results.length) * 100)}%`]
+    // ── Summary rows ─────────────────────────────────────────────────────────
+    R++;
+    const summLabelStyle = {
+      font: { bold: true, sz: 10, color: { rgb: C.summLabel }, name: 'Calibri' },
+      fill: { fgColor: { rgb: C.summBg }, patternType: 'solid' },
+      alignment: { horizontal: 'left', vertical: 'center' },
+      border: borders,
+    };
+    const summValStyle = {
+      font: { bold: false, sz: 10, name: 'Calibri' },
+      fill: { fgColor: { rgb: C.summBg }, patternType: 'solid' },
+      alignment: { horizontal: 'left', vertical: 'center' },
+      border: borders,
+    };
+    const classAvg = Math.round(results.reduce((s, r) => s + r.average, 0) / results.length * 100) / 100;
+    const summaries: [string, string | number][] = [
+      ['Total Students', results.length],
+      ['Class Average', classAvg],
+      ['Highest Avg', Math.max(...results.map(r => r.average))],
+      ['Lowest Avg', Math.min(...results.map(r => r.average))],
+      ['Pass Rate (≥50%)', `${Math.round((results.filter(r => r.average >= 50).length / results.length) * 100)}%`],
     ];
+    summaries.forEach(([label, val]) => {
+      ws[`A${R + 1}`] = mkCell(label, summLabelStyle);
+      ws[`B${R + 1}`] = mkCell(val as string | number, summValStyle);
+      R++;
+    });
 
-    // Combine all rows
-    const allRows = [
-      ...titleRows,
-      headerRow,
-      ...dataRows,
-      ...summaryRows
+    // ── Sheet metadata ────────────────────────────────────────────────────────
+    ws['!ref'] = `A1:${colLetter(totalCols - 1)}${R + 1}`;
+    ws['!merges'] = merges;
+    ws['!rows'] = [
+      { hpt: 28 }, // title
+      { hpt: 20 }, // meta
+      { hpt: 6  }, // blank
+      { hpt: 36 }, // header (tall for wrap)
     ];
-
-    const worksheet = XLSX.utils.aoa_to_sheet(allRows);
-
-    // Set column widths
-    const colWidths = [
-      { width: 5 },   // Position
-      { width: 12 },  // Student ID
-      { width: 25 },  // Student Name
-      ...subjectList.map(() => ({ width: 10 })), // Subject columns
-      { width: 8 },   // Total
-      { width: 10 },  // Average
-      { width: 8 },   // Grade
-      { width: 12 },  // Days Present
+    ws['!cols'] = [
+      { width: 5  },  // Pos
+      { width: 13 },  // Student ID
+      { width: 26 },  // Student Name
+      ...subjectList.map(() => ({ width: 11 })),
+      { width: 8  },  // Total
+      { width: 8  },  // Avg
+      { width: 7  },  // Grade
+      { width: 13 },  // Days Present
       { width: 12 },  // Days Absent
-      { width: 12 }   // Attendance %
+      { width: 32 },  // Head's Remarks
+      { width: 20 },  // Next Term Begins
     ];
-    worksheet['!cols'] = colWidths;
+    ws['!freeze'] = { xSplit: 3, ySplit: 4 }; // freeze first 3 cols + 4 header rows
 
-    // Add merge for title
-    worksheet['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: headerRow.length - 1 } }
-    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, ws as import('xlsx').WorkSheet, 'Broadsheet');
 
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Broadsheet');
-
-    // Generate filename
     const timestamp = new Date().toISOString().slice(0, 10);
-    const filename = `Class_Broadsheet_${className.replace(/\s+/g, '_')}_${termName.replace(/\s+/g, '_')}_${timestamp}.xlsx`;
-
+    const filename = `Class_Broadsheet_${className.replace(/\s+/g, '_')}_${termLabel.replace(/\s+/g, '_')}_${timestamp}.xlsx`;
     XLSX.writeFile(workbook, filename);
   }
 

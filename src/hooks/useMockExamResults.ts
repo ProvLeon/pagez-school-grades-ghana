@@ -92,9 +92,19 @@ export const useMockExamResults = (sessionId: string | null) => {
         } : null
       });
 
-      // Keep the original aggregate values in position field - DO NOT overwrite
-      // Position for ranking will be calculated in the UI component
-      return enriched;
+      // Deduplicate by student_id — if the DB has duplicate rows for a student
+      // in this session (a data integrity issue), keep the one with the highest
+      // total_score to avoid rendering the same student twice in the table.
+      const seenStudents = new Map<string, EnrichedMockExamResult>();
+      for (const result of enriched) {
+        const existing = seenStudents.get(result.student_id);
+        if (!existing || (result.total_score ?? 0) > (existing.total_score ?? 0)) {
+          seenStudents.set(result.student_id, result);
+        }
+      }
+      const deduped = Array.from(seenStudents.values());
+
+      return deduped;
     },
   });
 };

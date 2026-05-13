@@ -9,6 +9,8 @@ export interface ParsedResultData {
   days_school_opened?: number;
   days_present?: number;
   days_absent?: number;
+  heads_remarks?: string;
+  next_term_begin?: string;
   subjects: {
     subject_code: string;
     subject_name: string;
@@ -91,6 +93,8 @@ export const useResultsExcelParser = () => {
             const daysOpenedIndex = findColumnIndex(headers, ['days school opened', 'days_school_opened', 'school days']);
             const daysPresentIndex = findColumnIndex(headers, ['days present', 'days_present', 'present']);
             const daysAbsentIndex = findColumnIndex(headers, ['days absent', 'days_absent', 'absent']);
+            const headsRemarksIndex = findColumnIndex(headers, ["head's remarks", 'heads_remarks', 'heads remarks', 'head remarks', 'head_remarks', "principal's remarks", 'head remark']);
+            const nextTermBeginIndex = findColumnIndex(headers, ['next term begins', 'next_term_begin', 'next term begin', 'next term', 'next_term']);
 
             // Check for required columns
             if (studentIdIndex === -1) {
@@ -194,6 +198,8 @@ export const useResultsExcelParser = () => {
                   days_school_opened: daysSchoolOpened,
                   days_present: daysPresent,
                   days_absent: daysAbsent,
+                  heads_remarks: getCellValue(row, headsRemarksIndex) || undefined,
+                  next_term_begin: getCellValue(row, nextTermBeginIndex) || undefined,
                   subjects: subjects.filter(s =>
                     s.ca1_score !== undefined ||
                     s.ca2_score !== undefined ||

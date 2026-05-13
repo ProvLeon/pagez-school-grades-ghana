@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 import { useBilling } from '@/hooks/useBilling';
 import { useAuth } from '@/contexts/AuthContext';
-import { TRIAL_SEAT_CAP, calcAnnualFee } from '@/services/billingService';
+import { TRIAL_SEAT_CAP, calcAnnualFee, calcTopUpFee } from '@/services/billingService';
 import { SubscriptionStatus } from '@/types/billing';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -325,8 +325,13 @@ export const BillingAdminSettings: React.FC = () => {
     ? resolvedDelta >= 1
     : resolvedSeats >= seatFloor;
 
-  const annualFee = calcAnnualFee(resolvedSeats);
-  const isMinimumApplied = resolvedSeats * PER_SEAT_RATE < MINIMUM_FEE;
+  // For a mid-year top-up (active), charge ONLY for the additional seats — no minimum.
+  // For all other states (trial/renewal/locked), charge for the full new total with minimum.
+  const annualFee = isActiveSubscription
+    ? calcTopUpFee(resolvedDelta)
+    : calcAnnualFee(resolvedSeats);
+  // Minimum never applies to top-ups — user already paid it at initial subscription.
+  const isMinimumApplied = !isActiveSubscription && resolvedSeats * PER_SEAT_RATE < MINIMUM_FEE;
 
   // ── Inline seat validation states ──────────────────────────────────────
   // isBelowCommitted is impossible in delta mode (delta >= 1 always adds seats)
@@ -374,7 +379,10 @@ export const BillingAdminSettings: React.FC = () => {
     if (paying) return;
     setPaying(true);
     try {
-      await initiatePayment(resolvedSeats as number);
+      // Pass both the new total seat count (for DB update) AND the
+      // correctly-computed fee (delta-based for top-ups, full for renewals)
+      // so useBilling doesn't re-derive the fee from the total seat count.
+      await initiatePayment(resolvedSeats as number, annualFee);
     } finally {
       setPaying(false);
     }
@@ -848,7 +856,7 @@ export const BillingAdminSettings: React.FC = () => {
                 {/* Header row — large fee display */}
                 <div className="px-4 py-3 flex items-center justify-between bg-white border-b border-neutral-100">
                   <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
-                    Annual fee
+                    {isActiveSubscription ? 'Seat Top-Up Fee' : 'Annual Fee'}
                   </span>
                   <motion.span
                     key={annualFee}
@@ -865,13 +873,14 @@ export const BillingAdminSettings: React.FC = () => {
                 <div className="px-4 py-3 space-y-2 text-xs">
                   <div className="flex justify-between text-neutral-600">
                     <span>
-                      {resolvedSeats} student
-                      {(resolvedSeats as number) !== 1 ? 's' : ''} × GHS{' '}
+                      {isActiveSubscription ? resolvedDelta : resolvedSeats}{' '}
+                      {isActiveSubscription ? 'additional seat' : 'student'}
+                      {(isActiveSubscription ? resolvedDelta : (resolvedSeats as number)) !== 1 ? 's' : ''} × GHS{' '}
                       {PER_SEAT_RATE.toFixed(2)}
                     </span>
                     <span className="font-medium text-neutral-800">
                       GHS{' '}
-                      {((resolvedSeats as number) * PER_SEAT_RATE).toFixed(2)}
+                      {((isActiveSubscription ? resolvedDelta : (resolvedSeats as number)) * PER_SEAT_RATE).toFixed(2)}
                     </span>
                   </div>
 
@@ -894,7 +903,10 @@ export const BillingAdminSettings: React.FC = () => {
 
                 {/* Footer note */}
                 <div className="px-4 py-2 bg-neutral-100/60 border-t border-neutral-100 text-xs text-neutral-400">
-                  GHS 2.00 / student · GHS 200 minimum · Jan 1 – Dec 31
+                  {isActiveSubscription
+                    ? 'GHS 2.00 / additional seat · no minimum charge'
+                    : 'GHS 2.00 / student · GHS 200 minimum · Jan 1 – Dec 31'
+                  }
                 </div>
               </div>
 

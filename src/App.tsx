@@ -198,9 +198,22 @@ const App = () => {
 
   const disableAuth = false;
 
+  // Global fix: Radix UI (@radix-ui/react-remove-scroll) sets pointer-events:none
+  // on document.body while a modal is open via the data-scroll-locked attribute.
+  // When the attribute is removed (modal closed), the inline style is sometimes
+  // NOT cleaned up, freezing all page clicks. This MutationObserver watches the
+  // attribute and strips the leftover inline style the moment it's gone.
   useEffect(() => {
-    // no-op: ensure client-side hydration before banner checks if needed
+    const observer = new MutationObserver(() => {
+      if (!document.body.hasAttribute('data-scroll-locked')) {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+      }
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-scroll-locked', 'style'] });
+    return () => observer.disconnect();
   }, []);
+
   return (
     <ErrorBoundary
       onError={(error, errorInfo) => {

@@ -10,6 +10,11 @@ export function calcAnnualFee(seats: number): number {
   return Math.max(MINIMUM_ANNUAL_FEE, Math.round(seats * PER_SEAT_RATE * 100) / 100);
 }
 
+/** Top-up fee: no minimum applied — user already paid it at initial subscription. */
+export function calcTopUpFee(additionalSeats: number): number {
+  return Math.round(additionalSeats * PER_SEAT_RATE * 100) / 100;
+}
+
 export const billingService = {
   async fetchBillingDetails(): Promise<OrganizationBilling | null> {
     const { data: { user } } = await supabase.auth.getUser();

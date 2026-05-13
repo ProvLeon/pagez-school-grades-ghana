@@ -56,9 +56,18 @@ const TeacherAssignmentDialog = ({
 
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
-  const [academicYear, setAcademicYear] = useState("2024/2025");
   const [isPrimaryTeacher, setIsPrimaryTeacher] = useState(false);
   const [assignments, setAssignments] = useState<SelectedAssignment[]>([]);
+
+  // Auto-derive the current academic year from today's date.
+  // Ghanaian school calendar: new year begins in September.
+  const currentAcademicYear = (() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    return now.getMonth() >= 8 // 0-indexed: 8 = September
+      ? `${y}/${y + 1}`
+      : `${y - 1}/${y}`;
+  })();
 
   const { data: classes = [] } = useClasses();
   const { data: subjects = [] } = useSubjects();
@@ -102,7 +111,7 @@ const TeacherAssignmentDialog = ({
       teacher_id: teacherId,
       class_id: a.class_id,
       subject_id: a.subject_id,
-      academic_year: academicYear,
+      academic_year: currentAcademicYear,
       is_primary_teacher: isPrimaryTeacher,
     }));
 
@@ -118,7 +127,6 @@ const TeacherAssignmentDialog = ({
   const resetForm = () => {
     setSelectedClassId("");
     setSelectedSubjectId("");
-    setAcademicYear("2024/2025");
     setIsPrimaryTeacher(false);
     setAssignments([]);
   };
@@ -255,33 +263,15 @@ const TeacherAssignmentDialog = ({
 
             {/* Settings Section */}
             <div className="space-y-3 pt-2 border-t">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Academic Year</Label>
-                  <Select value={academicYear} onValueChange={setAcademicYear}>
-                    <SelectTrigger className="border-primary/20 focus:border-primary/40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2024/2025">2024/2025</SelectItem>
-                      <SelectItem value="2023/2024">2023/2024</SelectItem>
-                      <SelectItem value="2022/2023">2022/2023</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-end pb-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="is_primary"
-                      checked={isPrimaryTeacher}
-                      onCheckedChange={(checked) => setIsPrimaryTeacher(checked as boolean)}
-                    />
-                    <Label htmlFor="is_primary" className="text-sm">
-                      Class Teacher
-                    </Label>
-                  </div>
-                </div>
+              <div className="flex items-center space-x-2 pt-1">
+                <Checkbox
+                  id="is_primary"
+                  checked={isPrimaryTeacher}
+                  onCheckedChange={(checked) => setIsPrimaryTeacher(checked as boolean)}
+                />
+                <Label htmlFor="is_primary" className="text-sm">
+                  Class Teacher
+                </Label>
               </div>
             </div>
           </div>

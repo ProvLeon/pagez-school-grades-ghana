@@ -204,9 +204,23 @@ const GradingSettings = () => {
               <h3 className="font-semibold text-foreground">On this page</h3>
               <nav>
                 <ul className="space-y-2">
-                  <li><a href="#academic-settings" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Academic Settings</a></li>
-                  <li><a href="#grading-scales" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Grading Scales</a></li>
-                  <li><a href="#comment-options" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Comment Options</a></li>
+                  {[
+                    { id: 'academic-settings', label: 'Academic Settings' },
+                    { id: 'grading-scales',    label: 'Grading Scales' },
+                    { id: 'comment-options',   label: 'Comment Options' },
+                  ].map(({ id, label }) => (
+                    <li key={id}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }
+                        className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors text-left w-full"
+                      >
+                        {label}
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               </nav>
               <div className="pt-6">

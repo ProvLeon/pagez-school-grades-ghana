@@ -380,7 +380,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 border-t">
         <div className="text-xs text-muted-foreground text-center">
-          @{new Date().getFullYear()} e-Result System v {import.meta.env.VITE_APP_VERSION} | PB Pagez LTD
+          &copy; {new Date().getFullYear()} e-Result GH v {import.meta.env.VITE_APP_VERSION} | PB Pagez LTD
         </div>
       </SidebarFooter>
     </Sidebar>

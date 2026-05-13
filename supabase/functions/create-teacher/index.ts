@@ -192,6 +192,21 @@ serve(async (req) => {
       );
     }
 
+    // Link teacher to the organization so getUserOrganizationId() works on login
+    const { error: orgProfileError } = await adminClient
+      .from("user_organization_profiles")
+      .insert({
+        user_id: userId,
+        organization_id: organizationId,
+        role: "teacher",
+        is_active: true,
+      });
+
+    if (orgProfileError) {
+      // Non-fatal: log the issue but don't roll back an otherwise successful creation
+      console.error("Failed to create user_organization_profile for teacher:", orgProfileError.message);
+    }
+
     console.log(`Successfully created teacher: ${full_name} (${teacherEmail})`);
 
     return new Response(

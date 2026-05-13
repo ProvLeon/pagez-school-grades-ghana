@@ -12,6 +12,7 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateSheetTemplate } from "@/hooks/useSheetTemplates";
 import { TemplateService } from "@/services/templateService";
+import { useGradingSettings } from "@/hooks/useGradingSettings";
 
 export const TemplateGeneratorSection = () => {
   const [selectedTemplate, setSelectedTemplate] = useState("");
@@ -28,6 +29,7 @@ export const TemplateGeneratorSection = () => {
   });
   const { data: subjects = [] } = useSubjects();
   const createTemplate = useCreateSheetTemplate();
+  const { data: gradingSettings } = useGradingSettings();
 
   const templateTypes = [
     {
@@ -86,7 +88,15 @@ export const TemplateGeneratorSection = () => {
           await TemplateService.generateStudentRegistrationTemplate(className, departmentName, parseInt(studentCount) || 50);
           break;
         case 'results_entry':
-          await TemplateService.generateResultsEntryTemplate(className, departmentName, students, getFilteredSubjects());
+          await TemplateService.generateResultsEntryTemplate(
+            className,
+            departmentName,
+            students,
+            getFilteredSubjects(),
+            undefined,
+            undefined,
+            gradingSettings?.next_term_begin || undefined
+          );
           break;
         case 'attendance':
           await TemplateService.generateAttendanceTemplate(className, students);
@@ -241,50 +251,7 @@ export const TemplateGeneratorSection = () => {
           </Card>
         </div>
       </div>
-      {/*<Card>*/}
-      {/*  <CardHeader>*/}
-      {/*    <CardTitle className="flex items-center gap-2 text-base">*/}
-      {/*      <Info className="w-5 h-5 text-muted-foreground" />*/}
-      {/*      About Our Templates*/}
-      {/*    </CardTitle>*/}
-      {/*  </CardHeader>*/}
-      {/*  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">*/}
-      {/*    <div>*/}
-      {/*      <h4 className="font-semibold text-foreground mb-3">Ghana-Specific Features</h4>*/}
-      {/*      <ul className="space-y-3 text-sm text-muted-foreground">*/}
-      {/*        <li className="flex items-start gap-3">*/}
-      {/*          <CheckCircle className="w-4 h-4 mt-1 flex-shrink-0" />*/}
-      {/*          <span>Templates include fields for Ghana Card numbers and region-aware addresses.</span>*/}
-      {/*        </li>*/}
-      {/*        <li className="flex items-start gap-3">*/}
-      {/*          <CheckCircle className="w-4 h-4 mt-1 flex-shrink-0" />*/}
-      {/*          <span>The results entry template is aligned with the official GES assessment structure.</span>*/}
-      {/*        </li>*/}
-      {/*        <li className="flex items-start gap-3">*/}
-      {/*          <CheckCircle className="w-4 h-4 mt-1 flex-shrink-0" />*/}
-      {/*          <span>Phone number fields are pre-formatted for the +233 country code.</span>*/}
-      {/*        </li>*/}
-      {/*      </ul>*/}
-      {/*    </div>*/}
-      {/*    <div>*/}
-      {/*      <h4 className="font-semibold text-foreground mb-3">General Benefits</h4>*/}
-      {/*      <ul className="space-y-3 text-sm text-muted-foreground">*/}
-      {/*        <li className="flex items-start gap-3">*/}
-      {/*          <CheckCircle className="w-4 h-4 mt-1 flex-shrink-0" />*/}
-      {/*          <span>Reduces errors by pre-filling class lists and subject details where applicable.</span>*/}
-      {/*        </li>*/}
-      {/*        <li className="flex items-start gap-3">*/}
-      {/*          <CheckCircle className="w-4 h-4 mt-1 flex-shrink-0" />*/}
-      {/*          <span>Includes built-in data validation and dropdown lists to ensure data integrity.</span>*/}
-      {/*        </li>*/}
-      {/*        <li className="flex items-start gap-3">*/}
-      {/*          <CheckCircle className="w-4 h-4 mt-1 flex-shrink-0" />*/}
-      {/*          <span>Standardized formatting prevents common errors during the bulk upload process.</span>*/}
-      {/*        </li>*/}
-      {/*      </ul>*/}
-      {/*    </div>*/}
-      {/*  </CardContent>*/}
-      {/*</Card>*/}
+     
     </div>
   );
 };

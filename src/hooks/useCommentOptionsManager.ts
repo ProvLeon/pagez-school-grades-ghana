@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCommentOptions } from "@/hooks/useGradingSettings";
 import { CommentOption, CommentType } from "@/types/gradingSettings";
 import {
@@ -12,22 +12,29 @@ import {
 export const useCommentOptionsManager = () => {
   const { data: existingCommentOptions = [] } = useCommentOptions();
 
+  // Guard: only seed from DB on first load — prevents invalidateQueries
+  // from re-fetching and overwriting in-progress user edits.
+  const initializedRef = useRef(false);
+
   const [conductOptions, setConductOptions] = useState<CommentOption[]>([]);
   const [attitudeOptions, setAttitudeOptions] = useState<CommentOption[]>([]);
   const [interestOptions, setInterestOptions] = useState<CommentOption[]>([]);
   const [teacherCommentOptions, setTeacherCommentOptions] = useState<CommentOption[]>([]);
 
-  // Load existing comment options
+  // Seed from DB — once only
   useEffect(() => {
-    const conductOpts = existingCommentOptions.filter(opt => opt.option_type === 'conduct');
-    const attitudeOpts = existingCommentOptions.filter(opt => opt.option_type === 'attitude');
-    const interestOpts = existingCommentOptions.filter(opt => opt.option_type === 'interest');
-    const teacherOpts = existingCommentOptions.filter(opt => opt.option_type === 'teacher');
+    if (existingCommentOptions.length > 0 && !initializedRef.current) {
+      initializedRef.current = true;
+      const conductOpts = existingCommentOptions.filter(opt => opt.option_type === 'conduct');
+      const attitudeOpts = existingCommentOptions.filter(opt => opt.option_type === 'attitude');
+      const interestOpts = existingCommentOptions.filter(opt => opt.option_type === 'interest');
+      const teacherOpts = existingCommentOptions.filter(opt => opt.option_type === 'teacher');
 
-    setConductOptions(conductOpts.length > 0 ? conductOpts.map(opt => ({ id: opt.id, value: opt.option_value })) : defaultConductOptions);
-    setAttitudeOptions(attitudeOpts.length > 0 ? attitudeOpts.map(opt => ({ id: opt.id, value: opt.option_value })) : defaultAttitudeOptions);
-    setInterestOptions(interestOpts.length > 0 ? interestOpts.map(opt => ({ id: opt.id, value: opt.option_value })) : defaultInterestOptions);
-    setTeacherCommentOptions(teacherOpts.length > 0 ? teacherOpts.map(opt => ({ id: opt.id, value: opt.option_value })) : defaultTeacherCommentOptions);
+      setConductOptions(conductOpts.length > 0 ? conductOpts.map(opt => ({ id: opt.id, value: opt.option_value })) : defaultConductOptions);
+      setAttitudeOptions(attitudeOpts.length > 0 ? attitudeOpts.map(opt => ({ id: opt.id, value: opt.option_value })) : defaultAttitudeOptions);
+      setInterestOptions(interestOpts.length > 0 ? interestOpts.map(opt => ({ id: opt.id, value: opt.option_value })) : defaultInterestOptions);
+      setTeacherCommentOptions(teacherOpts.length > 0 ? teacherOpts.map(opt => ({ id: opt.id, value: opt.option_value })) : defaultTeacherCommentOptions);
+    }
   }, [existingCommentOptions]);
 
   const addCommentOption = (type: CommentType) => {

@@ -68,12 +68,19 @@ const ManageTeacher = () => {
   const handlePasswordUpdate = async (newPassword: string) => {
     if (!selectedTeacher?.user_id) return;
     try {
-      const { error } = await supabase.auth.admin.updateUserById(selectedTeacher.user_id, { password: newPassword });
+      const { data, error } = await supabase.functions.invoke('reset-teacher-password', {
+        body: { userId: selectedTeacher.user_id, newPassword },
+      });
       if (error) throw error;
-      toast({ title: "Password Reset", description: `Password has been reset.` });
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Password Reset", description: `Password has been reset successfully.` });
       setIsPasswordDialogOpen(false);
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to reset password.", variant: "destructive" });
+    } catch (error: any) {
+      toast({
+        title: "Password Reset Failed",
+        description: error?.message || "Failed to reset password.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -147,7 +154,7 @@ const ManageTeacher = () => {
       </main>
 
       <TeacherEditDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} teacher={selectedTeacher} onUpdateTeacher={handleUpdateTeacher} />
-      <TeacherPasswordDialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen} teacher={selectedTeacher} onPasswordUpdate={handlePasswordUpdate} />
+      <TeacherPasswordDialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen} teacher={selectedTeacher} assignments={assignments} onPasswordUpdate={handlePasswordUpdate} />
       <DeleteConfirmationDialog isOpen={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen} onConfirm={handleConfirmDelete} title="Delete Teacher" description={`Are you sure you want to delete ${selectedTeacher?.full_name}?`} isLoading={deleteTeacherMutation.isPending} />
     </div>
   );

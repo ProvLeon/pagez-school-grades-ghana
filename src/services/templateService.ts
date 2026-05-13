@@ -277,7 +277,8 @@ export class TemplateService {
     students: Array<{ student_id: string; full_name: string }> = [],
     subjects: Array<{ name: string; code?: string }> = [],
     caTypes: Array<{ id: string; name: string }> = [],
-    academicYear?: string
+    academicYear?: string,
+    nextTermBegin?: string
   ): Promise<void> {
     const XLSX = (await import('xlsx-js-style')).default;
     // Get example CA Type from the list or use default
@@ -309,7 +310,9 @@ export class TemplateService {
     });
 
     const attendanceColumns: TemplateColumn[] = [
-      { header: 'Days Present', key: 'days_present', width: 14, validation: { type: 'number' } }
+      { header: 'Days Present', key: 'days_present', width: 14, validation: { type: 'number' } },
+      { header: "Head's Remarks", key: 'heads_remarks', width: 35 },
+      { header: 'Next Term Begins', key: 'next_term_begin', width: 22 },
     ];
 
     const allColumns = [...baseColumns, ...subjectColumns, ...attendanceColumns];
@@ -390,7 +393,9 @@ export class TemplateService {
           '',  // term
           academicYear || '2024/2025',
           ...new Array(subjectColumns.length).fill(''),
-          ''  // days present
+          '',  // days present
+          '',  // heads remarks
+          nextTermBegin || '',  // next term begins — pre-filled from grading settings
         ];
         dataRows.push(row);
       });
@@ -403,7 +408,9 @@ export class TemplateService {
         'first',
         academicYear || '2024/2025',
         ...new Array(subjectColumns.length).fill(''),
-        ''
+        '',  // days present
+        '',  // heads remarks
+        nextTermBegin || '',  // next term begins — pre-filled from grading settings
       ];
       dataRows.push(sampleRow);
 
