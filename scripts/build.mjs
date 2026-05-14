@@ -14,12 +14,17 @@
  */
 
 import { build } from 'vite';
+import { execSync } from 'child_process';
 
 let exitCode = 0;
 
 try {
   await build();
   console.log('✓ Build completed successfully');
+
+  // Generate sitemap after build
+  console.log('\n📝 Generating sitemap...');
+  execSync('node scripts/generate-sitemap.mjs', { stdio: 'inherit' });
 } catch (err) {
   console.error('✗ Build failed:', err);
   exitCode = 1;
