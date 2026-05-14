@@ -1,0 +1,24 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "copilot/fix-npm-start-hang-issue",
+    "main",
+    "origin",
+    "updates",
+    "vercel/install-vercel-web-analytics-i-ot9btu"
+  ],
+  "parent": {
+    "copilot/fix-npm-start-hang-issue": "main",
+    "main": null,
+    "origin": "main",
+    "updates": "main",
+    "vercel/install-vercel-web-analytics-i-ot9btu": "main"
+  },
+  "order": [
+    "main",
+    "copilot/fix-npm-start-hang-issue",
+    "origin",
+    "updates",
+    "vercel/install-vercel-web-analytics-i-ot9btu"
+  ]
+}
