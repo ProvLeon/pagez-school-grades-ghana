@@ -20,6 +20,7 @@ import { useEffect, useState, lazy, Suspense } from "react";
 import { LegalModal } from "@/components/LegalModal";
 import { useLegalModal } from "@/hooks/useLegalModal";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // ✅ LAZY LOAD all pages instead of static imports
 const Index = lazy(() => import("./pages/Index"));
@@ -523,6 +524,7 @@ const App = () => {
         </TooltipProvider>
       </QueryClientProvider>
       <Analytics />
+      <SpeedInsights />
     </ErrorBoundary>
   );
 };
