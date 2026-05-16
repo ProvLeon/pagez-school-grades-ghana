@@ -4,12 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "node --max-old-space-size=1536 scripts/build.mjs",
+    "dev": "node api.js && vite",
+    "build": "node api.js && node --max-old-space-size=1536 scripts/build.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "node server.js"
+    "start": "node api.js && node server.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
