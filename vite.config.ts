@@ -8,10 +8,10 @@ import path from "path";
 // Node.js event-loop alive after `vite build` completed, resulting in a
 // 2-hour SIGTERM on Render/Vercel.
 export default defineConfig(async ({ mode }) => {
-  const devPlugins =
-    mode === "development"
-      ? [(await import("lovable-tagger")).componentTagger()]
-      : [];
+  // const devPlugins =
+  //   mode === "development"
+  //     ? [(await import("lovable-tagger")).componentTagger()]
+  //     : [];
 
   return ({
     server: {
@@ -20,7 +20,7 @@ export default defineConfig(async ({ mode }) => {
     },
     plugins: [
       react(),
-      ...devPlugins,
+      // ...devPlugins,
     ].filter(Boolean),
     resolve: {
       alias: {
