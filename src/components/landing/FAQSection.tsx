@@ -1,4 +1,3 @@
-import { Helmet } from "react-helmet";
 import {
   Accordion,
   AccordionContent,
@@ -42,11 +41,6 @@ const faqs: FAQItem[] = [
 const FAQSection = () => {
   return (
     <>
-      <Helmet>
-        <title>FAQ - e-Results GH School Management Platform</title>
-        <meta name="description" content="Frequently asked questions about e-Results GH - Ghana's school results and grading management platform." />
-      </Helmet>
-
       <Schema data={createFAQSchema(faqs)} />
 
       <section id="faq" className="py-20 md:py-28 bg-white">
