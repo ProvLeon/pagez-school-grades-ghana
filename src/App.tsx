@@ -195,7 +195,10 @@ const ForceRedirect = ({ to }: { to: string }) => {
 
 const RouteAwareHelpButton = () => {
   const location = useLocation();
-  if (location.pathname === '/') return null;
+  const path = location.pathname || '/';
+  // Treat root and index.html as the landing page so the help button
+  // doesn't appear before the user navigates to app pages.
+  if (path === '/' || path === '' || path.endsWith('/index.html')) return null;
   return <FloatingHelpButton />;
 };
 
