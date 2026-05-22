@@ -28,11 +28,13 @@ interface SubjectsTableSectionProps {
     ca?: number;
     exam?: number;
   };
+  variant?: "term" | "mock";
 }
 
 export const SubjectsTableSection = ({
   subjectMarks,
-  caTypeConfig
+  caTypeConfig,
+  variant = "term"
 }: SubjectsTableSectionProps) => {
   const caPercentage = (caTypeConfig?.ca ?? ((caTypeConfig?.ca1 || 0) + (caTypeConfig?.ca2 || 0) + (caTypeConfig?.ca3 || 0) + (caTypeConfig?.ca4 || 0)));
   const examPercentage = (caTypeConfig?.exam ?? (100 - caPercentage));
@@ -107,22 +109,26 @@ export const SubjectsTableSection = ({
         <Table className="w-full">
           <TableHeader>
             <TableRow className="border-b border-slate-100 dark:border-border bg-transparent hover:bg-transparent">
-              <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-4 px-6 h-auto">
+              <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-3 px-6 h-auto">
                 Subject
               </TableHead>
-              <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-4 text-center h-auto">
-                CA ({caPercentage}%)
-              </TableHead>
-              <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-4 text-center h-auto">
-                Exam ({examPercentage}%)
-              </TableHead>
-              <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-4 text-center h-auto">
+              {variant === "term" && (
+                <>
+                  <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-3 text-center h-auto">
+                    CA ({caPercentage}%)
+                  </TableHead>
+                  <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-3 text-center h-auto">
+                    Exam ({examPercentage}%)
+                  </TableHead>
+                </>
+              )}
+              <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-3 text-center h-auto">
                 Total
               </TableHead>
-              <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-4 text-center h-auto">
+              <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-3 text-center h-auto">
                 Grade
               </TableHead>
-              <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-4 text-right pr-6 h-auto">
+              <TableHead className="font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-muted-foreground py-3 text-right pr-6 h-auto">
                 Remarks
               </TableHead>
             </TableRow>
@@ -130,7 +136,7 @@ export const SubjectsTableSection = ({
           <TableBody>
             {subjectMarks.length === 0 ? (
               <TableRow className="hover:bg-transparent border-0">
-                <TableCell colSpan={6} className="text-center py-12">
+                <TableCell colSpan={variant === "term" ? 6 : 4} className="text-center py-8">
                   <span className="text-slate-400 dark:text-muted-foreground font-medium">No subjects found for this result</span>
                 </TableCell>
               </TableRow>
@@ -145,25 +151,29 @@ export const SubjectsTableSection = ({
                       index === subjectMarks.length - 1 ? "border-0" : ""
                     )}
                   >
-                    <TableCell className="font-semibold text-slate-900 dark:text-slate-200 py-4 px-6 max-w-[200px] truncate">
+                    <TableCell className="font-semibold text-slate-900 dark:text-slate-200 py-2.5 px-6 max-w-[200px] truncate">
                       {mark.subject?.name || `Subject ID: ${mark.subject_id || 'Missing'}`}
                     </TableCell>
-                    <TableCell className="text-center py-4">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-xs">
-                        {weightedCaScore}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center py-4">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-xs">
-                        {weightedExamScore}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center py-4">
+                    {variant === "term" && (
+                      <>
+                        <TableCell className="text-center py-2.5">
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-xs">
+                            {weightedCaScore}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center py-2.5">
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-xs">
+                            {weightedExamScore}
+                          </span>
+                        </TableCell>
+                      </>
+                    )}
+                    <TableCell className="text-center py-2.5">
                       <span className="text-base font-bold text-slate-900 dark:text-slate-100">
                         {Math.round(mark.total_score || 0)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-center py-4">
+                    <TableCell className="text-center py-2.5">
                       <div className="flex justify-center">
                         <span className={cn(
                           "inline-flex items-center justify-center w-8 h-8 rounded-lg border font-bold text-sm",
@@ -173,7 +183,7 @@ export const SubjectsTableSection = ({
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right py-4 pr-6">
+                    <TableCell className="text-right py-2.5 pr-6">
                       <span className="text-slate-500 dark:text-slate-400 font-medium text-xs uppercase tracking-wide">
                         {getRemarkForGrade(mark.grade)}
                       </span>
@@ -186,12 +196,16 @@ export const SubjectsTableSection = ({
             {/* Pad with empty rows to maintain minimum height if under 5 rows for aesthetics */}
             {subjectMarks.length > 0 && subjectMarks.length < 5 && Array.from({ length: 5 - subjectMarks.length }).map((_, i) => (
               <TableRow key={`empty-${i}`} className="border-b border-slate-50 dark:border-border/50 hover:bg-transparent">
-                <TableCell className="py-4 px-6 text-slate-300 dark:text-slate-700/50">—</TableCell>
-                <TableCell className="py-4 text-center text-slate-300 dark:text-slate-700/50">—</TableCell>
-                <TableCell className="py-4 text-center text-slate-300 dark:text-slate-700/50">—</TableCell>
-                <TableCell className="py-4 text-center text-slate-300 dark:text-slate-700/50">—</TableCell>
-                <TableCell className="py-4 text-center text-slate-300 dark:text-slate-700/50">—</TableCell>
-                <TableCell className="py-4 pr-6 text-right text-slate-300 dark:text-slate-700/50">—</TableCell>
+                <TableCell className="py-2.5 px-6 text-slate-300 dark:text-slate-700/50">—</TableCell>
+                {variant === "term" && (
+                  <>
+                    <TableCell className="py-2.5 text-center text-slate-300 dark:text-slate-700/50">—</TableCell>
+                    <TableCell className="py-2.5 text-center text-slate-300 dark:text-slate-700/50">—</TableCell>
+                  </>
+                )}
+                <TableCell className="py-2.5 text-center text-slate-300 dark:text-slate-700/50">—</TableCell>
+                <TableCell className="py-2.5 text-center text-slate-300 dark:text-slate-700/50">—</TableCell>
+                <TableCell className="py-2.5 pr-6 text-right text-slate-300 dark:text-slate-700/50">—</TableCell>
               </TableRow>
             ))}
           </TableBody>

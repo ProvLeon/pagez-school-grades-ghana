@@ -22,6 +22,10 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { getExamTypeName } from '@/hooks/useMockExamDepartments';
+import { SubjectsTableSection } from '@/components/results/SubjectsTableSection';
+import { MockReportCardService, MockPDFData } from '@/services/MockReportCardService';
+import { useSchoolSettings } from '@/hooks/useSchoolSettings';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -237,8 +241,11 @@ const PublicMockResults = () => {
   const [inputValue, setInputValue] = useState('');
   const [submittedId, setSubmittedId] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // ── ALL HOOKS ABOVE EVERY EARLY RETURN ─────────────────────────────────────
+  const { settings: schoolSettings } = useSchoolSettings();
+  const { toast } = useToast();
 
   // 1. Fetch session metadata
   const {
@@ -359,7 +366,44 @@ const PublicMockResults = () => {
     },
   });
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // ─── Event handlers ─────────────────────────────────────────────────────────
+  const handleDownloadPDF = async () => {
+    if (!foundResult || !session) return;
+    
+    setIsGeneratingPDF(true);
+    toast({ title: 'Generating PDF...', description: 'Preparing your mock report card.' });
+    
+    try {
+      const subjectScores = foundResult.subject_marks.map(m => ({
+        subjectName: m.subject?.name || 'Unknown Subject',
+        totalScore: m.total_score
+      }));
+
+      const pdfData: MockPDFData = {
+        studentName: foundResult.student?.full_name || 'Unknown Student',
+        sessionName: session.name,
+        academicYear: session.academic_year,
+        schoolSettings: schoolSettings || null,
+        subjectScores: subjectScores
+      };
+
+      const blob = await MockReportCardService.generateIndividualPDF(pdfData);
+      const fileName = `${pdfData.studentName.replace(/\s+/g, '-')}-mock-result-${session.name.replace(/\s+/g, '-')}.pdf`.toLowerCase();
+      MockReportCardService.downloadPDF(blob, fileName);
+      
+      toast({ title: 'PDF Downloaded', description: 'Your report has been downloaded successfully.' });
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to generate your PDF report.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   const handleSearch = () => {
     if (!inputValue.trim()) return;
     setSubmittedId(inputValue.trim().toUpperCase());
@@ -377,7 +421,7 @@ const PublicMockResults = () => {
   // No session ID in URL
   if (!sessionId) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden">
         <PageHeader
           title={
             <>
@@ -452,7 +496,7 @@ const PublicMockResults = () => {
   // Session loading
   if (sessionLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden">
         <PageHeader
           title={
             <>
@@ -475,7 +519,7 @@ const PublicMockResults = () => {
   // Session not found or error
   if (sessionError || !session) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden">
         <PageHeader
           title={
             <>
@@ -523,7 +567,7 @@ const PublicMockResults = () => {
   // Session not published yet
   if (!session.is_published) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden">
         <PageHeader
           title={<>{session.name}</>}
           subtitle="Results for this mock exam session have not been published yet."
@@ -569,7 +613,7 @@ const PublicMockResults = () => {
     : { grade: '', isPassing: false };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden">
       <PageHeader
         title={<>{session.name}</>}
         subtitle={`${session.academic_year} · ${capitalize(session.term)} Term · ${getExamTypeName(examType)} — Enter your Student ID to view your result.`}
@@ -875,7 +919,7 @@ const PublicMockResults = () => {
                   </p>
                 </div>
 
-                {/* Three metric tiles */}
+                {/* Details grid (Avg, Aggregate, Grade) */}
                 <div className="px-5 py-4 grid grid-cols-3 gap-3 border-b border-gray-100">
                   <div className="bg-white rounded-xl border border-gray-100 px-3 py-3 text-center shadow-sm">
                     <div className="flex items-center justify-center gap-1 mb-1">
@@ -925,47 +969,8 @@ const PublicMockResults = () => {
                   </div>
                 </div>
 
-                {/* Subject breakdown */}
-                {foundResult.subject_marks.length > 0 && (
-                  <div className="overflow-hidden border-b border-gray-100">
-                    <div className="px-5 py-2.5 bg-gray-50/60 border-b border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="w-3.5 h-3.5 text-gray-400" />
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                          Subject Breakdown
-                        </p>
-                      </div>
-                    </div>
-                    <div className="divide-y divide-gray-50">
-                      {foundResult.subject_marks.map((mark) => (
-                        <div
-                          key={mark.id}
-                          className="flex items-center justify-between px-5 py-2.5"
-                        >
-                          <p className="text-[13px] text-gray-700 font-medium">
-                            {mark.subject?.name || 'Unknown Subject'}
-                          </p>
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-[13px] font-bold text-gray-800">
-                              {mark.total_score ?? '—'}%
-                            </span>
-                            <span
-                              className={cn(
-                                'text-[11px] font-bold px-2 py-0.5 rounded-full',
-                                gradeClasses(mark.grade)
-                              )}
-                            >
-                              {mark.grade || '—'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Pass / fail verdict */}
-                <div className="px-5 py-4">
+                <div className="px-5 py-4 border-b border-gray-100">
                   <div
                     className={cn(
                       'flex items-center gap-2.5 px-4 py-3 rounded-xl text-[13px] font-semibold',
@@ -979,10 +984,46 @@ const PublicMockResults = () => {
                     ) : (
                       <XCircle className="w-4 h-4 text-red-500 shrink-0" />
                     )}
-                    {isPassing
-                      ? `Passed — aggregate of ${aggregate} is within the ${examType.toUpperCase()} passing threshold.`
-                      : `Not passed — aggregate of ${aggregate} exceeds the ${examType.toUpperCase()} passing threshold.`}
+                    <span className="truncate">
+                      {isPassing
+                        ? `Passed — aggregate of ${aggregate} is within threshold.`
+                        : `Not passed — aggregate of ${aggregate} exceeds threshold.`}
+                    </span>
                   </div>
+                </div>
+
+                {/* Massive Download CTA section */}
+                <div className="px-5 py-5 space-y-3 bg-gray-50/50">
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleDownloadPDF}
+                    disabled={isGeneratingPDF}
+                    className={cn(
+                      'w-full h-13 rounded-xl font-bold text-[14px] flex items-center justify-center gap-2.5 transition-all duration-200 py-3.5',
+                      isGeneratingPDF
+                        ? 'bg-blue-100 text-blue-400 cursor-not-allowed'
+                        : 'bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5'
+                    )}
+                  >
+                    {isGeneratingPDF ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generating PDF…
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-4 h-4" />
+                        Download Report Card (PDF)
+                      </>
+                    )}
+                  </motion.button>
+
+                  <p className="text-center text-[11px] text-gray-400 leading-relaxed">
+                    The PDF will open or download automatically on your device.
+                    <br />
+                    Save it to your phone for future reference.
+                  </p>
                 </div>
               </motion.div>
             )}
@@ -993,6 +1034,7 @@ const PublicMockResults = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
+
             className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex items-start gap-3.5"
           >
             <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
