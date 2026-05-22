@@ -90,8 +90,8 @@ export const SubjectsTableSection = ({
   return (
     <div className="rounded-2xl border border-slate-100 dark:border-border bg-white dark:bg-card shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] overflow-hidden flex flex-col">
       <div className="px-6 py-5 flex items-center gap-3 border-b border-slate-100 dark:border-border bg-slate-50/50 dark:bg-slate-900/50">
-        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
-          <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <BookOpen className="w-5 h-5 text-primary" />
         </div>
         <div>
           <h3 className="text-lg font-bold text-slate-900 dark:text-card-foreground line-clamp-1">

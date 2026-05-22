@@ -29,14 +29,14 @@ export const StudentInfoSection = ({
   return (
     <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-card border border-slate-100 dark:border-border shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
       {/* Subtle Background Accent */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/20 dark:bg-indigo-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-rose-50 dark:bg-rose-500/5 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
 
       <div className="relative flex flex-col md:flex-row md:items-center justify-between p-6 sm:p-8 gap-6 z-10">
 
         {/* Left: Identity */}
         <div className="flex items-center gap-5">
-          <div className="relative shrink-0 flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-100 dark:from-indigo-500/20 dark:to-blue-500/20 border border-white dark:border-slate-800 shadow-sm text-indigo-600 dark:text-indigo-400 overflow-hidden">
+          <div className="relative shrink-0 flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 border border-white dark:border-slate-800 shadow-sm text-primary overflow-hidden">
             {photoUrl ? (
               <img src={photoUrl} alt={studentName} className="w-full h-full object-cover" />
             ) : studentName ? (
@@ -50,7 +50,7 @@ export const StudentInfoSection = ({
               {studentName || "Unknown Student"}
             </h2>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold bg-primary/10 text-primary border border-primary/20">
                 <GraduationCap className="w-4 h-4" />
                 {className || "Unassigned Class"}
               </span>
