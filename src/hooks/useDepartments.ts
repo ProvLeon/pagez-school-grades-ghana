@@ -49,7 +49,12 @@ export const useCreateDepartment = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('A department with this name already exists.');
+        }
+        throw new Error(error.message);
+      }
       return data;
     },
     onSuccess: () => {
@@ -82,7 +87,12 @@ export const useUpdateDepartment = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('A department with this name already exists.');
+        }
+        throw new Error(error.message);
+      }
       return data;
     },
     onSuccess: () => {

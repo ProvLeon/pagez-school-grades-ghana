@@ -6,9 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const openRouterApiKey = Deno.env.get("OPENROUTER_API_KEY");
-const primaryModel = Deno.env.get("OPENROUTER_MODEL") || "meta-llama/llama-3.2-3b-instruct:free";
-const fallbackModelsEnv = Deno.env.get("OPENROUTER_FALLBACK_MODELS") || "google/gemma-3n-e4b-it:free,mistralai/mistral-7b-instruct:free,qwen/qwen-2-7b-instruct:free";
+const openAiApiKey = Deno.env.get("OPENAI_API_KEY");
+const primaryModel = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+const fallbackModelsEnv = Deno.env.get("OPENAI_FALLBACK_MODELS") || "gpt-3.5-turbo";
 const fallbackModels = fallbackModelsEnv.split(",").map((m) => m.trim()).filter(Boolean);
 
 // Combine primary model with fallbacks for sequential attempts
@@ -21,11 +21,11 @@ serve(async (req) => {
   }
 
   try {
-    if (!openRouterApiKey) {
-      console.error("CRITICAL: OPENROUTER_API_KEY environment variable is not set");
+    if (!openAiApiKey) {
+      console.error("CRITICAL: OPENAI_API_KEY environment variable is not set");
       return new Response(
         JSON.stringify({
-          error: "Missing OPENROUTER_API_KEY. Please set it in Supabase Edge Function secrets.",
+          error: "Missing OPENAI_API_KEY. Please set it in Supabase Edge Function secrets.",
           code: "missing_api_key",
           details: "The API key must be configured in your Supabase project settings."
         }),
@@ -94,15 +94,13 @@ serve(async (req) => {
     // Try each model in sequence until one succeeds
     for (const model of modelsToTry) {
       try {
-        console.log(`[Attempt] Calling OpenRouter with model: ${model}`);
+        console.log(`[Attempt] Calling OpenAI with model: ${model}`);
 
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${openRouterApiKey}`,
+            Authorization: `Bearer ${openAiApiKey}`,
             "Content-Type": "application/json",
-            "HTTP-Referer": Deno.env.get("SITE_URL") || "https://school-grades.app",
-            "X-Title": "School Grades Ghana",
           },
           body: JSON.stringify({
             model: model,
@@ -127,7 +125,7 @@ serve(async (req) => {
             error: errorMessage
           });
 
-          lastError = data?.error || { message: "OpenRouter request failed" };
+          lastError = data?.error || { message: "OpenAI request failed" };
 
           // If it's a model-specific error, try the next model
           const errorCode = lastError?.code || lastError?.type || "";
@@ -143,13 +141,13 @@ serve(async (req) => {
 
           // For auth errors or other critical errors, don't retry
           if (response.status === 401 || response.status === 403) {
-            console.error("[Auth Error] Invalid OpenRouter API credentials");
+            console.error("[Auth Error] Invalid OpenAI API credentials");
             return new Response(
               JSON.stringify({
-                error: "Invalid or missing OpenRouter API key",
+                error: "Invalid or missing OpenAI API key",
                 code: "auth_error",
                 status: 401,
-                details: "The OPENROUTER_API_KEY is invalid or has expired. Please check your Supabase secrets."
+                details: "The OPENAI_API_KEY is invalid or has expired. Please check your Supabase secrets."
               }),
               { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
@@ -205,7 +203,7 @@ serve(async (req) => {
         debugInfo: {
           totalModelsAttempted: modelsToTry.length,
           failedAttempts: modelAttempts.length,
-          apiKeyConfigured: !!openRouterApiKey
+          apiKeyConfigured: !!openAiApiKey
         }
       }),
       { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }

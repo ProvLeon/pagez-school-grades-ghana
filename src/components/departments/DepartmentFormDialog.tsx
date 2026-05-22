@@ -97,28 +97,14 @@ export function DepartmentFormDialog({
         { id: department.id, ...submitData },
         {
           onSuccess: () => {
-            toast({ title: "Department updated successfully" });
             onOpenChange(false);
-          },
-          onError: () => {
-            toast({
-              title: "Failed to update department",
-              variant: "destructive",
-            });
           },
         }
       );
     } else {
       createDepartment.mutate(submitData, {
         onSuccess: () => {
-          toast({ title: "Department created successfully" });
           onOpenChange(false);
-        },
-        onError: () => {
-          toast({
-            title: "Failed to create department",
-            variant: "destructive",
-          });
         },
       });
     }
