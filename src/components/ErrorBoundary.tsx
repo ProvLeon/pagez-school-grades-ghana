@@ -187,102 +187,106 @@ class ErrorBoundary extends Component<Props, State> {
       const canRetry = this.retryCount < this.maxRetries;
 
       const severityColors = {
-        low: 'border-yellow-200 bg-yellow-50',
-        medium: 'border-orange-200 bg-orange-50',
-        high: 'border-red-200 bg-red-50',
-        critical: 'border-red-300 bg-red-100',
+        low: 'border-yellow-200/50 bg-yellow-50/50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200',
+        medium: 'border-orange-200/50 bg-orange-50/50 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200',
+        high: 'border-red-200/50 bg-red-50/50 dark:bg-red-900/20 text-red-800 dark:text-red-200',
+        critical: 'border-red-300/50 bg-red-100/50 dark:bg-red-950/30 text-red-900 dark:text-red-100',
       };
 
       return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-          <Card className="w-full max-w-2xl shadow-xl border-0">
-            <CardHeader className="text-center pb-6">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <AlertTriangle className="w-8 h-8 text-white" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
+          {/* Ambient background glows */}
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl pointer-events-none" />
+
+          <Card className="w-full max-w-2xl rounded-2xl bg-white dark:bg-card shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 dark:border-border relative z-10 overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-400 via-orange-400 to-red-500" />
+            
+            <CardHeader className="text-center pb-2 pt-10">
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <div className="absolute -inset-4 bg-red-100 dark:bg-red-900/20 rounded-full blur-xl animate-pulse" />
+                  <div className="w-20 h-20 bg-gradient-to-br from-white to-red-50 dark:from-gray-800 dark:to-red-950/30 rounded-2xl flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-red-100 dark:border-red-900/30 relative">
+                    <AlertTriangle className="w-10 h-10 text-red-500 drop-shadow-sm" />
+                  </div>
                 </div>
               </div>
-              <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Oops! Something went wrong
+              <CardTitle className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                Something unexpected happened
               </CardTitle>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">
-                We're sorry for the inconvenience. The application encountered an unexpected error.
+              <p className="text-gray-500 dark:text-gray-400 mt-3 text-lg max-w-md mx-auto">
+                We're sorry for the interruption. Our system encountered a problem while processing your request.
               </p>
             </CardHeader>
 
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-8 px-8 pb-10">
               {/* Error Severity Alert */}
-              <Alert className={severityColors[severity]}>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription className="font-medium">
+              <Alert className={`mt-4 border shadow-sm ${severityColors[severity]} backdrop-blur-sm`}>
+                <AlertDescription className="font-medium flex items-center justify-center text-center py-1">
                   {errorMessage}
                 </AlertDescription>
               </Alert>
 
-              {/* Error Details (Development Only) */}
-              {import.meta.env.VITE_APP_ENVIRONMENT === 'development' && error && (
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    Development Error Details:
-                  </h4>
-                  <div className="text-sm space-y-2">
-                    <div>
-                      <span className="font-medium">Error:</span>
-                      <p className="text-red-600 dark:text-red-400 font-mono text-xs mt-1">
-                        {error.message}
-                      </p>
-                    </div>
-                    {error.stack && (
-                      <div>
-                        <span className="font-medium">Stack Trace:</span>
-                        <pre className="text-xs bg-gray-200 dark:bg-gray-700 p-2 rounded mt-1 overflow-auto max-h-32">
-                          {error.stack}
-                        </pre>
-                      </div>
-                    )}
-                    <div>
-                      <span className="font-medium">Error ID:</span>
-                      <code className="text-xs bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded ml-2">
-                        {this.state.errorId}
-                      </code>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Suggestions */}
               {suggestions.length > 0 && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                  <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-3">
-                    Suggested Actions:
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-5 border border-gray-100 dark:border-gray-800">
+                  <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-sm uppercase tracking-wider">
+                    Recommended Actions
                   </h4>
-                  <ul className="space-y-2">
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {suggestions.map((suggestion, index) => (
-                      <li key={index} className="flex items-start text-blue-800 dark:text-blue-200">
-                        <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                        <span className="text-sm">{suggestion}</span>
+                      <li key={index} className="flex items-center text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-gray-50 dark:border-gray-700/50">
+                        <span className="w-1.5 h-1.5 bg-primary rounded-full mr-3 flex-shrink-0" />
+                        <span className="text-sm font-medium">{suggestion}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
 
+              {/* Error Details (Development Only) */}
+              {import.meta.env.VITE_APP_ENVIRONMENT === 'development' && error && (
+                <div className="bg-gray-900 rounded-xl p-5 text-left overflow-hidden border border-gray-800 shadow-inner">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-300 text-sm flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                      Developer Logs
+                    </h4>
+                    <code className="text-xs text-gray-500 font-mono">ID: {this.state.errorId}</code>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-red-400 font-mono text-sm break-all">
+                        {error.message}
+                      </p>
+                    </div>
+                    {error.stack && (
+                      <div className="relative group">
+                        <pre className="text-xs text-gray-400 font-mono bg-black/50 p-3 rounded-lg overflow-x-auto max-h-48 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+                          {error.stack}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-4 pt-2">
                 {canRetry && (
                   <Button
                     onClick={this.handleRetry}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="flex-1 h-12 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white rounded-xl shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.15)] text-base"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    Try Again ({this.maxRetries - this.retryCount} attempts left)
+                    Try Again
                   </Button>
                 )}
 
                 <Button
                   onClick={this.handleReload}
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 h-12 rounded-xl bg-slate-50/50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 transition-all duration-300 hover:-translate-y-1 hover:shadow-sm text-base"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Reload Page
@@ -290,19 +294,15 @@ class ErrorBoundary extends Component<Props, State> {
 
                 <Button
                   onClick={this.handleGoHome}
-                  variant="outline"
-                  className="flex-1"
+                  className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.2)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.25)] transition-all duration-300 hover:-translate-y-1 border-0 text-base font-medium"
                 >
                   <Home className="w-4 h-4 mr-2" />
-                  Go to Dashboard
+                  Return Home
                 </Button>
               </div>
 
-              {/* Contact Support */}
-              <div className="text-center pt-4 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  If this problem persists, please contact support
-                </p>
+              {/* Footer */}
+              <div className="flex flex-col sm:flex-row items-center justify-between pt-6 mt-6 border-t border-gray-100 dark:border-gray-800">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -311,17 +311,14 @@ class ErrorBoundary extends Component<Props, State> {
                     const body = `Error ID: ${this.state.errorId}\nError Message: ${error?.message}\nTimestamp: ${new Date().toISOString()}\nPage: ${window.location.href}`;
                     window.location.href = `mailto:${import.meta.env.VITE_SUPPORT_EMAIL || 'support@pbpagez.com'}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                   }}
-                  className="text-blue-600 hover:text-blue-700"
+                  className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
                 >
                   <Mail className="w-4 h-4 mr-2" />
-                  Contact Support
+                  Report this issue
                 </Button>
-              </div>
-
-              {/* Footer */}
-              <div className="text-center text-xs text-gray-500 dark:text-gray-400">
-                PB Pagez v{import.meta.env.VITE_APP_VERSION || '1.0.0'} |
-                Error ID: {this.state.errorId}
+                <div className="text-xs text-gray-400 mt-4 sm:mt-0 font-medium tracking-wide">
+                  eResultsGH • Ref: {this.state.errorId.split('_')[1] || this.state.errorId}
+                </div>
               </div>
             </CardContent>
           </Card>
