@@ -125,7 +125,26 @@ const TermInformationCard = ({
 
       if (error) {
         console.error("Edge function error:", error);
-        throw new Error(error.message || "Failed to generate remark");
+        
+        let errorMsg = error.message || "Failed to generate remark";
+        
+        // Try to extract the custom JSON body from the edge function if available
+        if (error.context && typeof error.context.json === 'function') {
+           try {
+              const errData = await error.context.json();
+              if (errData.details) errorMsg = errData.details;
+              else if (errData.error) errorMsg = errData.error;
+           } catch (e) {
+              console.error("Failed to parse error context", e);
+           }
+        }
+        
+        // If it's still the generic error, make it user friendly
+        if (errorMsg === "Edge Function returned a non-2xx status code") {
+            errorMsg = "The AI service encountered an error or is temporarily unavailable. Please try again later.";
+        }
+        
+        throw new Error(errorMsg);
       }
 
       if (data?.error) {
