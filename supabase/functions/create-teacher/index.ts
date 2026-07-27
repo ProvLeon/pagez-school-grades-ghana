@@ -43,14 +43,33 @@ serve(async (req) => {
       );
     }
 
-    // Check if the caller is an admin by looking at their profile
-    const { data: callerProfile, error: profileError } = await userClient
+    // Create admin client with service role key to reliably read profiles & organization roles
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // Check caller's role in user_organization_profiles (canonical source) or profiles
+    const { data: orgProfile } = await adminClient
+      .from("user_organization_profiles")
+      .select("role, organization_id")
+      .eq("user_id", callerUser.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    const { data: callerProfile } = await adminClient
       .from("profiles")
       .select("user_type")
       .eq("user_id", callerUser.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !callerProfile || callerProfile.user_type !== "admin") {
+    const isAdmin =
+      ["admin", "super_admin"].includes(orgProfile?.role || "") ||
+      ["admin", "super_admin"].includes(callerProfile?.user_type || "");
+
+    if (!isAdmin) {
       return new Response(
         JSON.stringify({ error: "Unauthorized: Only admins can create teachers" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -70,14 +89,6 @@ serve(async (req) => {
 
     // Determine the email to use
     const teacherEmail = email || `${username || full_name.toLowerCase().replace(/\s+/g, '.')}@school.local`;
-
-    // Create admin client with service role key
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
 
     // Check if a teacher with this email already exists
     const { data: existingTeacher } = await adminClient
@@ -143,8 +154,8 @@ serve(async (req) => {
       // Don't fail - profile might be created by a trigger
     }
 
-    // Get the caller's organization_id from user_organization_profiles
-    const { data: userOrgProfile, error: orgError } = await userClient
+    // Get the caller's organization_id reliably from user_organization_profiles using adminClient
+    const { data: userOrgProfile, error: orgError } = await adminClient
       .from("user_organization_profiles")
       .select("organization_id")
       .eq("user_id", callerUser.id)
