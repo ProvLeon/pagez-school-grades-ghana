@@ -39,8 +39,9 @@ const ManageTeacher = () => {
       const result = await createTeacherMutation.mutateAsync(teacherData);
       toast({ title: "Teacher Added", description: "New teacher account created." });
       return result; // Return the created teacher for post-creation prompt
-    } catch (error) {
-      toast({ title: "Failed to Add Teacher", variant: "destructive" });
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to add teacher account. Please try again.";
+      toast({ title: "Failed to Add Teacher", description: errorMessage, variant: "destructive" });
       throw error; // Re-throw so the dialog knows it failed
     }
   };
