@@ -42,6 +42,7 @@ const PublicMockResults = lazy(() => import("./pages/PublicMockResults"));
 const MockExams = lazy(() => import("./pages/MockExams"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const BillingReturn = lazy(() => import("./pages/BillingReturn"));
 const SignUp = lazy(() => import("./pages/SignUp"));
 
 // Legal pages
@@ -287,6 +288,7 @@ const App = () => {
                       <Route path="/login" element={disableAuth ? <ForceRedirect to="/dashboard" /> : <Login />} />
                       <Route path="/forgot-password" element={<ForgotPassword />} />
                       <Route path="/reset-password" element={<ResetPassword />} />
+                      <Route path="/billing/return" element={<BillingReturn />} />
                       <Route path="/signup" element={<SignUp />} />
                       <Route path="/student-reports" element={<PublicReports />} />
                       <Route path="/mock-results" element={<PublicMockResults />} />

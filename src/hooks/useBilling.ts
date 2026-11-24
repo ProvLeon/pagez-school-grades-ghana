@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { billingService, TRIAL_SEAT_CAP, calcAnnualFee } from '@/services/billingService';
+import { billingService, TRIAL_SEAT_CAP } from '@/services/billingService';
 import { OrganizationBilling } from '@/types/billing';
 import { useToast } from './use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -68,10 +68,8 @@ export const useBilling = () => {
    *
    * @param seatCount   Number of seats the school is paying for.
    *                    If omitted, falls back to `declared_seat_count`.
-   * @param amountGHS   Override the calculated fee (optional — normally derived
-   *                    from seatCount via calcAnnualFee).
    */
-  const initiatePayment = async (seatCount?: number, amountGHS?: number) => {
+  const initiatePayment = async (seatCount?: number) => {
     if (!billing || !user) {
       toast({
         title: "Error",
@@ -90,33 +88,21 @@ export const useBilling = () => {
       return;
     }
 
-    // Resolve seats to charge for
+    // Resolve seats to charge for; the server recalculates the amount.
     const seats = seatCount ?? billing.declared_seat_count;
-    const fee = amountGHS ?? calcAnnualFee(seats);
+    if (!Number.isInteger(seats) || seats < 1) {
+      toast({ title: 'Invalid seat count', description: 'Choose at least one seat.', variant: 'destructive' });
+      return;
+    }
 
-    // NOTE: We do NOT write declared_seat_count to the DB here.
-    // seat_count is forwarded to the verify-payment Edge Function via metadata
-    // and the verifyAndActivate() call — the Edge Function updates declared_seat_count
-    // only after Paystack confirms the payment. Updating before payment would cause
-    // the seat quota to reflect instantly even if the user cancels or closes Paystack.
-    const reference = `REF_${Date.now()}_${billing.id.substring(0, 8)}`;
-
-    await billingService.initializePayment(
-      user.email ?? 'admin@school.com',
-      fee,
-      billing.id,
-      reference,
-      () => {
-        toast({
-          title: "Subscription Activated!",
-          description: "Your subscription is now active. Your seat quota has been updated.",
-        });
-        // verify-payment Edge Function has already updated the DB by the time
-        // this callback fires — a short delay is enough for the write to settle.
-        setTimeout(fetchBilling, 800);
-      },
-      seats,
-    );
+    // The server owns pricing and entitlement changes; this request only starts checkout.
+    const idempotencyKey = crypto.randomUUID();
+    const authorizationUrl = await billingService.startHostedCheckout(billing.id, seats, idempotencyKey);
+    if (!authorizationUrl) {
+      toast({ title: 'Payment unavailable', description: 'We could not start checkout. Please try again.', variant: 'destructive' });
+      return;
+    }
+    window.location.assign(authorizationUrl);
   };
 
   // ─── Admin toggle ────────────────────────────────────────────────────────────

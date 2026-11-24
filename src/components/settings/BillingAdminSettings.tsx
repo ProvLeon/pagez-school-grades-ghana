@@ -382,7 +382,7 @@ export const BillingAdminSettings: React.FC = () => {
       // Pass both the new total seat count (for DB update) AND the
       // correctly-computed fee (delta-based for top-ups, full for renewals)
       // so useBilling doesn't re-derive the fee from the total seat count.
-      await initiatePayment(resolvedSeats as number, annualFee);
+      await initiatePayment(resolvedSeats as number);
     } finally {
       setPaying(false);
     }

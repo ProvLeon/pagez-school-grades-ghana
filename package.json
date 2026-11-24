@@ -7,9 +7,9 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "node init && vite",
-    "build": "node init && node --max-old-space-size=1536 scripts/build.mjs",
-    "build:dev": "node init && vite build --mode development",
+    "dev": "vite",
+    "build": "node --max-old-space-size=1536 scripts/build.mjs",
+    "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -94,5 +94,9 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1"
-  }
+  },
+  "trustedDependencies": [
+    "@swc/core",
+    "core-js"
+  ]
 }

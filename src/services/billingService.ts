@@ -96,55 +96,36 @@ export const billingService = {
     }
   },
 
-  async loadPaystack(): Promise<any> {
-    return new Promise((resolve, reject) => {
-      if ((window as any).PaystackPop) {
-        resolve((window as any).PaystackPop);
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://js.paystack.co/v1/inline.js';
-      script.async = true;
-      script.onload = () => resolve((window as any).PaystackPop);
-      script.onerror = () => reject(new Error('Paystack inline script failed to load.'));
-      document.body.appendChild(script);
+  async startHostedCheckout(organizationId: string, seatCount: number, idempotencyKey: string): Promise<string | null> {
+    const { data: { session } } = await supabase.auth.getSession();
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!session?.access_token || !supabaseUrl) return null;
+    const response = await fetch(`${supabaseUrl}/functions/v1/initialize-payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ organization_id: organizationId, seat_count: seatCount, idempotency_key: idempotencyKey }),
     });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || typeof result?.authorization_url !== 'string') return null;
+    return result.authorization_url;
   },
 
-  async updateDeclaredSeats(orgId: string, seats: number): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('organizations')
-        .update({ declared_seat_count: seats })
-        .eq('id', orgId);
-      if (error) {
-        console.error('Error updating declared seats:', error);
-        return false;
-      }
-      return true;
-    } catch (err) {
-      console.error('Failed to update declared seats:', err);
-      return false;
-    }
-  },
+  
 
   async verifyAndActivate(
     reference: string,
-    organizationId: string,
-    seatCount?: number,
+    _organizationId?: string,
+    _seatCount?: number,
   ): Promise<{ success: boolean; billing?: unknown }> {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !anonKey) {
+      if (!supabaseUrl) {
         console.error('[verifyAndActivate] Supabase env vars not set.');
         return { success: false };
       }
 
-      // Tell the Edge Function which Paystack environment this payment was made in
-      // so it uses the matching secret key for verification.
-      const isTest = import.meta.env.VITE_PAYSTACK_ENV !== 'live';
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return { success: false };
 
       const resp = await fetch(
         `${supabaseUrl}/functions/v1/verify-payment`,
@@ -152,14 +133,9 @@ export const billingService = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${anonKey}`,
+            'Authorization': `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({
-            reference,
-            organization_id: organizationId,
-            seat_count: seatCount,
-            is_test: isTest,
-          }),
+          body: JSON.stringify({ reference }),
         }
       );
 
@@ -178,90 +154,4 @@ export const billingService = {
     }
   },
 
-  async initializePayment(
-    email: string,
-    amountGHS: number,
-    organizationId: string,
-    reference: string,
-    onSuccess: () => void,
-    seatCount?: number,
-  ) {
-    try {
-      const PaystackPop = await this.loadPaystack();
-
-      // Paystack amount is always the lowest currency unit (pesewas)
-      const amountInPesewas = amountGHS * 100;
-      const isLive = import.meta.env.VITE_PAYSTACK_ENV === 'live';
-      const publicKey = isLive
-        ? import.meta.env.VITE_PAYSTACK_PUBLIC_KEY_LIVE
-        : import.meta.env.VITE_PAYSTACK_PUBLIC_KEY_TEST;
-
-      if (!publicKey) {
-        console.error(
-          isLive
-            ? "VITE_PAYSTACK_PUBLIC_KEY_LIVE is not set."
-            : "VITE_PAYSTACK_PUBLIC_KEY_TEST is not set."
-        );
-        alert("Payment configuration error. Please contact support.");
-        return;
-      }
-
-      const handler = PaystackPop.setup({
-        key: publicKey,
-        email: email,
-        amount: amountInPesewas,
-        currency: "GHS",
-        ref: reference,
-        metadata: {
-          organization_id: organizationId,
-          custom_fields: [
-            {
-              display_name: "Organization ID",
-              variable_name: "organization_id",
-              value: organizationId,
-            },
-            ...(seatCount !== undefined ? [{
-              display_name: "Seat Count",
-              variable_name: "seat_count",
-              value: String(seatCount),
-            }] : []),
-          ],
-        },
-        callback: function (response: any) {
-          console.log("Paystack payment success. Reference:", response.reference);
-          // Call verify-payment Edge Function immediately — verifies with Paystack
-          // API server-side using the correct key (test vs live) and activates the
-          // subscription in the DB right away. No webhook dependency.
-          billingService
-            .verifyAndActivate(response.reference, organizationId, seatCount)
-            .then(({ success }) => {
-              if (success) {
-                onSuccess();
-              } else {
-                // Verification failed — surface it rather than silently refreshing
-                console.error(
-                  '[billingService] verifyAndActivate failed for ref:',
-                  response.reference
-                );
-                // Still call onSuccess so the UI at least refreshes;
-                // the admin can retry if the status hasn't changed.
-                onSuccess();
-              }
-            })
-            .catch((err) => {
-              console.error('[billingService] Unexpected error in verifyAndActivate:', err);
-              onSuccess();
-            });
-        },
-        onClose: function () {
-          console.log("Paystack window closed by user.");
-        }
-      });
-
-      handler.openIframe();
-    } catch (err) {
-      console.error("Payment initialization failed:", err);
-      alert("Failed to load Paystack payment gateway.");
-    }
-  }
 };
