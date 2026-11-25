@@ -99,14 +99,20 @@ export const billingService = {
   async startHostedCheckout(organizationId: string, seatCount: number, idempotencyKey: string): Promise<string | null> {
     const { data: { session } } = await supabase.auth.getSession();
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    if (!session?.access_token || !supabaseUrl) return null;
+    if (!session?.access_token || !supabaseUrl) {
+      console.error('[startHostedCheckout] Missing session or VITE_SUPABASE_URL');
+      return null;
+    }
     const response = await fetch(`${supabaseUrl}/functions/v1/initialize-payment`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ organization_id: organizationId, seat_count: seatCount, idempotency_key: idempotencyKey }),
     });
     const result = await response.json().catch(() => null);
-    if (!response.ok || typeof result?.authorization_url !== 'string') return null;
+    if (!response.ok || typeof result?.authorization_url !== 'string') {
+      console.error('[startHostedCheckout] Edge function error:', result);
+      return null;
+    }
     return result.authorization_url;
   },
 

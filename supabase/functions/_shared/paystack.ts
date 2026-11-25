@@ -22,10 +22,18 @@ export function requirePaystackConfig() {
 export async function paystackRequest<T>(path: string, init: RequestInit, secret: string): Promise<T> {
   const response = await fetch(`https://api.paystack.co${path}`, {
     ...init,
-    headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json", ...(init.headers ?? {}) },
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      "Content-Type": "application/json",
+      "User-Agent": "eResultsGH/1.0",
+      ...(init.headers ?? {}),
+    },
   });
   const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.status) throw new Error("Payment provider request failed");
+  if (!response.ok || !payload?.status) {
+    const errorMsg = payload?.message || response.statusText || `HTTP ${response.status}`;
+    throw new Error(`Paystack error: ${errorMsg}`);
+  }
   return payload.data as T;
 }
 

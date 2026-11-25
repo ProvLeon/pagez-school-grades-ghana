@@ -51,8 +51,7 @@ CREATE TABLE IF NOT EXISTS public.checkout_orders (
   outcome text CHECK (outcome IN ('fulfilled', 'review'))
 );
 CREATE INDEX IF NOT EXISTS checkout_orders_org_idx ON public.checkout_orders (organization_id, created_at DESC);
-CREATE UNIQUE INDEX IF NOT EXISTS checkout_orders_open_org_idx ON public.checkout_orders (organization_id)
-  WHERE outcome IS NULL;
+DROP INDEX IF EXISTS checkout_orders_open_org_idx;
 CREATE INDEX IF NOT EXISTS checkout_orders_rate_idx ON public.checkout_orders (organization_id, created_at DESC);
 ALTER TABLE public.checkout_orders ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.checkout_orders FROM PUBLIC, anon, authenticated;
@@ -74,13 +73,10 @@ BEGIN
   SELECT * INTO existing FROM public.checkout_orders
     WHERE idempotency_key = p_idempotency_key AND created_by = p_user AND organization_id = p_org;
   IF FOUND THEN RETURN existing; END IF;
-  SELECT * INTO existing FROM public.checkout_orders
-    WHERE organization_id = p_org AND outcome IS NULL ORDER BY created_at DESC LIMIT 1;
-  IF FOUND THEN RETURN existing; END IF;
   SELECT * INTO org FROM public.organizations WHERE id = p_org FOR UPDATE;
-  IF NOT FOUND OR org.admin_id <> p_user OR org.is_active IS NOT TRUE OR org.billing_enabled IS NOT TRUE
-    OR NOT EXISTS (SELECT 1 FROM public.user_organization_profiles
-                   WHERE organization_id = p_org AND user_id = p_user AND role = 'admin' AND is_active IS TRUE) THEN
+  IF NOT FOUND OR org.is_active IS NOT TRUE OR org.billing_enabled IS NOT TRUE
+    OR (org.admin_id <> p_user AND NOT EXISTS (SELECT 1 FROM public.user_organization_profiles
+                   WHERE organization_id = p_org AND user_id = p_user AND role = 'admin' AND is_active IS TRUE)) THEN
     RAISE EXCEPTION 'Checkout not authorized' USING ERRCODE = '42501';
   END IF;
   IF p_seats IS NULL OR p_seats NOT BETWEEN 1 AND 1000000 OR p_seats <
